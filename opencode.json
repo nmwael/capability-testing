@@ -1,62 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "local-gemma4-26b/gemma4-26b-a4b-s4",
-  "small_model": "local-gemma4-26b/gemma4-26b-a4b-s4",
+  "model": "opencode/ling-3.1-flash-free",
+  "small_model": "opencode/ling-3.1-flash-free",
   "provider": {
-    "local-gemma4-26b": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Bifrost (local gemma4-26b-a4b)",
-      "options": {
-        "baseURL": "http://127.0.0.1:8082/v1",
-        "headers": {
-          "x-bf-passthrough-extra-params": "true"
-        }
-      },
-      "models": {
-        "gemma4-26b-a4b": {
-          "name": "gemma4-26b-a4b (unpinned fallback)",
-          "limit": {
-            "context": 65536,
-            "output": 65536
-          }
-        },
-        "gemma4-26b-a4b-s0": {
-          "name": "gemma4-26b-a4b - Slot 0",
-          "limit": {
-            "context": 65536,
-            "output": 65536
-          }
-        },
-        "gemma4-26b-a4b-s1": {
-          "name": "gemma4-26b-a4b - Slot 1",
-          "limit": {
-            "context": 65536,
-            "output": 65536
-          }
-        },
-        "gemma4-26b-a4b-s2": {
-          "name": "gemma4-26b-a4b - Slot 2",
-          "limit": {
-            "context": 65536,
-            "output": 65536
-          }
-        },
-        "gemma4-26b-a4b-s3": {
-          "name": "gemma4-26b-a4b - Slot 3",
-          "limit": {
-            "context": 65536,
-            "output": 65536
-          }
-        },
-        "gemma4-26b-a4b-s4": {
-          "name": "gemma4-26b-a4b - Slot 4",
-          "limit": {
-            "context": 65536,
-            "output": 65536
-          }
-        }
-      }
-    },
     "opencode": {
       "options": {
         "setCacheKey": false
@@ -65,39 +11,35 @@
   },
   "agent": {
     "architect": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s0"
+      "model": "opencode/big-pickle"
     },
     "coder": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s1"
+      "model": "opencode/ling-3.1-flash-free"
     },
     "researcher": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s2"
+      "model": "opencode/nemotron-3-ultra-free"
     },
     "reviewer": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s3"
+      "model": "opencode/nemotron-3.5-lightning-free"
     },
     "build": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s4"
+      "model": "opencode/ling-3.1-flash-free"
     },
     "ui": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s4"
+      "model": "opencode/fledge-alpha-free"
     },
     "artist": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s4"
+      "model": "opencode/space-bunny-free"
     },
     "ai-researcher": {
-      "model": "local-gemma4-26b/gemma4-26b-a4b-s4"
+      "model": "opencode/mimo-v2.6-flash-free"
     }
   },
   "enabled_providers": [
-    "local-gemma4-26b",
-    "opencode","nvidia","openrouter"
+    "opencode"
   ],
   "subagent_depth": 2,
   "server": {
     "port": 4096
-  },
-  "limit": {
-    "context": 65536
   }
 }
