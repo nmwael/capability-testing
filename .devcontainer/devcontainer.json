@@ -1,5 +1,5 @@
 {
-  "name": "agentic-devcontainer-feature",
+  "name": "capability-testing",
   "build": {
     "dockerfile": "Dockerfile"
   },

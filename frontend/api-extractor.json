@@ -1,0 +1,6 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "apiReport": {"enabled": true},
+  "mainEntryPointFilePath": "./src/index.ts",
+  "bundledPackages": []
+}

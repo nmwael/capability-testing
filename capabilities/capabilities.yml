@@ -1,0 +1,30 @@
+capabilities:
+  - id: invoice.recalculate-penalty
+    intent: "Apply late-payment penalty to a closed invoice"
+    owner: billing
+    status: active  # active | deprecated | retired
+    since: 3.2.0
+    verified_by:
+      - "InvoiceRecalculationIT"        # backend integration test class (FQCN or simple name)
+      - "billing/recalculate-penalty.feature"  # cucumber feature path
+
+  - id: bulk-csv-export
+    intent: "Export multiple invoices as CSV"
+    owner: invoicing
+    status: retired
+    since: 3.1.0
+    retired_at: 2026-10-03
+    reason: "Modulith split - replaced by export-batch module"
+    restore_after: 2027-Q1  # CI will fail if this date has passed and still retired
+    tracked_by: PROJ-889
+    pr: "#1234"
+    verified_by: []  # retired capabilities need not be enforced
+
+  - id: invoice.list
+    intent: "List invoices with filtering/pagination"
+    owner: invoicing
+    status: active
+    since: 3.0.0
+    verified_by:
+      - "InvoiceListIT"
+      - "invoicing/invoice-list.feature"
