@@ -1,6 +1,7 @@
 {
   "name": "capability-testing",
   "build": {
+    "context": "..",
     "dockerfile": "Dockerfile"
   },
   "features": {
