@@ -13,7 +13,7 @@ This repo focuses on **capability testing** using **Cucumber/Gherkin** with **Qu
 - Frontend: React
 - Reports: Cucumber JSON/JUnit/HTML
 
-## Role specialization (cloud mode)
+## Role specialization
 - architect: capability model, test strategy, scenario decomposition, HITL gate
 - researcher: domain discovery, example mapping, edge cases
 - ai-researcher: BDD patterns, Quarkiverse Cucumber, living docs, traceability
@@ -30,7 +30,12 @@ This repo focuses on **capability testing** using **Cucumber/Gherkin** with **Qu
 - @ScenarioScope for shared state per scenario
 - Keep features implementation-agnostic (backend API or UI journey)
 - Follow HITL: architect plan → human approval → implementation (per AGENTS.md in repo)
-- Cloud mode only (opencode provider). No local models.
+- Local profile `q`: qwen3-8b orchestrator on :8089, qwen2.5-coder-7b coder on :8090, via bifrost :8082 / opencode :4096.
+
+## Local stack (profile q)
+- qwen3-8b (Q4_K_M): llama-server :8089, ctx 16384, 1 slot — architect, researcher, reviewer, build, ui, artist, ai-researcher
+- qwen2.5-coder-7b (Q4_K_M): llama-server :8090, ctx 8192, 1 slot — coder
+- `.devcontainer/llm-lab-{models,roles}.json` are the `models` feature build inputs; regenerating them requires `devcontainer up --workspace-folder .`
 
 ## Verification
 - Run Cucumber tests via Maven/Gradle (check README/pom.xml first)

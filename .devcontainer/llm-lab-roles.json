@@ -1,10 +1,10 @@
 {
-  "architect": {"model": "big-pickle", "slot": 0},
-  "coder": {"model": "ling-3.1-flash-free", "slot": 0},
-  "researcher": {"model": "nemotron-3-ultra-free", "slot": 0},
-  "reviewer": {"model": "nemotron-3.5-lightning-free", "slot": 0},
-  "build": {"model": "ling-3.1-flash-free", "slot": 0},
-  "ui": {"model": "fledge-alpha-free", "slot": 0},
-  "artist": {"model": "space-bunny-free", "slot": 0},
-  "ai-researcher": {"model": "mimo-v2.6-flash-free", "slot": 0}
+  "architect": {"model": "qwen3-8b", "slot": 0},
+  "researcher": {"model": "qwen3-8b", "slot": 0},
+  "reviewer": {"model": "qwen3-8b", "slot": 0},
+  "build": {"model": "qwen3-8b", "slot": 0},
+  "ui": {"model": "qwen3-8b", "slot": 0},
+  "artist": {"model": "qwen3-8b", "slot": 0},
+  "ai-researcher": {"model": "qwen3-8b", "slot": 0},
+  "coder": {"model": "qwen2.5-coder-7b", "slot": 0}
 }
