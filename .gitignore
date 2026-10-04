@@ -1,5 +1,6 @@
 models/
 wip/
+tmp/
 *.gguf
 
 # Python bytecode

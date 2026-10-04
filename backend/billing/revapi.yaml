@@ -1,0 +1,11 @@
+api:
+  - com.example.billing.api.*
+reporter:
+  console: true
+  file:
+    format: json
+    file: target/revapi-report.json
+rules:
+  - name: no-breaking-api-changes
+    severity: error
+    description: Fail on deletions or signature changes
