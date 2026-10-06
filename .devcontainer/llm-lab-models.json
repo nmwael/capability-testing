@@ -18,7 +18,7 @@
     "quant": "Q4_K_M",
     "url": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m.gguf",
     "port": 8090,
-    "context": 8192,
+    "context": 16384,
     "parallel": 1,
     "kv_cache_type_k": "q4_0",
     "kv_cache_type_v": "q8_0"

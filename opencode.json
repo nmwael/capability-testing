@@ -42,15 +42,15 @@
         "qwen2.5-coder-7b": {
           "name": "qwen2.5-coder-7b (unpinned fallback)",
           "limit": {
-            "context": 8192,
-            "output": 8192
+            "context": 16384,
+            "output": 16384
           }
         },
         "qwen2.5-coder-7b-s0": {
           "name": "qwen2.5-coder-7b - Slot 0",
           "limit": {
-            "context": 8192,
-            "output": 8192
+            "context": 16384,
+            "output": 16384
           }
         }
       }
