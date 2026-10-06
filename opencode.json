@@ -16,15 +16,15 @@
         "qwen3-8b": {
           "name": "qwen3-8b (unpinned fallback)",
           "limit": {
-            "context": 16384,
-            "output": 16384
+            "context": 40960,
+            "output": 40960
           }
         },
         "qwen3-8b-s0": {
           "name": "qwen3-8b - Slot 0",
           "limit": {
-            "context": 16384,
-            "output": 16384
+            "context": 40960,
+            "output": 40960
           }
         }
       }
@@ -42,15 +42,15 @@
         "qwen2.5-coder-7b": {
           "name": "qwen2.5-coder-7b (unpinned fallback)",
           "limit": {
-            "context": 16384,
-            "output": 16384
+            "context": 32768,
+            "output": 32768
           }
         },
         "qwen2.5-coder-7b-s0": {
           "name": "qwen2.5-coder-7b - Slot 0",
           "limit": {
-            "context": 16384,
-            "output": 16384
+            "context": 32768,
+            "output": 32768
           }
         }
       }
@@ -97,6 +97,6 @@
     "port": 4096
   },
   "limit": {
-    "context": 16384
+    "context": 40960
   }
 }
