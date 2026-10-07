@@ -21,7 +21,9 @@
     "ghcr.io/devcontainers-extra/features/apt-get-packages:1.0.8": {
       "packages": "gh,jq,ripgrep,shfmt,shellcheck,bats,python3,python3-pip,python3-venv"
     },
-    "ghcr.io/devcontainers/features/java:1": {},
+    "ghcr.io/devcontainers/features/java:1": {
+      "installMaven": true
+    },
     "ghcr.io/devcontainers/features/docker-in-docker:4": {
       "moby": false
     },
