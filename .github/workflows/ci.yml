@@ -37,6 +37,6 @@ jobs:
           node-version: 20
       - working-directory: frontend
         run: |
-          npm ci || true
-          npm run typecheck || true
-          npx depcruise src --config .depcruiser.js || true
+          npm ci
+          npm run typecheck
+          npx depcruise src --config .depcruiser.js

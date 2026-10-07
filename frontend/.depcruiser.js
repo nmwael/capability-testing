@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   options: {
     doNotFollow: 'node_modules'
   },
