@@ -1,5 +1,5 @@
+@cap:invoice.recalculate-penalty
 Feature: Recalculate penalty
-  @cap:invoice.recalculate-penalty
   As a billing operator
   I want to recalculate late payment penalty
   So that invoices reflect correct amount

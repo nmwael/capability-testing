@@ -35,5 +35,27 @@
       <version>${archunit.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.quarkiverse.cucumber</groupId>
+      <artifactId>quarkus-cucumber</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
+
+  <build>
+    <testResources>
+      <!-- The capability .feature files live at the repo root (that is the path
+           capabilities.yml and the traceability gate reference), so pull them
+           onto this module's test classpath instead of duplicating them. -->
+      <testResource>
+        <directory>${project.basedir}/../../billing</directory>
+        <includes>
+          <include>*.feature</include>
+        </includes>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+      </testResource>
+    </testResources>
+  </build>
 </project>

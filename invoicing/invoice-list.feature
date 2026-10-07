@@ -1,5 +1,5 @@
+@cap:invoice.list
 Feature: List invoices
-  @cap:invoice.list
   As a customer
   I want to list invoices with filtering
   So that I can find my documents
