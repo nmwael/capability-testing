@@ -35,10 +35,5 @@
       <version>${archunit.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.revapi</groupId>
-      <artifactId>revapi-maven-plugin</artifactId>
-      <version>${revapi.version}</version>
-    </dependency>
   </dependencies>
 </project>

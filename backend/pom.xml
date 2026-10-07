@@ -19,7 +19,6 @@
     <maven.compiler.release>17</maven.compiler.release>
     <quarkus.platform.version>3.15.1</quarkus.platform.version>
     <archunit.version>1.2.0</archunit.version>
-    <revapi.version>0.16.0</revapi.version>
   </properties>
 
   <dependencyManagement>
