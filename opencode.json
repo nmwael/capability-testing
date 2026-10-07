@@ -17,14 +17,14 @@
           "name": "qwen3-8b (unpinned fallback)",
           "limit": {
             "context": 40960,
-            "output": 40960
+            "output": 8192
           }
         },
         "qwen3-8b-s0": {
           "name": "qwen3-8b - Slot 0",
           "limit": {
             "context": 40960,
-            "output": 40960
+            "output": 8192
           }
         }
       }
@@ -43,14 +43,14 @@
           "name": "qwen2.5-coder-7b (unpinned fallback)",
           "limit": {
             "context": 32768,
-            "output": 32768
+            "output": 8192
           }
         },
         "qwen2.5-coder-7b-s0": {
           "name": "qwen2.5-coder-7b - Slot 0",
           "limit": {
             "context": 32768,
-            "output": 32768
+            "output": 8192
           }
         }
       }
