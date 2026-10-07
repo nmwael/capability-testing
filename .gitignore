@@ -3,6 +3,11 @@ wip/
 tmp/
 *.gguf
 
+# Build output
+target/
+node_modules/
+dist/
+
 # Python bytecode
 __pycache__/
 *.pyc
