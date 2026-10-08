@@ -84,7 +84,7 @@
       "model": "local-qwen3-8b/qwen3-8b-s0"
     },
     "coder": {
-      "model": "local-qwen2.5-coder-7b/qwen2.5-coder-7b-s0"
+      "model": "local-qwen3-8b/qwen3-8b-s0"
     }
   },
   "enabled_providers": [

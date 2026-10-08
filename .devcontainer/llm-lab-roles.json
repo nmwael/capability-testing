@@ -6,5 +6,5 @@
   "ui": {"model": "qwen3-8b", "slot": 0},
   "artist": {"model": "qwen3-8b", "slot": 0},
   "ai-researcher": {"model": "qwen3-8b", "slot": 0},
-  "coder": {"model": "qwen2.5-coder-7b", "slot": 0}
+  "coder": {"model": "qwen3-8b", "slot": 0}
 }
