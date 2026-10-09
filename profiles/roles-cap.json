@@ -1,0 +1,10 @@
+{
+  "architect":     { "model": "phi-4-mini",     "slot": 0 },
+  "researcher":    { "model": "phi-4-mini",     "slot": 0 },
+  "reviewer":      { "model": "phi-4-mini",     "slot": 0 },
+  "build":         { "model": "phi-4-mini",     "slot": 0 },
+  "ui":            { "model": "phi-4-mini",     "slot": 0 },
+  "artist":        { "model": "phi-4-mini",     "slot": 0 },
+  "ai-researcher": { "model": "phi-4-mini",     "slot": 0 },
+  "coder":         { "model": "qwen3.5-9b-mtp", "slot": 0 }
+}

@@ -40,12 +40,27 @@ else
         par="$(jq -r ".models[$i].parallel // 3" "$STACK_JSON")"
         kv_k="$(jq -r ".models[$i].kv_cache_type_k // empty" "$STACK_JSON")"
         kv_v="$(jq -r ".models[$i].kv_cache_type_v // empty" "$STACK_JSON")"
+        st="$(jq -r ".models[$i].spec_type // empty" "$STACK_JSON")"
+        sn="$(jq -r ".models[$i].spec_draft_n_max // empty" "$STACK_JSON")"
 
         # KV cache dominates VRAM at long context (measured ~0.5 MiB/token at f16),
         # so it is opt-in per model rather than hardcoded.
         kv_args=()
         [ -n "$kv_k" ] && kv_args+=(--cache-type-k "$kv_k")
         [ -n "$kv_v" ] && kv_args+=(--cache-type-v "$kv_v")
+
+        # Speculative decoding is opt-in too; absent spec_type keeps argv unchanged.
+        spec_args=()
+        case "$st" in
+        "") ;;
+        draft-mtp)
+            spec_args+=(--spec-type draft-mtp)
+            [ -n "$sn" ] && spec_args+=(--spec-draft-n-max "$sn")
+            ;;
+        *)
+            echo "WARNING: unsupported spec_type '$st' on '$name' — ignoring" >&2
+            ;;
+        esac
 
         # Same glob the feature's fetcher names files for: *<hf / -> _>*<quant>*.gguf
         slug="$(printf '%s' "$hf" | tr '/' '_')"
@@ -66,10 +81,11 @@ else
         else
             # --alias must equal models[].name: it is the model id opencode pins
             # and the prefix bifrost routes on ("{name}*"). A mismatch 404s.
-            echo "[auto-startup] starting $name on :$port (ctx=$ctx slots=$par kv=${kv_k:-f16}/${kv_v:-f16})"
+            echo "[auto-startup] starting $name on :$port (ctx=$ctx slots=$par kv=${kv_k:-f16}/${kv_v:-f16} spec=${st:-none})"
             nohup llama-server -m "$model_file" --host 0.0.0.0 --port "$port" \
                 --ctx-size "$ctx" --alias "$name" --parallel "$par" \
                 ${kv_args[@]+"${kv_args[@]}"} \
+                ${spec_args[@]+"${spec_args[@]}"} \
                 >"/tmp/llama-server-$name.log" 2>&1 &
 
             ready=false

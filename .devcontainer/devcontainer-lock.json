@@ -50,8 +50,8 @@
       "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/llama-server@sha256:b4b11bb1a13fd1f8b82600dec315d39fc5825ffe745c3d3030cd915824e88b76",
       "integrity": "sha256:b4b11bb1a13fd1f8b82600dec315d39fc5825ffe745c3d3030cd915824e88b76"
     },
-    "ghcr.io/nmwael/agentic-devcontainer-feature/models:1.4.0": {
-      "version": "1.4.0",
+    "ghcr.io/nmwael/agentic-devcontainer-feature/models:1.5.0": {
+      "version": "1.5.0",
       "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:a1fdfad53a5a3f9ab0b66cd51f7de6459abbe148918c8b8a0b68545005d0221e",
       "integrity": "sha256:a1fdfad53a5a3f9ab0b66cd51f7de6459abbe148918c8b8a0b68545005d0221e"
     },
