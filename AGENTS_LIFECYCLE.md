@@ -38,14 +38,14 @@ To prevent "Infinite Spins" and "Step Exhaustion," all agents must adhere to the
 
 ## Agent communication rules (hard-learned from diagnostics)
 
-201: - Subagents have fully isolated context: they cannot see earlier conversation turns. Never reference prior-turn content in a delegation prompt — always inline the full literal content.
-202: - Never trust a subagent's success report. Verify every write with the architect's own read/glob before reporting success to the user.
-203: - Prefer full-content write over surgical edit when creating or rewriting files. After any edit, re-read the file to confirm original content was preserved.
-204: - Scratch/tmp files a subagent writes for itself (wip/, /tmp/opencode, or the workspace) MUST be uid-prefixed (e.g., `scratch_<flow>_<uuid4>/` or `<short-uuid>_name.py`) so concurrent agents never collide or overwrite each other's working files.
-205: - The build agent AND the architect must watch delegated subagents for stuck states — repeated identical failures, self-retry loops, no progress across delegations, or step-limit exhaustion — and intervene immediately: stop the loop, re-issue a smaller delegation, or escalate to the architect for a revised plan; never let a stuck subagent burn budget in a self-correction loop.
-206: - Researcher reports must back every factual claim with verbatim evidence (file:line) and must answer UNKNOWN rather than guess. A report that defers its own deliverables (e.g. ends with "next steps" or promises further reading) is a failed delegation — re-issue immediately.
-207: - Before finalizing, every agent must re-read the files it cites. A cited line number that does not exist in the file, or a detail (e.g. "no trailing newline") contradicted by the actual bytes, is a failed deliverable.
-208: - Delegation traffic (architect ⇄ specialist) uses the JSON envelopes in `AGENTS.md` § "Delegation JSON envelope": a specialist's final message is exactly one `Result` object. Prose, fenced prose, or "next steps" outside the envelope is a failed delegation — the architect re-issues it as a `Directive` with `iteration` incremented.
+- Subagents have fully isolated context: they cannot see earlier conversation turns. Never reference prior-turn content in a delegation prompt — always inline the full literal content.
+- Never trust a subagent's success report. Verify every write with the architect's own read/glob before reporting success to the user.
+- Prefer full-content write over surgical edit when creating or rewriting files. After any edit, re-read the file to confirm original content was preserved.
+- Scratch/tmp files a subagent writes for itself (wip/, /tmp/opencode, or the workspace) MUST be uid-prefixed (e.g., `scratch_<flow>_<uuid4>/` or `<short-uuid>_name.py`) so concurrent agents never collide or overwrite each other's working files.
+- The build agent AND the architect must watch delegated subagents for stuck states — repeated identical failures, self-retry loops, no progress across delegations, or step-limit exhaustion — and intervene immediately: stop the loop, re-issue a smaller delegation, or escalate to the architect for a revised plan; never let a stuck subagent burn budget in a self-correction loop.
+- Researcher reports must back every factual claim with verbatim evidence (file:line) and must answer UNKNOWN rather than guess. A report that defers its own deliverables (e.g. ends with "next steps" or promises further reading) is a failed delegation — re-issue immediately.
+- Before finalizing, every agent must re-read the files it cites. A cited line number that does not exist in the file, or a detail (e.g. "no trailing newline") contradicted by the actual bytes, is a failed deliverable.
+- Delegation traffic (architect ⇄ specialist) uses the JSON envelopes in `AGENTS.md` § "Delegation JSON envelope": a specialist's final message is exactly one `Result` object. Prose, fenced prose, or "next steps" outside the envelope is a failed delegation — the architect re-issues it as a `Directive` with `iteration` incremented.
 
 ## Verification Protocol
 

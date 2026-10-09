@@ -83,6 +83,7 @@ else
             # and the prefix bifrost routes on ("{name}*"). A mismatch 404s.
             echo "[auto-startup] starting $name on :$port (ctx=$ctx slots=$par kv=${kv_k:-f16}/${kv_v:-f16} spec=${st:-none})"
             nohup llama-server -m "$model_file" --host 0.0.0.0 --port "$port" \
+                --jinja --chat-template chatml \
                 --ctx-size "$ctx" --alias "$name" --parallel "$par" \
                 ${kv_args[@]+"${kv_args[@]}"} \
                 ${spec_args[@]+"${spec_args[@]}"} \

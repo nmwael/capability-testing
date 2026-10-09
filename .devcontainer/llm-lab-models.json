@@ -1,10 +1,12 @@
 [
+
+  
   {
     "name": "phi-4-mini",
     "provider": "local-phi-4-mini",
     "hf": "microsoft_Phi-4-mini-instruct",
-    "quant": "IQ4_XS",
-    "url": "bartowski/microsoft_Phi-4-mini-instruct-GGUF/resolve/main/microsoft_Phi-4-mini-instruct-IQ4_XS.gguf",
+    "quant": "Q4_K_M",
+    "url": "unsloth/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf",
     "port": 8089,
     "context": 32768,
     "output": 8192,
