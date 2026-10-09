@@ -21,9 +21,9 @@
       "integrity": "sha256:3f63bbee7418dc940d9e5e7ab93ef3049acfe4dba3085b17ee45fe307fdba4e5"
     },
     "ghcr.io/devcontainers/features/docker-in-docker:4": {
-      "version": "4.1.3",
-      "resolved": "ghcr.io/devcontainers/features/docker-in-docker@sha256:fae40f3c8be5a7c3b0db344c1d30341bc2c91ba38d1d5b14cd2ad72e6d65d084",
-      "integrity": "sha256:fae40f3c8be5a7c3b0db344c1d30341bc2c91ba38d1d5b14cd2ad72e6d65d084"
+      "version": "4.1.2",
+      "resolved": "ghcr.io/devcontainers/features/docker-in-docker@sha256:ad3d6d36d95ee7f880f61f98862257f3e70253d3faef09f86af42fb87ee60429",
+      "integrity": "sha256:ad3d6d36d95ee7f880f61f98862257f3e70253d3faef09f86af42fb87ee60429"
     },
     "ghcr.io/devcontainers/features/java:1": {
       "version": "1.8.3",
@@ -31,9 +31,9 @@
       "integrity": "sha256:61a839211feda1e2a1f10646648a948e733e4d98d770f3a4b6698a3c5fc92abe"
     },
     "ghcr.io/devcontainers/features/node:2": {
-      "version": "2.1.1",
-      "resolved": "ghcr.io/devcontainers/features/node@sha256:2a19d3b0b3879437637cfd292eb29fee0afcfbe6364e33db9afc4f80c5c1f956",
-      "integrity": "sha256:2a19d3b0b3879437637cfd292eb29fee0afcfbe6364e33db9afc4f80c5c1f956"
+      "version": "2.1.0",
+      "resolved": "ghcr.io/devcontainers/features/node@sha256:586c9a6f7dd40bd3ba2cd41e7f2f88dcc31fbe5d1442afcbf07ffbc66b686857",
+      "integrity": "sha256:586c9a6f7dd40bd3ba2cd41e7f2f88dcc31fbe5d1442afcbf07ffbc66b686857"
     },
     "ghcr.io/nmwael/agentic-devcontainer-feature/bifrost-gateway:1.1.3": {
       "version": "1.1.3",
@@ -50,20 +50,20 @@
       "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/llama-server@sha256:b4b11bb1a13fd1f8b82600dec315d39fc5825ffe745c3d3030cd915824e88b76",
       "integrity": "sha256:b4b11bb1a13fd1f8b82600dec315d39fc5825ffe745c3d3030cd915824e88b76"
     },
-    "ghcr.io/nmwael/agentic-devcontainer-feature/models:1.6.0": {
-      "version": "1.6.0",
-      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:c7f9d95806891aabd71efe2f20d82f1df4d9e6fdea5a2737158afd9eb670b79d",
-      "integrity": "sha256:c7f9d95806891aabd71efe2f20d82f1df4d9e6fdea5a2737158afd9eb670b79d"
-    },
-    "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.3.0": {
-      "version": "1.3.0",
-      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents@sha256:a56bf27e2dad029cf74abec31c200c74e5d5ab50ea849af773c017b0b510134c",
-      "integrity": "sha256:a56bf27e2dad029cf74abec31c200c74e5d5ab50ea849af773c017b0b510134c"
-    },
     "ghcr.io/tailscale/codespace/tailscale:1.0.8": {
       "version": "1.0.8",
       "resolved": "ghcr.io/tailscale/codespace/tailscale@sha256:fa5ce7ca298e7ab95842fef99e107a01b090b8ca8a687789220f3f3c887ccdb2",
       "integrity": "sha256:fa5ce7ca298e7ab95842fef99e107a01b090b8ca8a687789220f3f3c887ccdb2"
+    },
+    "ghcr.io/nmwael/agentic-devcontainer-feature/models:1.6.0": {
+      "version": "1.6.0",
+      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:6650eb596f80268ed4fd8850874ee8699d350b6995d140dc424e1648bd1ca2fd",
+      "integrity": "sha256:6650eb596f80268ed4fd8850874ee8699d350b6995d140dc424e1648bd1ca2fd"
+    },
+    "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.3.0": {
+      "version": "1.3.0",
+      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents@sha256:2f935305193db71e538e018a9b90a446728af24ef25e1691e93a79856f4f0611",
+      "integrity": "sha256:2f935305193db71e538e018a9b90a446728af24ef25e1691e93a79856f4f0611"
     }
   }
 }
