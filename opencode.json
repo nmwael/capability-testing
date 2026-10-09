@@ -61,67 +61,29 @@
       }
     }
   },
-"agent": {
+  "agent": {
     "architect": {
-      "description": "Plans work, delegates to specialists, coordinates dependencies, and integrates results.",
-      "model": "local-phi-4-mini/phi-4-mini-s0",
-      "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "todowrite": "allow",
-        "question": "allow"
-          }
+      "model": "local-phi-4-mini/phi-4-mini-s0"
     },
     "researcher": {
-      "model": "local-phi-4-mini/phi-4-mini-s0",
-      "permission": {
-        "read": "allow",
-        "webfetch": "allow",
-        "websearch": "allow"
-      }
+      "model": "local-phi-4-mini/phi-4-mini-s0"
     },
     "reviewer": {
-      "model": "local-phi-4-mini/phi-4-mini-s0",
-      "permission": {
-        "read": "allow",
-        "lsp": "allow"
-      }
+      "model": "local-phi-4-mini/phi-4-mini-s0"
     },
     "build": {
-      "model": "local-phi-4-mini/phi-4-mini-s0",
-      "permission": {
-        "read": "allow",
-        "bash": "ask"
-      }
+      "model": "local-phi-4-mini/phi-4-mini-s0"
     },
     "ui": {
-      "model": "local-phi-4-mini/phi-4-mini-s0",
-      "permission": {
-        "read": "allow",
-        "edit": "allow"
-      }
+      "model": "local-phi-4-mini/phi-4-mini-s0"
     },
     "artist": {
-      "model": "local-phi-4-mini/phi-4-mini-s0",
-      "permission": {
-        "read": "allow",
-        "webfetch": "allow"
-      }
+      "model": "local-phi-4-mini/phi-4-mini-s0"
     },
     "coder": {
-      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0",
-      "permission": {
-        "read": "allow",
-        "edit": "allow",
-        "bash": "ask",
-        "glob": "allow",
-        "grep": "allow",
-        "lsp": "allow"
-      }
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0"
     }
-  }
-  ,
+  },
   "enabled_providers": [
     "local-phi-4-mini",
     "local-qwen3.5-9b-mtp",
