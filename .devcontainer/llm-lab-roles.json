@@ -5,6 +5,5 @@
   "build": {"model": "qwen3-8b", "slot": 0},
   "ui": {"model": "qwen3-8b", "slot": 0},
   "artist": {"model": "qwen3-8b", "slot": 0},
-  "ai-researcher": {"model": "qwen3-8b", "slot": 0},
   "coder": {"model": "qwen3-8b", "slot": 0}
 }

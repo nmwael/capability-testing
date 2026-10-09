@@ -35,7 +35,7 @@ frontend/ # Vite React TS, features/billing, features/invoicing, dep-cruiser, AP
 
 The box runs the local `q` profile (from agentic-code-box):
 
-- **qwen3-8b** (Q4_K_M) — llama-server on :8089, context 16384, slot 0; serves architect, researcher, reviewer, build, ui, artist, ai-researcher
+- **qwen3-8b** (Q4_K_M) — llama-server on :8089, context 16384, slot 0; serves architect, researcher, reviewer, build, ui, artist
 - **qwen2.5-coder-7b** (Q4_K_M) — llama-server on :8090, context 8192, slot 0; serves the coder role
 - Expect ~9 GiB weights / ~10.9 GiB VRAM — a >=12 GiB GPU is required
 - Routing: llama-server -> bifrost gateway :8082 -> opencode :4096

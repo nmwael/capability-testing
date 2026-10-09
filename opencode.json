@@ -80,9 +80,6 @@
     "artist": {
       "model": "local-qwen3-8b/qwen3-8b-s0"
     },
-    "ai-researcher": {
-      "model": "local-qwen3-8b/qwen3-8b-s0"
-    },
     "coder": {
       "model": "local-qwen3-8b/qwen3-8b-s0"
     }
