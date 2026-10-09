@@ -52,8 +52,8 @@
     },
     "ghcr.io/nmwael/agentic-devcontainer-feature/models:1.5.0": {
       "version": "1.5.0",
-      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:a1fdfad53a5a3f9ab0b66cd51f7de6459abbe148918c8b8a0b68545005d0221e",
-      "integrity": "sha256:a1fdfad53a5a3f9ab0b66cd51f7de6459abbe148918c8b8a0b68545005d0221e"
+      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:6650eb596f80268ed4fd8850874ee8699d350b6995d140dc424e1648bd1ca2fd",
+      "integrity": "sha256:6650eb596f80268ed4fd8850874ee8699d350b6995d140dc424e1648bd1ca2fd"
     },
     "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.2.3": {
       "version": "1.2.3",
