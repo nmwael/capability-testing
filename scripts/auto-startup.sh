@@ -115,6 +115,43 @@ else
     done
 fi
 
+# --- Self-heal bifrost routing from the manifest ------------------------------
+# bifrost bakes routing at build time; if it was materialized against a
+# cloud/empty stack.json it keeps the legacy single-upstream catch-all and every
+# model id (e.g. the coder's "<name>-s0") is served by the orchestrator's
+# upstream. Re-resolve the manifest and re-materialize config/bifrost.json on
+# every start so model-id routing cannot drift from the manifest.
+if [ -f "$STACK_JSON" ]; then
+    _cloud="$(jq -r '.cloud // false' "$STACK_JSON" 2>/dev/null || echo false)"
+    _nmodels="$(jq -r '.models | length' "$STACK_JSON" 2>/dev/null || echo 0)"
+    if [ "$_cloud" = "true" ] || [ "${_nmodels:-0}" = "0" ]; then
+        if [ -f "$ROOT/.devcontainer/llm-lab-models.json" ] && [ -x /usr/local/share/llm-lab/models/resolve-stack.sh ]; then
+            echo "[auto-startup] stack.json has no local models — re-resolving from workspace profile"
+            sh /usr/local/share/llm-lab/models/resolve-stack.sh "$ROOT" || \
+                echo "[auto-startup] WARNING: resolve-stack.sh failed — routing may be stale"
+        else
+            echo "[auto-startup] WARNING: stack.json is cloud/empty and no workspace profile to resolve — routing may be stale"
+        fi
+    fi
+fi
+
+BIFROST_CFG_SCRIPT=/usr/local/share/llm-lab/bifrost/write-bifrost-config.sh
+BIFROST_CFG=/usr/local/share/llm-lab/bifrost/config/bifrost.json
+if [ -x "$BIFROST_CFG_SCRIPT" ] && [ -f "$STACK_JSON" ] && [ "$(jq -r '.cloud // false' "$STACK_JSON" 2>/dev/null || echo false)" != "true" ]; then
+    _bf_before="$(sha256sum "$BIFROST_CFG" 2>/dev/null | cut -d' ' -f1 || true)"
+    "$BIFROST_CFG_SCRIPT" "$STACK_JSON" "$BIFROST_CFG" 8089 >/dev/null || \
+        echo "[auto-startup] WARNING: bifrost config refresh failed — routing may be stale"
+    _bf_after="$(sha256sum "$BIFROST_CFG" 2>/dev/null | cut -d' ' -f1 || true)"
+    if [ -n "$_bf_before" ] && [ "$_bf_before" != "$_bf_after" ] && command -v pgrep >/dev/null 2>&1; then
+        _bf_pids="$(pgrep -f 'bifrost/bin.js' || true)"
+        if [ -n "$_bf_pids" ]; then
+            echo "[auto-startup] bifrost routing changed — restarting gateway"
+            for _p in $_bf_pids; do kill "$_p" 2>/dev/null || true; done
+            sleep 2
+        fi
+    fi
+fi
+
 # --- bifrost gateway: routes each model id to its upstream by name prefix -----
 if [ -f "$STACK_JSON" ]; then
     BIFROST_PORT="$(jq -r '.bifrost_port // 8082' "$STACK_JSON")"
