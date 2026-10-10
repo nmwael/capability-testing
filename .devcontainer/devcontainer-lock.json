@@ -10,10 +10,10 @@
       "resolved": "ghcr.io/devcontainers-extra/features/devcontainers-cli@sha256:855f5c6a10d1d1353fc3127216171653527f2dadaa50bee3ef4c55a261e19749",
       "integrity": "sha256:855f5c6a10d1d1353fc3127216171653527f2dadaa50bee3ef4c55a261e19749"
     },
-    "ghcr.io/devcontainers-extra/features/opencode:1.0.0": {
-      "version": "1.0.0",
-      "resolved": "ghcr.io/devcontainers-extra/features/opencode@sha256:7c15617cc9e501bc218097adc4910a00f81ed52fc5a5eef463aa1cc01317f9ba",
-      "integrity": "sha256:7c15617cc9e501bc218097adc4910a00f81ed52fc5a5eef463aa1cc01317f9ba"
+    "ghcr.io/devcontainers-extra/features/npm-package:1.0.4": {
+      "version": "1.0.4",
+      "resolved": "ghcr.io/devcontainers-extra/features/npm-package@sha256:ee315c064588643e1178eec33275efa55739f43761fc965b95a5d05eed70c76d",
+      "integrity": "sha256:ee315c064588643e1178eec33275efa55739f43761fc965b95a5d05eed70c76d"
     },
     "ghcr.io/devcontainers/features/common-utils:2": {
       "version": "2.7.0",
