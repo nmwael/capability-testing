@@ -90,6 +90,7 @@
     "opencode"
   ],
   "subagent_depth": 2,
+  "permission": "allow",
   "server": {
     "port": 4096
   },

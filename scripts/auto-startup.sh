@@ -42,6 +42,7 @@ else
         kv_v="$(jq -r ".models[$i].kv_cache_type_v // empty" "$STACK_JSON")"
         st="$(jq -r ".models[$i].spec_type // empty" "$STACK_JSON")"
         sn="$(jq -r ".models[$i].spec_draft_n_max // empty" "$STACK_JSON")"
+        ct="$(jq -r ".models[$i].chat_template // empty" "$STACK_JSON")"
 
         # KV cache dominates VRAM at long context (measured ~0.5 MiB/token at f16),
         # so it is opt-in per model rather than hardcoded.
@@ -61,6 +62,9 @@ else
             echo "WARNING: unsupported spec_type '$st' on '$name' — ignoring" >&2
             ;;
         esac
+
+        ct_args=()
+        [ -n "$ct" ] && ct_args+=(--chat-template "$ct")
 
         # Same glob the feature's fetcher names files for: *<hf / -> _>*<quant>*.gguf
         slug="$(printf '%s' "$hf" | tr '/' '_')"
@@ -83,10 +87,11 @@ else
             # and the prefix bifrost routes on ("{name}*"). A mismatch 404s.
             echo "[auto-startup] starting $name on :$port (ctx=$ctx slots=$par kv=${kv_k:-f16}/${kv_v:-f16} spec=${st:-none})"
             nohup llama-server -m "$model_file" --host 0.0.0.0 --port "$port" \
-                --jinja --chat-template chatml \
+                --jinja \
                 --ctx-size "$ctx" --alias "$name" --parallel "$par" \
                 ${kv_args[@]+"${kv_args[@]}"} \
                 ${spec_args[@]+"${spec_args[@]}"} \
+                ${ct_args[@]+"${ct_args[@]}"} \
                 >"/tmp/llama-server-$name.log" 2>&1 &
 
             ready=false

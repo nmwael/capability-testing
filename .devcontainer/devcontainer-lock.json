@@ -55,10 +55,10 @@
       "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:6650eb596f80268ed4fd8850874ee8699d350b6995d140dc424e1648bd1ca2fd",
       "integrity": "sha256:6650eb596f80268ed4fd8850874ee8699d350b6995d140dc424e1648bd1ca2fd"
     },
-    "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.2.3": {
-      "version": "1.2.3",
-      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents@sha256:2f935305193db71e538e018a9b90a446728af24ef25e1691e93a79856f4f0611",
-      "integrity": "sha256:2f935305193db71e538e018a9b90a446728af24ef25e1691e93a79856f4f0611"
+    "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.4.0": {
+      "version": "1.4.0",
+      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents@sha256:1d8948f8097cc5d7f4eddaba86f3ee0fbf7d0198884c490f02c0a623f123a847",
+      "integrity": "sha256:1d8948f8097cc5d7f4eddaba86f3ee0fbf7d0198884c490f02c0a623f123a847"
     },
     "ghcr.io/tailscale/codespace/tailscale:1.0.8": {
       "version": "1.0.8",
