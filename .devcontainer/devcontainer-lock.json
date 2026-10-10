@@ -55,10 +55,10 @@
       "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/models@sha256:c7f9d95806891aabd71efe2f20d82f1df4d9e6fdea5a2737158afd9eb670b79d",
       "integrity": "sha256:c7f9d95806891aabd71efe2f20d82f1df4d9e6fdea5a2737158afd9eb670b79d"
     },
-    "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.4.0": {
-      "version": "1.4.0",
-      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents@sha256:1d8948f8097cc5d7f4eddaba86f3ee0fbf7d0198884c490f02c0a623f123a847",
-      "integrity": "sha256:1d8948f8097cc5d7f4eddaba86f3ee0fbf7d0198884c490f02c0a623f123a847"
+    "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents:1.5.0": {
+      "version": "1.5.0",
+      "resolved": "ghcr.io/nmwael/agentic-devcontainer-feature/opencode-agents@sha256:a1cdf819d2a46c75b20b181615969c6a3c7254a918538e20cabe16e4e44f2a87",
+      "integrity": "sha256:a1cdf819d2a46c75b20b181615969c6a3c7254a918538e20cabe16e4e44f2a87"
     },
     "ghcr.io/tailscale/codespace/tailscale:1.0.8": {
       "version": "1.0.8",

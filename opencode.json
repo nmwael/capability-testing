@@ -63,25 +63,39 @@
   },
   "agent": {
     "architect": {
-      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+      "temperature": 0.1,
+      "steps": 30
     },
     "researcher": {
-      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+      "temperature": 0.1,
+      "steps": 20
     },
     "reviewer": {
-      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+      "temperature": 0.1,
+      "steps": 15
     },
     "build": {
-      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+      "temperature": 0.2,
+      "steps": 40
     },
     "ui": {
-      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+      "temperature": 0.2,
+      "steps": 20
     },
     "artist": {
-      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+      "temperature": 0.3,
+      "steps": 15
     },
     "coder": {
-      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0"
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0",
+      "temperature": 0.1,
+      "steps": 25
     }
   },
   "enabled_providers": [
