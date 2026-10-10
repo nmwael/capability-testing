@@ -11,9 +11,9 @@ set -euo pipefail
 
 PROFILE="${1:-}"
 case "$PROFILE" in
-cap | q) ;;
+cap | q | gemma) ;;
 *)
-    echo "usage: bash scripts/use-profile.sh <cap|q>" >&2
+    echo "usage: bash scripts/use-profile.sh <cap|q|gemma>" >&2
     exit 1
     ;;
 esac

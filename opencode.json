@@ -1,11 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "local-phi-4-mini/phi-4-mini-s0",
-  "small_model": "local-phi-4-mini/phi-4-mini-s0",
+  "model": "local-gemma-4-e4b/gemma-4-e4b-s0",
+  "small_model": "local-gemma-4-e4b/gemma-4-e4b-s0",
   "provider": {
-    "local-phi-4-mini": {
+    "local-gemma-4-e4b": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Bifrost (local phi-4-mini)",
+      "name": "Bifrost (local gemma-4-e4b)",
       "options": {
         "baseURL": "http://127.0.0.1:8082/v1",
         "headers": {
@@ -13,17 +13,17 @@
         }
       },
       "models": {
-        "phi-4-mini": {
-          "name": "phi-4-mini (unpinned fallback)",
+        "gemma-4-e4b": {
+          "name": "gemma-4-e4b (unpinned fallback)",
           "limit": {
-            "context": 32768,
+            "context": 65536,
             "output": 8192
           }
         },
-        "phi-4-mini-s0": {
-          "name": "phi-4-mini - Slot 0",
+        "gemma-4-e4b-s0": {
+          "name": "gemma-4-e4b - Slot 0",
           "limit": {
-            "context": 32768,
+            "context": 65536,
             "output": 8192
           }
         }
@@ -63,29 +63,29 @@
   },
   "agent": {
     "architect": {
-      "model": "local-phi-4-mini/phi-4-mini-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
     },
     "researcher": {
-      "model": "local-phi-4-mini/phi-4-mini-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
     },
     "reviewer": {
-      "model": "local-phi-4-mini/phi-4-mini-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
     },
     "build": {
-      "model": "local-phi-4-mini/phi-4-mini-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
     },
     "ui": {
-      "model": "local-phi-4-mini/phi-4-mini-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
     },
     "artist": {
-      "model": "local-phi-4-mini/phi-4-mini-s0"
+      "model": "local-gemma-4-e4b/gemma-4-e4b-s0"
     },
     "coder": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0"
     }
   },
   "enabled_providers": [
-    "local-phi-4-mini",
+    "local-gemma-4-e4b",
     "local-qwen3.5-9b-mtp",
     "opencode"
   ],
@@ -94,6 +94,6 @@
     "port": 4096
   },
   "limit": {
-    "context": 32768
+    "context": 65536
   }
 }

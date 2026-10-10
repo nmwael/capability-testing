@@ -31,14 +31,14 @@ frontend/ # Vite React TS, features/billing, features/invoicing, dep-cruiser, AP
 * `invoice.list` active, owner invoicing
 * `bulk-csv-export` retired, restore_after 2027-Q1, tracked_by PROJ-889
 
-## Local LLM stack (profile q)
+## Local LLM stack (profile gemma)
 
-The box runs the local `q` profile (from agentic-code-box):
+The box runs the local `gemma` profile:
 
-- **qwen3-8b** (Q4_K_M) — llama-server on :8089, context 16384, slot 0; serves architect, researcher, reviewer, build, ui, artist
-- **qwen2.5-coder-7b** (Q4_K_M) — llama-server on :8090, context 8192, slot 0; serves the coder role
-- Expect ~9 GiB weights / ~10.9 GiB VRAM — a >=12 GiB GPU is required
+- **gemma-4-e4b** (Q4_K_M) — llama-server on :8089, context 65536, slot 0; serves architect, researcher, reviewer, build, ui, artist
+- **qwen3.5-9b-mtp** (Q4_K_M, MTP) — llama-server on :8090, context 32768, slot 0; serves the coder role
 - Routing: llama-server -> bifrost gateway :8082 -> opencode :4096
+- Switch profiles with `bash scripts/use-profile.sh gemma`, then `bash scripts/auto-startup.sh`
 
 Lifecycle:
 - `bash scripts/post-create.sh` — verify the box and scaffold the agent payload (postCreateCommand)
