@@ -21,6 +21,42 @@ OPENCODE_PORT="${OPENCODE_PORT:-4096}"
 
 echo "[auto-startup] workspace=$ROOT models=$MODELS_DIR"
 
+# --- Tailscale (official feature: tailscaled + CLI), userspace networking ---
+# The feature bakes the binaries; the daemon must be started per container
+# boot (build-time runs don't persist). Root daemon + world socket dir so the
+# vscode user's CLI can talk to it. Joins the tailnet automatically when
+# TS_AUTHKEY is set (containerEnv) — "join the VPN" with zero manual steps.
+if command -v tailscaled >/dev/null 2>&1 && ! pgrep -x tailscaled >/dev/null 2>&1; then
+    echo "[auto-startup] starting tailscaled (userspace networking)"
+    sudo mkdir -p /var/run/tailscale /var/lib/tailscale 2>/dev/null
+    sudo chown "$(id -u):$(id -g)" /var/run/tailscale 2>/dev/null
+    # shellcheck disable=SC2024 # redirect as vscode to /tmp is intended (sticky world-writable)
+    sudo nohup tailscaled -tun userspace-networking \
+        -state /var/lib/tailscale/tailscaled.state \
+        -socket /var/run/tailscale/tailscaled.sock \
+        >/tmp/tailscaled.log 2>&1 &
+    sleep 2
+fi
+if command -v tailscale >/dev/null 2>&1; then
+    if sudo timeout 5 tailscale status >/dev/null 2>&1; then
+        echo "[auto-startup] tailscale already up"
+    elif [ -n "${TS_AUTHKEY:-}" ]; then
+        # Stable tailnet node name: TS_HOSTNAME comes from containerEnv (host
+        # override via ${localEnv:TS_HOSTNAME}, else the workspace-folder
+        # basename). Engines without nested substitution can leave a literal
+        # ${...} here, so fall back to this workspace's folder name.
+        _ws="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+        case "${TS_HOSTNAME:-}" in
+        ""|*'${'*) TS_HOSTNAME="$(basename "$_ws")" ;;
+        esac
+        sudo tailscale up --authkey="$TS_AUTHKEY" --hostname="$TS_HOSTNAME" \
+            --accept-routes --accept-dns --operator="$(id -un)" 2>/dev/null ||
+            echo "[auto-startup] WARNING: tailscale up (authkey) failed"
+    else
+        echo "[auto-startup] TS_AUTHKEY unset — skipping tailscale up (run 'tailscale up' for interactive login)"
+    fi
+fi
+
 if [ -n "${SKIP_LLAMA_START:-}" ]; then
     echo "[auto-startup] SKIP_LLAMA_START set — skipping llama-server"
 elif [ ! -f "$STACK_JSON" ]; then

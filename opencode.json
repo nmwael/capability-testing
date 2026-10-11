@@ -103,7 +103,7 @@
     "local-qwen3.5-9b-mtp",
     "opencode"
   ],
-  "subagent_depth": 2,
+  "subagent_depth": 3,
   "permission": "allow",
   "server": {
     "port": 4096
