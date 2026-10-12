@@ -2,6 +2,9 @@
 description: Reviewing code for bugs, style, security issues, and suggesting improvements
 mode: subagent
 permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
   - action: execute
     resource: "*"
     effect: deny

@@ -40,17 +40,23 @@ The architect inlines the FULL drafted plan in your `context`. You see nothing e
    node scripts/verify-plan-claims.mjs --plan wip/fact-check/plan.md
    ```
 
-   The checker validates npm specs (registry.npmjs.org), Maven coordinates (repo1.maven.org), repo paths (working tree), and cross-checks `library/architect/stack-coordinates.mini.md`. It exits `1` when any claim is `MISSING`, `REJECTED`, or `CONFLICT`. If `wip/` does not exist, `mkdir -p` it. Never leave the scratch file behind in a tracked path.
+   The checker validates npm specs (registry.npmjs.org), Maven coordinates (repo1.maven.org), repo paths (working tree), bare package names written as dependencies, the executability of every `- Check:` command, the plan's output-grammar (BNF) shape, and cross-checks `library/architect/stack-coordinates.mini.md`. It exits `1` when any claim is `MISSING`, `REJECTED`, `CONFLICT`, or `INSUFFICIENT`. Read `summary.verdict`, `summary.substantive` and the per-claim statuses — a `PASS` with a low substantive count is a warning about vagueness, not a clean bill of health. If `wip/` does not exist, `mkdir -p` it. Never leave the scratch file behind in a tracked path.
 
-2. **Interpret every blocking claim** and give it a finding. `MISSING`/`REJECTED`/`CONFLICT` from the checker is `high`. `WARN` (e.g. an imported module that is not among the plan's declared dependencies, or a path not yet on disk) is `medium` unless you can show it is benign.
+2. **Interpret every blocking claim** and give it a finding. `MISSING`/`REJECTED`/`CONFLICT`/`INSUFFICIENT` from the checker is `high`. `WARN` (e.g. an imported module that is not among the plan's declared dependencies, or a path not yet on disk) is `medium` unless you can show it is benign. Every `UNKNOWN` claim must appear in your findings as well — in particular a bare package name the plan pins no version for: `high` when the plan will depend on or import that name, `medium` otherwise.
+   - `INSUFFICIENT` means the plan named nothing checkable. That is a `high` finding in its own right ("an unauditable plan is not a clean plan"), never a pass.
+   - Likewise, fewer than three substantive claims means the plan is too vague to audit: report it as `high`.
 
-3. **Check what the script cannot.** Read the referent for anything the plan names and the checker did not cover:
-   - Read `library/architect/stack-coordinates.mini.md` and flag any plan claim that contradicts it (wrong version, a coordinate the reference forbids, a path outside the real Maven modules).
-   - Read the repo files the plan says it will modify and confirm they exist and contain what the plan claims (the checker only proves a path exists, not that the plan's description of it is true).
-   - Flag API/symbol claims you cannot substantiate (`read`/`grep` the repo; `webfetch` the package docs if needed) as `high` when they are load-bearing, otherwise `medium`. Write `UNKNOWN` rather than assuming.
-   - Flag role/scope defects: an implementation verb (create/add/write/update) assigned to `researcher`, a subtask bundling two objectives, a missing trailing `reviewer` gate, or a subtask with no copy-pasteable verification command.
+3. **Check what the script cannot — this checklist is MANDATORY.** The script proves existence; it cannot prove that the plan *means* what it says. Work every item below and put a finding in your Result for each one that is not satisfied. A satisfied item needs no finding, but your `summary` must list the items you worked, so the reader can see the audit happened:
+   - (a) **Shape (BNF).** Report the grammar defects the checker found — a subtask missing `- Files:`/`- Change:`/`- Check:`/`- Role:`, a `Role:` outside `coder | researcher | reviewer | ui | artist | fact-checker`, a turn that does not end with `I am waiting for approval` — and any you can see yourself: a subtask bundling two objectives, or a plan with no trailing `reviewer` gate. Grammar defects are `high`; the missing trailing `wait` line is `medium`.
+   - (b) **Reference.** Read `library/architect/stack-coordinates.mini.md` and flag any plan claim that contradicts it (wrong version, a coordinate the reference forbids, a path outside the real Maven modules).
+   - (c) **Modified files.** For every path the plan says it will *modify*, `read` it and confirm it exists and contains what the plan claims (the checker only proves a path exists, not that the plan's description of it is true). A claimed modification the real file contradicts is `high`.
+   - (d) **Commands.** For every `- Check:` command, confirm it could actually run here: the program exists, its file/module arguments exist, and its working directory makes sense (e.g. `mvn` needs a `pom.xml` in the directory it runs from). A check that cannot pass is `high` — a subtask whose check cannot run is not implemented.
+   - (e) **Roles.** Implementation verbs (create/add/write/replace/update/build) belong to `coder`/`ui`/`artist`; verification-only subtasks belong to `reviewer`/`fact-checker`. Anything else — a `researcher` told to build, a `ui` subtask whose only work is running a check — is `medium`, or `high` if it would put generated code in a reading role.
+   - (f) **Dependencies.** Every package the plan uses or imports must be one of the plan's declared dependencies (a `dependencies`/`devDependencies` entry, or a `Files:` subtask that adds it). An import no subtask declares is `medium`.
+   - (g) **Success criteria.** A `- Check:` must be an executable command or an observable output, never a judgement ("build succeeds", "looks right", "PLAN_IS_CLEAR"). A judgement is `medium`.
+   - (h) **Symbols and APIs.** Any API, prop or symbol the plan names, checked against the package's types/docs (`webfetch` if needed). Unsubstantiated and load-bearing is `high`; write `UNKNOWN` rather than assuming.
 
-4. **Report.** Every finding cites its basis: `path:line`, a URL, or the exact checker line. No uncited claim.
+4. **Report.** Every finding cites its basis: `path:line`, a URL, or the exact checker line. No uncited claim. Findings that are only a restatement of the checker's own lines, with no item from step 3, are an INVALID fact-check and will be rejected. Do not report "0 blocking" unless you actually worked items (a)–(h) and say so in `summary`.
 
 ## Output format
 
@@ -59,13 +65,19 @@ Your final message MUST be exactly one raw JSON object — the `Result` envelope
 Clean plan (nothing blocking found — a passing fact-check):
 
 ```json
-{"task_id":"F1","role":"fact-checker","status":"done","summary":"12 claims checked; 0 blocking. Versions and paths all substantiate.","findings":[{"severity":"low","claim":"frontend/index.html","path":"frontend/index.html","issue":"not yet on disk","suggestion":"confirm the plan intends to create it"}]}
+{"task_id":"F1","role":"fact-checker","status":"done","summary":"12 claims, 11 substantive; 0 blocking. Worked (a)-(h): (a) shape OK — Files/Change/Check/Role on every subtask and the trailing wait line present; (b) reference agrees; (c) read frontend/package.json and backend/invoicing/pom.xml, both contain what the plan claims; (d) both Check commands can run as written; (e) roles are coder only; (f) no import outside the declared deps; (g) every Check is a command; (h) no API or symbol claims.","findings":[{"severity":"low","claim":"frontend/index.html","path":"frontend/index.html","issue":"not yet on disk","suggestion":"confirm the plan intends to create it"}]}
 ```
 
 Plan with blocking defects:
 
 ```json
 {"task_id":"F1","role":"fact-checker","status":"done","summary":"14 claims checked; 2 blocking. Invented package and a forbidden KIE coordinate.","findings":[{"severity":"high","claim":"@types/vitejs/plugin-react@6.1.2","source":"scripts/verify-plan-claims.mjs","issue":"MISSING — no such npm package","suggestion":"delete the claim; @vitejs/plugin-react ships its own types"},{"severity":"high","claim":"org.kie:kie-api:7.74.1.Final","source":"library/architect/stack-coordinates.mini.md","issue":"CONFLICT — the reference forbids the stale KIE 7 line; kie-api is BOM-managed","suggestion":"drop the version; let org.drools:drools-bom manage it"}]}
+```
+
+Vague plan (`INSUFFICIENT` — nothing substantive to check, so nothing to pass). Note that each finding comes from a different checklist item, not from the checker's arithmetic:
+
+```json
+{"task_id":"F1","role":"fact-checker","status":"done","summary":"INSUFFICIENT reported by the checker and I agree: no version, path or command in the plan is pinned. Worked (a)-(h): (a) shape OK; (d) `mvn -q -pl backend -am validate` cannot run — there is no pom.xml at the repo root; (f) `@xyflow/react` is imported but no subtask declares it; (g) `bats test-frontend.bats` names a file no subtask creates.","findings":[{"severity":"high","claim":"the plan as a whole","source":"scripts/verify-plan-claims.mjs","issue":"INSUFFICIENT — no version, coordinate, path or command is pinned; the plan cannot be audited","suggestion":"re-plan with exact versions, paths and commands, then re-submit"},{"severity":"high","claim":"test-frontend.bats","source":"scripts/verify-plan-claims.mjs","issue":"MISSING — named in a Check line, on no Files line, and not on disk","suggestion":"drop the check or add a subtask that creates the file"},{"severity":"high","claim":"@xyflow/react","source":"from @xyflow/react (unquoted import)","issue":"WARN/UNKNOWN — imported but declared by no subtask","suggestion":"add it to frontend/package.json with a pinned version"},{"severity":"medium","claim":"React-Flow","source":"- Change: Set up React Flow dependencies (React, React-Flow, etc.)","issue":"UNKNOWN — not a valid npm name (uppercase); the intended package is react-flow or @xyflow/react","suggestion":"write the exact package name"}]}
 ```
 
 `status` is `done` when you completed the audit — even if you found defects (defects live in `findings`, not in `status`). Use `blocked` ONLY when you genuinely cannot run the check (e.g. the plan was not inlined, or the checker is missing):
@@ -76,7 +88,7 @@ Plan with blocking defects:
 
 ## Severity (binding)
 
-- `high` — a claim that is false, unverifiable and load-bearing, or explicitly forbidden. A plan may NOT be approved with an unresolved `high`.
+- `high` — a claim that is false, unverifiable and load-bearing, or explicitly forbidden. A plan may NOT be approved with an unresolved `high`. A checker `MISSING`/`REJECTED`/`CONFLICT`/`INSUFFICIENT`, an unchecked step-3 item that fails, and a plan naming fewer than three substantive claims are all `high`.
 - `medium` — a claim that is probably wrong or incomplete but not fatal.
 - `low` — hygiene: an unstaged path, a missing courtesy note.
 
@@ -87,6 +99,8 @@ Plan with blocking defects:
 - You cannot approve a plan you did not check against a source — an unverified `OK` is a failure.
 - You cannot ground a finding in anything but `path:line`, a URL, or raw checker output.
 - You cannot invent a claim the plan does not make; audit what is written.
+- You cannot return a checker transcript as your audit: if no finding came from step 3, the Result is invalid.
+- You cannot call a plan clean when the checker reported `INSUFFICIENT`, or when you skipped any checklist item (a)–(h).
 
 ## Bounded iteration
 

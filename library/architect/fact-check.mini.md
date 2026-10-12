@@ -14,16 +14,20 @@ be auditable on these axes:
 |---|---|---|
 | npm package + version | `@xyflow/react@12.12.0`, `"vite": "8.3.4"` | `registry.npmjs.org` |
 | npm name shape | `@types/vitejs/plugin-react` (invalid: 2 slashes) | name grammar |
+| Bare package name | `@xyflow/react` named with no version, `React-Flow` | `registry.npmjs.org` |
 | Maven coordinate | `org.drools:drools-bom:10.2.0`, `org.kie:kie-api` | `repo1.maven.org` |
 | Repo path | `backend/invoicing/src/main/resources/rules/penalty.drl` | the working tree |
 | Imported module | `import { ReactFlow } from '@xyflow/react'` | registry + the plan's declared deps |
 | CLI flag / subcommand | `vite --no-quiet --devtools` | the tool's `--help` / docs |
 | API symbol / prop | `<ReactFlow controlled={false}>` | package types / docs |
 | Ground rule | "DRL under `backend/src/**`" | `library/architect/stack-coordinates.mini.md` |
-| Command + expected exit | `mvn -q -pl invoicing -am validate` exits 0 | run it, or cite the module |
+| Command + expected exit | `mvn -q -pl invoicing -am validate` exits 0 | PATH + the working directory it runs from |
+| Plan shape (BNF) | a subtask with no `- Check:` line, a bad `Role:` | the grammar in `.opencode/agents/architect.md` |
 
-The mechanical checker (`scripts/verify-plan-claims.mjs`) covers the first five deterministically. The
-`fact-checker` must cover the rest by reading the referent.
+The mechanical checker (`scripts/verify-plan-claims.mjs`) covers the coordinate, name, path, import,
+command and shape axes deterministically. The `fact-checker` must cover the rest by reading the referent —
+and must cover the checklist in `.opencode/agents/fact-checker.md` step 3 (a)–(h) regardless, because
+existence is not meaning.
 
 ## 2. The source-of-truth ladder
 
@@ -47,12 +51,17 @@ PLAN
 node scripts/verify-plan-claims.mjs --plan wip/fact-check/plan.md
 ```
 
-- Exit `0` = no blocking claim. Exit `1` = at least one `MISSING`, `REJECTED`, or `CONFLICT`.
+- Exit `0` = no blocking claim. Exit `1` = at least one `MISSING`, `REJECTED`, `CONFLICT`, or `INSUFFICIENT`.
 - `--quiet` prints only the JSON payload; `--no-network` skips the registry lookups (use when offline —
   unverifiable claims then report `UNKNOWN`).
-- Statuses: `OK`, `MISSING` (does not exist), `REJECTED` (forbidden by the reference), `CONFLICT`
-  (contradicts the reference), `WARN` (suspicious but not fatal, e.g. an import outside the declared deps),
-  `UNKNOWN` (could not be checked — e.g. offline).
+- Statuses: `OK`, `MISSING` (does not exist / cannot run), `REJECTED` (forbidden by the reference),
+  `CONFLICT` (contradicts the reference), `WARN` (suspicious but not fatal, e.g. an import outside the
+  declared deps), `UNKNOWN` (could not be checked — e.g. offline, or a name pinned to no version),
+  `INSUFFICIENT` (the plan named nothing substantive).
+- `summary.substantive` counts the claims that actually pin the plan down (paths, versions, coordinates,
+  imports, package names) — check-command and shape rows are reported but not counted. Fewer than three
+  substantive claims means the plan is too vague to audit, and `INSUFFICIENT` (zero) is blocking: an
+  unauditable plan is not a clean plan.
 - The checker proves **existence**, not **correctness of use**. `react-flow-renderer` is a real npm package;
   that it is the wrong one for a v12 plan is the `fact-checker`'s judgement, informed by the `WARN`.
 
@@ -66,6 +75,11 @@ node scripts/verify-plan-claims.mjs --plan wip/fact-check/plan.md
 
 The architect may not present a plan carrying an unresolved `high`. If a `high` claim is genuinely
 required, the architect names the human decision it needs instead of silently keeping the claim.
+
+A `Result` whose `findings` are only the checker's own output is **not a fact-check** — the checker proves
+existence, never meaning, so the `fact-checker` must also work the (a)–(h) checklist in its own system
+prompt (shape, reference, modified files, commands, roles, dependencies, success criteria, symbols). A
+plan that pins nothing is `INSUFFICIENT`: the checker fails it, and the finding is `high`, not a pass.
 
 ## 5. The architect → fact-checker Directive
 
@@ -100,3 +114,11 @@ round, increment `iteration`. After two rounds with an open `high`, the architec
 - Vite flags invented by pattern-matching (`--no-quiet`, `--devtools`) — verify against the tool, never infer.
 - A `.drl` under `backend/src/**` — that tree is not a Maven module and is on no classpath.
 - A `frontend/` Vite app with no `index.html` (and no `src/main.tsx`) — `vite build` then has no entry.
+- A package named in prose (`React-Flow`, `React`) — not a valid npm name (uppercase is impossible in npm);
+  the checker reports it `UNKNOWN`, because a name with no version pin is invisible to every version check.
+- A file named in a `- Check:` line that no `- Files:` line creates (`bats test-frontend.bats`) —
+  `MISSING`: the check can never pass, so the subtask is not implemented.
+- `mvn -pl <module>` with no `pom.xml` at the repo root and no `-f <pom>` or leading `cd <dir>` — Maven
+  cannot resolve a project from there (`WARN`), so the claimed "exits 0" is false.
+- A plan that pins no version, coordinate or command at all, so the checker extracts nothing —
+  `INSUFFICIENT`, which blocks. Silence is not cleanliness.
