@@ -135,6 +135,7 @@
       "effect": "allow"
     }
   ],
+  "lsp": true,
   "experimental": {
     "subagent_depth": 2,
     "policies": [

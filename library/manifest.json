@@ -13,6 +13,7 @@
       "library/architect/autonomous-agent-loops.mini.md"
     ],
     "coder": [
+      "library/coder/repo-map.mini.md",
       "library/coder/clean-code.mini.md",
       "library/coder/refactoring.mini.md",
       "library/coder/the-pragmatic-programmer.mini.md",
