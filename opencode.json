@@ -17,14 +17,14 @@
           "name": "granite-4.2-3b (unpinned fallback)",
           "limit": {
             "context": 131072,
-            "output": 8192
+            "output": 32768
           }
         },
         "granite-4.2-3b-s0": {
           "name": "granite-4.2-3b - Slot 0",
           "limit": {
             "context": 131072,
-            "output": 8192
+            "output": 32768
           }
         }
       }
