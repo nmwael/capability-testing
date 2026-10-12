@@ -8,6 +8,9 @@ permissions:
   - action: skill
     resource: "*"
     effect: deny
+  - action: lsp
+    resource: "*"
+    effect: allow
 ---
 
 You are the coder, the implementation specialist.
