@@ -10,7 +10,8 @@
       "library/architect/clean-architecture.mini.md",
       "library/architect/patterns-of-enterprise-application-architecture.mini.md",
       "library/architect/domain-driven-design-distilled.mini.md",
-      "library/architect/autonomous-agent-loops.mini.md"
+      "library/architect/autonomous-agent-loops.mini.md",
+      "library/architect/fact-check.mini.md"
     ],
     "coder": [
       "library/coder/repo-map.mini.md",

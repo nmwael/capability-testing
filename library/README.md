@@ -2,7 +2,7 @@
 
 Condensed reference books organized by agent role.
 
-Books in `architect/`, `coder/`, `researcher/`, `reviewer/` and `release-it.mini.md` are sourced from [ciembor/agent-rules-books](https://github.com/ciembor/agent-rules-books/) (MIT License). `coder/java.mini.md` is an original condensed reference for this repo, grounded in the repo's own code and in Oracle/Quarkus documentation. `architect/autonomous-agent-loops.mini.md` is an original condensed reference grounded in the freeCodeCamp "60 Patterns for Building Autonomous Systems" guide and web sources (Reflexion, Tree-of-Thought, ReAct, CrewAI flows), with repo-specific decision rules for the boxforsine verification-gate loops. `coder/repo-map.mini.md` is an original condensed repo map grounded in this repository's layout and build commands.
+Books in `architect/`, `coder/`, `researcher/`, `reviewer/` and `release-it.mini.md` are sourced from [ciembor/agent-rules-books](https://github.com/ciembor/agent-rules-books/) (MIT License). `coder/java.mini.md` is an original condensed reference for this repo, grounded in the repo's own code and in Oracle/Quarkus documentation. `architect/autonomous-agent-loops.mini.md` is an original condensed reference grounded in the freeCodeCamp "60 Patterns for Building Autonomous Systems" guide and web sources (Reflexion, Tree-of-Thought, ReAct, CrewAI flows), with repo-specific decision rules for the boxforsine verification-gate loops. `coder/repo-map.mini.md` is an original condensed repo map grounded in this repository's layout and build commands. `architect/fact-check.mini.md` is an original playbook for the pre-approval fact-check gate, grounded in this repo's claim taxonomy and the verifier at `scripts/verify-plan-claims.mjs`.
 
 ```
 library/
@@ -29,7 +29,7 @@ library/
 | Role | Books |
 | :--- | :--- |
 | All agents | `release-it.mini.md` |
-| @architect | `architect/clean-architecture.mini.md`, `architect/patterns-of-enterprise-application-architecture.mini.md`, `architect/domain-driven-design-distilled.mini.md`, `architect/autonomous-agent-loops.mini.md` |
+| @architect | `architect/clean-architecture.mini.md`, `architect/patterns-of-enterprise-application-architecture.mini.md`, `architect/domain-driven-design-distilled.mini.md`, `architect/autonomous-agent-loops.mini.md`, `architect/fact-check.mini.md` |
 | @coder | `coder/repo-map.mini.md` (repo map — read first), `coder/clean-code.mini.md`, `coder/refactoring.mini.md`, `coder/the-pragmatic-programmer.mini.md`, `coder/java.mini.md`, `coder/tdd-software.mini.md` |
 | @researcher | `researcher/a-philosophy-of-software-design.mini.md` |
 | @reviewer | `reviewer/code-complete.mini.md`, `reviewer/working-effectively-with-legacy-code.mini.md` |
