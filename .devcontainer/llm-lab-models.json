@@ -7,7 +7,7 @@
     "url": "ibm-granite/granite-4.2-3b-GGUF/resolve/main/granite-4.2-3b-Q4_K_M.gguf",
     "port": 8089,
     "context": 131072,
-    "output": 8192,
+    "output": 32768,
     "parallel": 1,
     "kv_cache_type_k": "q4_0",
     "kv_cache_type_v": "q4_0"

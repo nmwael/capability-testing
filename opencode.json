@@ -1,16 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-  "small_model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-  "provider": {
+  "providers": {
     "local-granite-4.2-3b": {
-      "npm": "@ai-sdk/openai-compatible",
       "name": "Bifrost (local granite-4.2-3b)",
-      "options": {
-        "baseURL": "http://127.0.0.1:8082/v1",
-        "headers": {
-          "x-bf-passthrough-extra-params": "true"
-        }
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:8082/v1"
+      },
+      "headers": {
+        "x-bf-passthrough-extra-params": "true"
       },
       "models": {
         "granite-4.2-3b": {
@@ -30,13 +29,13 @@
       }
     },
     "local-qwen3.5-9b-mtp": {
-      "npm": "@ai-sdk/openai-compatible",
       "name": "Bifrost (local qwen3.5-9b-mtp)",
-      "options": {
-        "baseURL": "http://127.0.0.1:8082/v1",
-        "headers": {
-          "x-bf-passthrough-extra-params": "true"
-        }
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:8082/v1"
+      },
+      "headers": {
+        "x-bf-passthrough-extra-params": "true"
       },
       "models": {
         "qwen3.5-9b-mtp": {
@@ -56,58 +55,109 @@
       }
     },
     "opencode": {
-      "options": {
+      "settings": {
         "setCacheKey": false
       }
     }
   },
-  "agent": {
+  "agents": {
     "architect": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "temperature": 0.1,
-      "steps": 150
+      "steps": 150,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      }
     },
     "researcher": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "temperature": 0.1,
-      "steps": 60
+      "steps": 60,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      }
     },
     "reviewer": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "temperature": 0.1,
-      "steps": 60
+      "steps": 60,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      }
     },
     "build": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "temperature": 0.2,
-      "steps": 80
+      "steps": 80,
+      "request": {
+        "body": {
+          "temperature": 0.2
+        }
+      }
     },
     "ui": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "temperature": 0.2,
-      "steps": 60
+      "steps": 60,
+      "request": {
+        "body": {
+          "temperature": 0.2
+        }
+      }
     },
     "artist": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "temperature": 0.3,
-      "steps": 40
+      "steps": 40,
+      "request": {
+        "body": {
+          "temperature": 0.3
+        }
+      }
     },
     "coder": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0",
-      "temperature": 0.1,
-      "steps": 120
+      "steps": 120,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      }
+    },
+    "title": {
+      "model": "local-granite-4.2-3b/granite-4.2-3b-s0"
     }
   },
-  "enabled_providers": [
-    "local-granite-4.2-3b",
-    "local-qwen3.5-9b-mtp",
-    "opencode"
+  "permissions": [
+    {
+      "action": "*",
+      "resource": "*",
+      "effect": "allow"
+    }
   ],
   "experimental": {
-    "subagent_depth": 2
-  },
-  "permission": "allow",
-  "limit": {
-    "context": 131072
+    "subagent_depth": 2,
+    "policies": [
+      {
+        "action": "provider.use",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "provider.use",
+        "resource": "local-granite-4.2-3b",
+        "effect": "allow"
+      },
+      {
+        "action": "provider.use",
+        "resource": "local-qwen3.5-9b-mtp",
+        "effect": "allow"
+      },
+      {
+        "action": "provider.use",
+        "resource": "opencode",
+        "effect": "allow"
+      }
+    ]
   }
 }
