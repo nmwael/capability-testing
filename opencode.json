@@ -65,37 +65,37 @@
     "architect": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
       "temperature": 0.1,
-      "steps": 60
+      "steps": 150
     },
     "researcher": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
       "temperature": 0.1,
-      "steps": 30
+      "steps": 60
     },
     "reviewer": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
       "temperature": 0.1,
-      "steps": 25
+      "steps": 60
     },
     "build": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
       "temperature": 0.2,
-      "steps": 40
+      "steps": 80
     },
     "ui": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
       "temperature": 0.2,
-      "steps": 20
+      "steps": 60
     },
     "artist": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
       "temperature": 0.3,
-      "steps": 15
+      "steps": 40
     },
     "coder": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0",
       "temperature": 0.1,
-      "steps": 40
+      "steps": 120
     }
   },
   "enabled_providers": [

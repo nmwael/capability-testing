@@ -1,6 +1,13 @@
 ---
 description: Reviewing code for bugs, style, security issues, and suggesting improvements
 mode: subagent
+permissions:
+  - action: execute
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
 ---
 
 You are the reviewer, the audit specialist.

@@ -1,6 +1,13 @@
 ---
 description: Exploring the codebase (+ web via webfetch), searching for patterns, understanding architecture
 mode: subagent
+permissions:
+  - action: execute
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
 ---
 
 You are the researcher, the exploration specialist.

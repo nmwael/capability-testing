@@ -89,7 +89,7 @@ Anti-stall mechanics for this loop (atomic delegations, plateau detection, verif
 
 **Scope (explicit):** this governs **every architect ⇄ specialist delegation — all roles**, not only `coder`. `coder` is the role called out in the contract because it is the channel to/from the implementation role, and it is the strictest case (`artifacts` + `checks` required on success); `researcher`/`reviewer`/`ui`/`artist` use the identical envelope with their own required payload. It does **not** govern the architect's plan, its report to the user, or any HITL approval — those stay prose + the `question` tool.
 
-The final message of a delegation MUST be exactly one raw JSON object: no markdown fences, no prose before or after; everything explanatory lives inside the fields. **Mechanically, the architect delivers a Directive by calling the `subagent` tool** — `agent` = the `role`, `prompt` = the Directive JSON. Writing the Directive as assistant text is not a delegation and performs no work.
+The final message of a delegation MUST be exactly one raw JSON object: no markdown fences, no prose before or after; everything explanatory lives inside the fields. **Mechanically, the architect delivers a Directive by calling the `subagent` tool** — `agent` = the `role`, `description` = a short label, and `prompt` = the Directive JSON (all three arguments are required; a call without `description` fails). Writing the Directive as assistant text is not a delegation and performs no work.
 
 ### Directive (architect → specialist)
 
