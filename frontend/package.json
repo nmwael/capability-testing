@@ -1,25 +1,14 @@
 {
-  "name": "capability-testing-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "react-flow-app",
+  "version": "0.1.0",
+  "description": "Frontend visualization for the Drools/Quarkus backend.",
+  "main": "src/index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "cruise": "depcruise src --config .depcruiser.js"
+    "start": "echo 'Development server starting...'"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "dependency-cruiser": "^18.5.0",
-    "typescript": "^5.5.4",
-    "vite": "^5.2.0"
+    "@types/react": "^^",
+    "react": "^^",
+    "react-dom": "^^"
   }
 }

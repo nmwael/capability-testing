@@ -18,7 +18,7 @@ Design-flow reference: [`SELF_DISCOVERING_FLOWS.md`](SELF_DISCOVERING_FLOWS.md) 
 
 The Architect must never stall or abandon work mid-task. These rules override convenience and are mandatory:
 
-1. **Atomic Delegations:** Every delegation must be small enough to complete well within the subagent's step budget (`steps` in `opencode.json`). Rule of thumb: one delegation = at most ~3 files written OR one script execution plus validation. Split larger jobs into sequential delegations.
+1. **Atomic Delegations:** Every delegation must be small enough to complete well within the subagent's step budget (`steps` in `opencode.json`). Rule of thumb: one delegation = one coherent component (aim for at most ~6 files written) OR one script execution plus validation. Split larger jobs into sequential delegations.
 2. **Immediate Recovery:** If any subagent returns blocked, incomplete, or step-limited, OR if the Architect detects a subagent repeating the same tool call with identical parameters/content in a loop, the Architect MUST immediately intervene — stop the execution and re-issue the work as smaller delegations. Never end the turn while planned work remains undone, unless a human decision is genuinely required.
 3. **Delegation Failure Fallback:** If two consecutive delegation attempts fail or are cancelled, the Architect may perform the remaining surgical edits directly with its own tools rather than stalling — provided the human has explicitly requested the change.
 4. **Verify Before Reporting:** The Architect must confirm every claimed artifact exists (via its own read/glob check) before reporting success to the user. Unverified success reports are forbidden.
@@ -30,7 +30,7 @@ The Architect must never stall or abandon work mid-task. These rules override co
 
 To prevent "Infinite Spins" and "Step Exhaustion," all agents must adhere to these advanced patterns:
 
-* **Atomic Task Decomposition:** Never issue a single task that contains more than 3 logical steps. If a task involves research, implementation, and verification, it MUST be split into three separate delegations.
+* **Atomic Task Decomposition:** Never bundle unrelated concerns into a single task. A task that involves research, implementation, and verification MUST be split into three separate delegations; a single coherent phase (e.g. implementing one component) may be one delegation.
 * **Prompt Chaining (Outline-First):** For complex code generation, the first delegation must only be to create a *pseudocode outline*. The second delegation then implements that specific outline. This prevents cognitive overload and step-limit hits.
 * **Bounded Iteration & Plateau Detection:** If an agent encounters the same error twice or fails to make progress across two turns (a "plateau"), it MUST stop immediately and delegate back to the Architect for a revised plan rather than attempting a third self-correction loop.
 * **Verification as Reward:** Agents should be encouraged to use tool outputs (e.g., running `pytest` or `trimesh` validation) as their own internal signal of success, rather than relying on verbal claims.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# use-profile.sh <cap|q> — switch the active local LLM profile.
+# use-profile.sh <cap|q|gemma|granite> — switch the active local LLM profile.
 #
 # Rewrites the models feature's input files, re-materializes the derived configs
 # (bifrost upstreams, opencode providers) from the shared manifest, and stops the
@@ -11,9 +11,9 @@ set -euo pipefail
 
 PROFILE="${1:-}"
 case "$PROFILE" in
-cap | q | gemma) ;;
+cap | q | gemma | granite) ;;
 *)
-    echo "usage: bash scripts/use-profile.sh <cap|q|gemma>" >&2
+    echo "usage: bash scripts/use-profile.sh <cap|q|gemma|granite>" >&2
     exit 1
     ;;
 esac
@@ -54,7 +54,11 @@ for port in $PORTS; do
     fi
 done
 
-for pat in 'bifrost/bin.js' 'opencode serve'; do
+# bifrost is a node launcher (bin.js) that forks a separate `bifrost-http`
+# child; both must be stopped or the orphaned child keeps :8082 (and its stale
+# routing) alive after the launcher dies. Bracket trick keeps the pattern from
+# matching this script's own cmdline.
+for pat in 'bifrost/bin.js' 'bifrost[-]http' 'opencode serve'; do
     pids="$(pgrep -f "$pat" || true)"
     if [ -n "$pids" ]; then
         echo "[use-profile] stopping '$pat'"

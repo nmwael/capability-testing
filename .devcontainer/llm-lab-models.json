@@ -1,23 +1,23 @@
 [
   {
-    "name": "gemma-4-e4b",
-    "provider": "local-gemma-4-e4b",
-    "hf": "bartowski/google_gemma-4-E4B-it-GGUF",
+    "name": "granite-4.2-3b",
+    "provider": "local-granite-4.2-3b",
+    "hf": "ibm-granite/granite-4.2-3b-GGUF",
     "quant": "Q4_K_M",
-    "url": "bartowski/google_gemma-4-E4B-it-GGUF/resolve/main/google_gemma-4-E4B-it-Q4_K_M.gguf",
+    "url": "ibm-granite/granite-4.2-3b-GGUF/resolve/main/granite-4.2-3b-Q4_K_M.gguf",
     "port": 8089,
-    "context": 65536,
+    "context": 131072,
     "output": 8192,
     "parallel": 1,
-    "kv_cache_type_k": "q8_0",
-    "kv_cache_type_v": "q8_0"
+    "kv_cache_type_k": "q4_0",
+    "kv_cache_type_v": "q4_0"
   },
   {
     "name": "qwen3.5-9b-mtp",
     "provider": "local-qwen3.5-9b-mtp",
     "hf": "Qwen3.5-9B-MTP-GGUF",
-    "quant": "Q4_K_M",
-    "url": "unsloth/Qwen3.5-9B-MTP-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
+    "quant": "Q3_K_M",
+    "url": "unsloth/Qwen3.5-9B-MTP-GGUF/resolve/main/Qwen3.5-9B-Q3_K_M.gguf",
     "port": 8090,
     "context": 32768,
     "output": 8192,

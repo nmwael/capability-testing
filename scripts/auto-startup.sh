@@ -179,7 +179,9 @@ if [ -x "$BIFROST_CFG_SCRIPT" ] && [ -f "$STACK_JSON" ] && [ "$(jq -r '.cloud //
         echo "[auto-startup] WARNING: bifrost config refresh failed — routing may be stale"
     _bf_after="$(sha256sum "$BIFROST_CFG" 2>/dev/null | cut -d' ' -f1 || true)"
     if [ -n "$_bf_before" ] && [ "$_bf_before" != "$_bf_after" ] && command -v pgrep >/dev/null 2>&1; then
-        _bf_pids="$(pgrep -f 'bifrost/bin.js' || true)"
+        # bifrost forks a separate `bifrost-http` child that survives killing
+        # the bin.js launcher; stop both or the orphan keeps :8082 (stale routing).
+        _bf_pids="$(pgrep -f 'bifrost/bin.js' || true) $(pgrep -f 'bifrost[-]http' || true)"
         if [ -n "$_bf_pids" ]; then
             echo "[auto-startup] bifrost routing changed — restarting gateway"
             for _p in $_bf_pids; do kill "$_p" 2>/dev/null || true; done

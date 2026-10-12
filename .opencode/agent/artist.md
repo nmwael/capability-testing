@@ -1,5 +1,5 @@
 ---
-description: Visual assets and artwork as code (SVG/CSS), image analysis via Gemma4 vision
+description: Visual assets and artwork as code (SVG/CSS), image analysis via vision models (Gemma4 under the gemma profile)
 mode: subagent
 ---
 
