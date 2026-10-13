@@ -21,6 +21,21 @@ OPENCODE_PORT="${OPENCODE_PORT:-4096}"
 
 echo "[auto-startup] workspace=$ROOT models=$MODELS_DIR"
 
+# --- GPU offload default -----------------------------------------------------
+# Measured on this box: offloaded, granite serves 39-42 tok/s on real agent
+# requests; without it llama-server silently runs on CPU (10.5 tok/s), and a
+# container restart put the whole stack back in that state. The flag is resolved
+# per boot by probing the device list, never assumed: a box with no CUDA device
+# must get no flag at all, because taking a flag it cannot honour is worse than
+# not passing it. An explicit N_GPU_LAYERS or a per-model stack.json field
+# overrides this default (see the per-model resolution below).
+NGL_DEFAULT=""
+if command -v llama-server >/dev/null 2>&1; then
+    if llama-server --list-devices 2>/dev/null | grep -qE '^[[:space:]]*CUDA[0-9]'; then
+        NGL_DEFAULT=99
+    fi
+fi
+
 # --- Tailscale (official feature: tailscaled + CLI), userspace networking ---
 # The feature bakes the binaries; the daemon must be started per container
 # boot (build-time runs don't persist). Root daemon + world socket dir so the
@@ -99,6 +114,30 @@ else
             ;;
         esac
 
+        # --- GPU offload: env > manifest per-model field > device probe ------
+        # Measured here: granite serves 39-42 tok/s offloaded against 10.5 on CPU,
+        # so this flag decides whether the stack is usable. Resolved per model and
+        # per boot, never assumed: stack.json is written by the `models` feature
+        # and may carry no such field, and a box with no CUDA device gets no flag.
+        ngl="${N_GPU_LAYERS:-}"
+        if [ -z "$ngl" ]; then
+            ngl="$(jq -r --argjson i "$i" '.models[$i].n_gpu_layers // empty' "$STACK_JSON" 2>/dev/null || true)"
+        fi
+        [ -z "$ngl" ] && ngl="$NGL_DEFAULT"
+        ngl_args=()
+        [ -n "$ngl" ] && ngl_args=(--n-gpu-layers "$ngl")
+
+        # MTP fights offload: draft-mtp on GPU measured 0.79 tok/s against 38.2
+        # with the spec sampler off, so offloading turns spec_type off unless the
+        # manifest opts back in with spec_on_gpu: true.
+        if [ -n "$ngl" ] && [ ${#spec_args[@]} -gt 0 ]; then
+            if [ "$(jq -r --argjson i "$i" '.models[$i].spec_on_gpu // false' "$STACK_JSON" 2>/dev/null || echo false)" != "true" ]; then
+                echo "[auto-startup] '$name': spec_type '$st' disabled for GPU offload (0.79 tok/s with it, 38.2 without)"
+                spec_args=()
+                st="none"
+            fi
+        fi
+
         ct_args=()
         [ -n "$ct" ] && ct_args+=(--chat-template "$ct")
 
@@ -121,10 +160,11 @@ else
         else
             # --alias must equal models[].name: it is the model id opencode pins
             # and the prefix bifrost routes on ("{name}*"). A mismatch 404s.
-            echo "[auto-startup] starting $name on :$port (ctx=$ctx slots=$par kv=${kv_k:-f16}/${kv_v:-f16} spec=${st:-none})"
+            echo "[auto-startup] starting $name on :$port (ctx=$ctx slots=$par kv=${kv_k:-f16}/${kv_v:-f16} spec=${st:-none} ngl=${ngl:-cpu})"
             nohup llama-server -m "$model_file" --host 0.0.0.0 --port "$port" \
                 --jinja \
                 --ctx-size "$ctx" --alias "$name" --parallel "$par" \
+                ${ngl_args[@]+"${ngl_args[@]}"} \
                 ${kv_args[@]+"${kv_args[@]}"} \
                 ${spec_args[@]+"${spec_args[@]}"} \
                 ${ct_args[@]+"${ct_args[@]}"} \
