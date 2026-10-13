@@ -90,11 +90,7 @@
     "reviewer": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-bounded",
       "steps": 14,
-      "request": {
-        "body": {
-          "temperature": 0.1
-        }
-      }
+      "temperature": 0.1
     },
     "fact-checker": {
       "model": "local-granite-4.2-3b/granite-4.2-3b-s0",

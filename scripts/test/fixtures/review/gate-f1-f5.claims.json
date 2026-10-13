@@ -374,6 +374,69 @@
           "pattern": "the refused artifact is left untouched"
         }
       ]
+    },
+    {
+      "id": "K18",
+      "statement": "F8b: the reviewer's sampling temperature reaches the provider - OpenCode 2.0.26's AgentConfig defines no `request` field, so a temperature nested under request.body was inert; it is now a top-level `temperature` on the reviewer block, which the schema does define",
+      "severity": "high",
+      "suggestion": "restore `\"temperature\": 0.1` on the reviewer block in opencode.json (not nested under request.body)",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node -e \"const r=require('./opencode.json').agents.reviewer; if(r.request) throw new Error('inert request.body present'); if(r.temperature!==0.1) throw new Error('reviewer temperature '+r.temperature); console.log('ok reviewer temperature '+r.temperature)\"",
+          "expect_exit": 0,
+          "expect_stdout": "ok reviewer temperature 0\\.1"
+        },
+        {
+          "kind": "file_contains",
+          "path": "opencode.json",
+          "whole_file": true,
+          "pattern": "\"reviewer\": \\{\\s*\"model\": \"local-granite-4.2-3b/granite-4.2-3b-bounded\",\\s*\"steps\": 14,\\s*\"temperature\": 0.1"
+        }
+      ]
+    },
+    {
+      "id": "K19",
+      "statement": "F8c: the echo witness is a shipped tool with a regression test - scripts/echo-check.mjs reads the session store the runtime wrote (read-only) and grades a final message byte-identical / identical-ignoring-fence / findings-only / differs, and `--verify` drives the runner's own --verify over the extracted message so the live reviewer sessions can be checked without transcription",
+      "severity": "high",
+      "suggestion": "restore scripts/echo-check.mjs and scripts/echo-check.test.mjs (the scratch wip/rg pair is promoted, not merely moved)",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node scripts/echo-check.test.mjs",
+          "expect_exit": 0,
+          "expect_stdout": "RESULT: PASS"
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/echo-check.mjs --help",
+          "expect_exit": 0,
+          "expect_stdout": "usage: node scripts/echo-check.mjs"
+        },
+        {
+          "kind": "file_exists",
+          "path": "scripts/echo-check.mjs"
+        },
+        {
+          "kind": "file_exists",
+          "path": "scripts/echo-check.test.mjs"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/echo-check.mjs",
+          "pattern": "identical-ignoring-fence"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/echo-check.mjs",
+          "pattern": "new DatabaseSync\\(path, \\{ readOnly: true \\}\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/echo-check.test.mjs",
+          "pattern": "the session store is byte-identical after every case"
+        }
+      ]
     }
   ],
   "advisories": [
@@ -384,6 +447,14 @@
       "line": 9,
       "issue": "the frontmatter denies action 'execute', which is not a permission action in OpenCode 2.0.26 — the shell tool maps to 'shell' and write/patch map to 'edit' (see $A/oh/A$ in the opencode build) — so this rule is inert. The enforced read-only guarantee is 'edit: deny'; shell remains allowed and must stay allowed, because the reviewer runs check commands to gather evidence.",
       "suggestion": "drop the inert 'execute' rule (the same inert rule is in .opencode/agents/fact-checker.md) and, if command execution really must be forbidden, say 'shell: deny' — but then the reviewer can no longer run scripts such as scripts/review-gate.mjs, so 'edit: deny' plus the read-only discipline section is the workable guarantee"
+    },
+    {
+      "severity": "medium",
+      "claim": "F4b",
+      "path": "opencode.json",
+      "line": 1,
+      "issue": "the other seven agent blocks (architect, researcher, fact-checker, build, ui, artist, coder) still nest their temperature under request.body, which OpenCode 2.0.26's AgentConfig does not define, so that setting is as inert for them as it was for the reviewer.",
+      "suggestion": "migrate each block to a top-level \"temperature\" (the reviewer is the only one migrated here, because it was the block under review); until then their temperature is whatever the provider defaults to"
     }
   ]
 }

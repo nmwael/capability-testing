@@ -1,10 +1,18 @@
 # PLAN.md — resume point
 
-**Status:** work parked. `main == origin/main == e8d240a`; working tree clean.
-**Written:** 2026-10-12.
+**Status:** the tooling round is **closed**; the retrofit is the only open item. `main == origin/main`;
+working tree clean (see `git log -1` for the exact sha that carries this update).
+**Written:** 2026-10-12. **Updated:** 2026-10-13.
 
 This file is the handoff. It records where the work stopped, what to do next, and the
 environment facts needed to pick it up without re-deriving them.
+
+> **2026-10-13 progress.** Every §4 item except the retrofit is done and reviewer-gated:
+> config-drift `987162f`, Track 1 `e822292`, LSP `27fbdb4`, fact-check stage `bc7d082`,
+> F4/F5 + gate runner `1882a3c`, the gate's echo mechanic `a4aa9f5` + `71b3a90`,
+> fact-checker hardening `1771fb2`, reviewer hardening `8daef2b`, GPU offload `8e93fbf`.
+> §2, §3 and §5 below have been rewritten to match; §6 gained the verified V2.0.26 config
+> facts. The one deliberate exception: the reviewer's temperature (below, §3 "after e8d240a").
 
 ---
 
@@ -30,14 +38,21 @@ Requirements that shaped the design:
 | Track 1 fixes (F1–F5 of the earlier round) | done, pushed | `e822292` |
 | LSP allow for `coder` | done, pushed | `27fbdb4` |
 | Fact-check stage (agent + checker + playbook + roster) | done, pushed, reviewer-gated | `bc7d082` |
-| **F1–F3 (checker coverage, checker harden, gate backstop)** | **landed, NOT reviewer-gated** | **`e8d240a`** |
-| **F4 (reviewer read-only hardening)** | **half-applied** | uncommitted |
-| **F5 (fixtures as a regression test)** | **not started** | — |
-| React Flow / Drools retrofit | **not started** | — |
+| F1–F3 (checker coverage, checker harden, gate backstop) | done, pushed | `e8d240a` |
+| F4 (reviewer read-only hardening) + F5 (fixtures as a regression test) | done, pushed | `1882a3c` |
+| Gate runner (`--attest`/`--verify`) — task accounting without transcription | done, pushed | `a4aa9f5`, `71b3a90` |
+| Fact-checker hardening (evidence, banned phrasing, self-check) | done, pushed | `1771fb2` |
+| Reviewer hardening (`--attest`, bounded output, verbatim discipline) | done, pushed | `8daef2b` |
+| GPU offload made permanent in `scripts/auto-startup.sh` | done, pushed, measured | `8e93fbf` |
+| `scripts/echo-check.mjs` — the witness for "the message was the runner's stdout" | done, pushed, tested offline | this commit |
+| Reviewer temperature moved off inert `request.body` | done, pushed | this commit |
+| React Flow / Drools retrofit | **not started — the only open item** | — |
 
-**The single most important caveat: `e8d240a` has NOT passed the mandatory `reviewer` gate.**
-The reviewer looped and silently rewrote the acceptance fixtures mid-review, so the pass never
-completed. See §4.
+**The old caveat is closed: `e8d240a` has now been gated.** `RV-F12345` passes end-to-end
+(`node scripts/review-gate.mjs --task RV-F12345` → 19 claims / 56 checks / `status: done` /
+2 medium advisories), and two live reviewer sessions verify against the attested artifact
+(`scripts/echo-check.mjs <session> --verify` → `valid`). The reviewer no longer has to hand-copy
+anything: `--attest` writes the envelope and prints a short attestation that `--verify` re-hashes.
 
 ## 3. What landed in `e8d240a` (5 files, +452/−29)
 
@@ -59,61 +74,91 @@ completed. See §4.
 - **F4 (partial) — `.opencode/agents/reviewer.md`**: `edit: deny` added to the frontmatter (`:5–7`), so
   the "you cannot edit files" rule is enforced rather than requested.
 
+### What landed after `e8d240a` (the tooling round is closed)
+
+- **F4/F5 — `1882a3c`:** `edit: deny` plus the Read-only / scope / tool-budget discipline in
+  `.opencode/agents/reviewer.md`, and the four acceptance fixtures promoted from gitignored `wip/`
+  to `scripts/test/fixtures/plans/*.md` with `scripts/verify-plan-claims.test.mjs` over them.
+- **Gate runner `--attest`/`--verify` — `a4aa9f5`, `71b3a90`.** The auditor no longer hand-copies a
+  47-check envelope: `--attest` writes it to `wip/review-gate/<task_id>.envelope.json` and prints a
+  ~1 KB attestation carrying that file's path/size/sha256 + findings; `--verify` re-hashes it and
+  compares exactly what a paraphrase would corrupt (`task_id`, `role`, `status`, `findings`), tolerates
+  one wrapping fence, resolves a dropped `artifact` pointer from `task_id`, and reports a re-worded
+  `summary` in `notes` rather than failing a correct audit. An artifact is immutable evidence:
+  `--attest` refuses to overwrite a differing one unless `--force`.
+- **Hardening — `1771fb2` (fact-checker), `8daef2b` (reviewer).** Evidence rules and banned phrasing
+  for the fact-checker; `--attest` as the reviewer's primary path, a bounded-output alias
+  (`granite-4.2-3b-bounded`, `limit.output: 16384`) and the "Verbatim discipline (binding)" section.
+- **`scripts/echo-check.mjs` + `scripts/echo-check.test.mjs` (this commit).** The witness for the
+  verbatim claim: it reads the session store the runtime wrote (read-only) and grades the final
+  message `byte-identical` / `identical-ignoring-fence` / `findings-only` / `differs`, with `--verify`
+  driving the runner's own `--verify` over the extracted message. The scratch `wip/rg/` pair is
+  promoted here, not merely moved. Live proof: two reviewer sessions verify `valid` against
+  `wip/review-gate/RV-F12345.envelope.json` (14 497 bytes, 47 checks).
+- **Reviewer temperature (this commit).** `opencode.json` nested it under `request.body`, but the
+  V2.0.26 `AgentConfig` defines **no `request` field** (see §6), so the setting was inert; the reviewer
+  block now carries a top-level `"temperature": 0.1`, which the schema does define. The other seven
+  agent blocks still nest theirs under `request.body` — recorded as advisory `F4b`, not silently fixed.
+
 ### Verification already run (all green)
 
 ```sh
 node --check scripts/verify-plan-claims.mjs
 node scripts/verify-capabilities.js                 # PASS
-node -e "JSON.parse(require('fs').readFileSync('opencode.json','utf8'))"
+node scripts/verify-plan-claims.test.mjs            # PASS — 4 fixtures
+node scripts/review-gate.test.mjs                   # PASS
+node scripts/echo-check.test.mjs                    # PASS — 18 assertions
+node scripts/review-gate.mjs --task RV-F12345       # exit 0, status done
 ```
 
-Acceptance fixtures (in gitignored `wip/`):
+Acceptance fixtures (committed by F5, no longer gitignored `wip/`):
 
 | Fixture | Expected | Why |
 |---|---|---|
-| `wip/plan-rf-clean.md` | **exit 0** | the corrected retrofit plan |
-| `wip/plan-rf.md` | **exit 1** | carries the two canonical blockers (malformed `@types/vitejs/plugin-react`; `org.kie:kie-api:7.74.1.Final` CONFLICT vs the reference) |
-| `wip/plan-vague.md` | **exit 1** | the architect's real vague plan — now blocked by `MISSING` `test-frontend.bats` |
-| `wip/plan-empty.md` | **exit 1** | pins nothing → `INSUFFICIENT` |
+| `scripts/test/fixtures/plans/plan-rf-clean.md` | **exit 0** | the corrected retrofit plan |
+| `scripts/test/fixtures/plans/plan-rf.md` | **exit 1** | carries the two canonical blockers (malformed `@types/vitejs/plugin-react`; `org.kie:kie-api:7.74.1.Final` CONFLICT vs the reference) |
+| `scripts/test/fixtures/plans/plan-vague.md` | **exit 1** | the architect's real vague plan — blocked by `MISSING` `test-frontend.bats` |
+| `scripts/test/fixtures/plans/plan-empty.md` | **exit 1** | pins nothing → `INSUFFICIENT` |
 
 ## 4. Resume checklist (in order)
 
-1. **Finish F4 — `.opencode/agents/reviewer.md`.** The frontmatter is done; the prompt side is not.
-   Add: **Read-only discipline** (never write/edit/delete, not even fixtures or scratch — a wrong
-   fixture is a *finding*, never an edit); **scope discipline** (read only the Directive's `files[]`
-   and what those files reference; read each file once; no broad globs such as `**/*.md`); a
-   **tool-call budget** (~12) with the bounded-iteration rule sharpened to "no NEW evidence in a turn →
-   stop and emit the Result"; and fix the `blocked` example's `blocker` to the escaped-JSON schema in
-   `AGENTS.md § Delegation JSON envelope`. Then update the `AGENTS.md:69` roster row to say read-only.
-2. **F5 — commit the acceptance fixtures as a regression test.** They currently exist **only in
-   gitignored `wip/`**, which is precisely why the reviewer's damage was invisible to `git status`.
-   Suggested shape: `scripts/test/fixtures/plans/*.md` (the four files) +
-   `scripts/verify-plan-claims.test.mjs`, spawning `node scripts/verify-plan-claims.mjs --plan <f>
-   --no-network` and asserting the exit codes and the two canonical `plan-rf.md` blockers.
-   Use `--no-network` for determinism: the malformed-name `MISSING`, the reference `CONFLICT`, the
-   missing-`.bats` `MISSING`, and `INSUFFICIENT` are all offline-decidable.
-3. **Run the mandatory `reviewer` gate** over F1–F4 (see `AGENTS.md § Workflow`), then commit + push.
-4. **Retrofit.** Re-run `@architect` on: *"please make this repo be about react flow for front end and
-   apache drools using quarkus for backend"* — confirm the gate fires (a `fact-checker` `Result` must
-   be attached before approval), approve, execute the corrected plan, finish with the reviewer gate.
+1. ~~**Finish F4 — `.opencode/agents/reviewer.md`.**~~ **DONE** (`1882a3c`): read-only/scope/budget
+   discipline, the escaped-JSON `blocker` example, and the `AGENTS.md` roster row.
+2. ~~**F5 — commit the acceptance fixtures as a regression test.**~~ **DONE** (`1882a3c`):
+   `scripts/test/fixtures/plans/*.md` + `scripts/verify-plan-claims.test.mjs`.
+3. ~~**Run the mandatory `reviewer` gate** over F1–F4.~~ **DONE**: `RV-F12345` is green
+   (19 claims / 56 checks / `status: done`), the artifact is attested, and two live reviewer sessions
+   verify through `scripts/echo-check.mjs --verify`.
+4. **Retrofit — the only open item.** Re-run `@architect` on: *"please make this repo be about react
+   flow for front end and apache drools using quarkus for backend"* — confirm the gate fires (a
+   `fact-checker` `Result` must be attached **before** approval), approve, execute the corrected plan,
+   finish with the reviewer gate. Then run
+   `node scripts/echo-check.mjs <reviewer-session> --verify` and keep the attestation artefact.
+5. **Optional follow-ups, not blockers:** migrate the other seven agents' `request.body.temperature`
+   (§3, advisory `F4b`); drop the inert `action: execute` deny from `reviewer.md:9` and
+   `fact-checker.md:9` (advisory `F4`); register `stack-coordinates.mini.md` in the library manifest.
 
 ## 5. Open risks and known defects
 
-- **Reviewer malfunction (root cause of the ungated commit).** It ran 20 tool calls with no Result:
-  it read the checker twice and all four fixtures twice, globbed `**/*.md` (45k input tokens, dragging
-  in all of `library/`), then **wrote to `wip/plan-rf-clean.md` (13→5 lines) and `wip/plan-rf.md`
-  (47→12 lines)** — deleting the malformed-package and `react-flow-renderer` cases and inventing a
-  nonexistent Maven coordinate `org.kie:kie-core`. Both fixtures were **restored verbatim** and the
-  acceptance run re-verified. F4 exists to stop a recurrence; F5 exists to make future loss visible.
-- **The architect still will not reliably emit tool calls on a broad brief.** It deliberates
-  (24k–79k reasoning chars) and then either returns a stub plan or *prints* the Directive JSON as
-  prose. The proven workaround — "your one action this turn is a `subagent` TOOL CALL" — is what F3
-  encodes, but it is **untested end-to-end** since the change.
-- **The fact-checker is improved but noisy when live.** It now records the (a)–(h) checklist in
-  `summary` and emits a step-3 `high`, but it also produced duplicate findings, one invalid
-  `severity:"pass"`, extra `checks`/`artifacts` fields, and it *dismissed* the `UNKNOWN` package names
-  it was told to report. Treat this as a granite-3B reliability limit, not a prompt gap, unless a
-  targeted prompt change moves it.
+- **Reviewer malfunction — CLOSED.** Root cause of the ungated commit: it ran 20 tool calls with no
+  Result, globbed `**/*.md` (45k tokens) and **rewrote two acceptance fixtures mid-review**. Fixed by
+  F4 (read-only discipline + `edit: deny`), F5 (fixtures committed, so loss is visible in `git status`)
+  and the echo rework: the reviewer now runs `--attest`, and `scripts/echo-check.mjs --verify` proves
+  the audit mechanically. Historical detail kept above in git history.
+- **The architect still will not reliably emit tool calls on a broad brief.** Measured four times
+  before the tooling round: it deliberates (24k–79k reasoning chars) and then either returns a stub
+  plan or *prints* the Directive JSON as prose. The workaround — "your one action this turn is a
+  `subagent` TOOL CALL", with the plan inlined verbatim and nothing else in the turn — is what `F3`
+  and `AGENTS.md § Orchestration Flow` step 2 encode. **Still the retrofit's biggest execution risk.**
+- **The fact-checker is improved but noisy when live.** It records the (a)–(h) checklist in `summary`
+  and emits a step-3 `high`, but it has produced duplicate findings, one invalid `severity:"pass"`,
+  extra `checks`/`artifacts` fields, and dismissed `UNKNOWN` package names. One later iteration also
+  **downgraded the central plan defect `high`→`medium`** and asserted that `llama-server` does not
+  support `--n-gpu-layers` — false, `llama-server --help` lists `-ngl, --gpu-layers, --n-gpu-layers N`.
+  Treat this as a granite-3B reliability limit, not a prompt gap: **read its findings, do not trust
+  its severity.**
+- **The gate verifies shape, not freshness.** `--verify` re-hashes the artefact but does not re-run the
+  gate, so it is only meaningful while the tree is unchanged — the echo is a point-in-time witness.
 - **`library/architect/stack-coordinates.mini.md` is not registered** in `library/manifest.json` or
   `library/README.md` (pre-existing gap, deliberately out of scope — the checker reads it by path).
 - **Doc drift:** `AGENTS.md` references `scripts/generate-opencode.jq`, which does not exist.
@@ -161,13 +206,34 @@ an empty `~/.cache/opencode`. Prefer CLI checks: `npm run typecheck`, `mvn -B te
 `node scripts/verify-capabilities.js`.
 
 **OpenCode v2.0.26 config shapes:** `providers.<id>.{name,package,settings,headers,models}`;
-`agents.<id>.{model,steps,request.body,permissions,mode,system}`; `permissions` is an ordered
-`{action,resource,effect}` list where the **last match wins**; there is no `lsp` action in the
-permission engine and `*` matches everything.
+`agents.<id>.{model,steps,temperature,prompt,tools,permissions,mode,...}` — the published schema
+(`https://opencode.ai/config.json`) has **no `request` field on `AgentConfig`**, so every
+`agents.*.request.body.temperature` block in `opencode.json` was inert; the `reviewer` is the one
+migrated to a top-level `temperature`. `permissions` is an ordered `{action,resource,effect}` list
+where the **last match wins**; the real actions are `shell` (the shell tool), `edit` (write/patch) and
+`subagent` (task) — an `action: execute` rule matches nothing and is inert, so `edit: deny` is the
+enforced read-only guarantee; there is no `lsp` action and `*` matches everything. A per-model
+`limit.output` (e.g. the `granite-4.2-3b-bounded` alias, 16384) is what bounds a step, not
+`request.body`.
+
+**The session store (for `scripts/echo-check.mjs`):** `~/.local/share/opencode/opencode.db` (SQLite,
+open **read-only**), table `session_message(session_id, type, data, seq)`; an assistant row's
+`data.content[]` text parts are the message, and `data.agent` / `data.model.id` name the author. The
+final message is the last `type='assistant'` row that actually carries text.
+
+**GPU / servers:** `nvidia-smi` is **not installed** — use `llama-server --list-devices`; logs live in
+`/tmp/llama-server-*.log`; `-ngl` / `--gpu-layers` / `--n-gpu-layers` are all accepted (the last
+rejected plan claimed otherwise). `scripts/auto-startup.sh` probes the device and applies the offload
+permanently; measured 138.69 tok/s on GPU vs 10.5 on CPU for granite. MTP spec-decoding on GPU cost
+0.79 tok/s vs 38.2 off, so `scripts/auto-startup.sh` gates MTP accordingly. Bifrost runs via
+`start-bifrost` (forks `bifrost-http`; kill both or `:8082` stays held).
 
 ## 7. Deliberately out of scope
 
 - Registering `library/architect/stack-coordinates.mini.md` in the library manifest/README.
-- Promoting the `wip/` fixtures to committed tests (**this is F5 — do it in §4 step 2**).
+- ~~Promoting the `wip/` fixtures to committed tests~~ — **done** (F5, `1882a3c`).
+- Migrating the other seven agent blocks off the inert `request.body` (advisory `F4b`), and removing
+  the inert `action: execute` deny from the reviewer/fact-checker frontmatter (advisory `F4`).
 - Re-litigating the LSP verdict, the model pins, or the GPG signing situation.
-- `wip/` is gitignored scratch and is not part of the shipped stack.
+- `wip/` is gitignored scratch and is not part of the shipped stack (cleaned on 2026-10-13; the two
+  tools that were worth keeping were promoted to `scripts/echo-check.mjs` and its test).
