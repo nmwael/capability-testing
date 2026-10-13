@@ -66,6 +66,19 @@ const fail = (msg) => {
 }
 const ok = (msg) => console.log(`    ok    ${msg}`)
 
+// The shipped checklist can legitimately report zero findings (a clean gate with
+// no advisories), so a tamper helper must be able to seed one: a *fabricated*
+// finding is caught by exactly the comparison a paraphrased one is, so the
+// property under test holds either way.
+const tamperFinding = (attestation, mutate) => {
+  if (Array.isArray(attestation.findings) && attestation.findings.length > 0) {
+    mutate(attestation.findings[0])
+  } else {
+    attestation.findings = [{ severity: "low", path: "AGENTS.md", line: 1, issue: "fabricated", suggestion: "fix it" }]
+  }
+  return attestation
+}
+
 // The runner's default attestation directory (wip/review-gate) holds real
 // evidence: an attestation points at an artefact by hash, so a test run that
 // rewrote one would silently orphan a correct reviewer attestation (measured).
@@ -466,9 +479,10 @@ function checkAttestMode() {
   else fail(`--verify rejected its own attestation: ${verdict.problems.join("; ")}`)
 
   // ...and it must reject every way a model could paraphrase it, which is the
-  // failure this mode exists to catch.
+  // failure this mode exists to catch. (A clean checklist reports no findings, so
+  // this case fabricates one instead — the comparison is the same.)
   const tampers = [
-    { label: "a paraphrased finding", edit: (a) => { a.findings[0].suggestion = "fix it" } },
+    { label: "a paraphrased (or fabricated) finding", edit: (a) => tamperFinding(a, (f) => { f.suggestion = "fix it" }) },
     { label: "a corrupted sha256", edit: (a) => { a.artifact.sha256 = "0".repeat(64) } },
     { label: "an artifact path that does not exist", edit: (a) => { a.artifact.path = "wip/no-such-envelope.json" } },
     { label: "a check count that disagrees with the artifact", edit: (a) => { a.artifact.checks = 1 } },
@@ -496,8 +510,7 @@ function checkAttestMode() {
   } else {
     fail(`a wrapping fence was rejected: ${fencedVerdict.problems.join("; ")}`)
   }
-  const fencedTamper = JSON.parse(res.stdout)
-  fencedTamper.findings[0].severity = "high"
+  const fencedTamper = tamperFinding(JSON.parse(res.stdout), (f) => { f.severity = "high" })
   writeFileSync(fencedPath, `\`\`\`json\n${JSON.stringify(fencedTamper, null, 2)}\n\`\`\``)
   const fencedBad = JSON.parse(gate(["--verify", fencedPath, "--quiet"]).stdout)
   if (fencedBad.valid) fail("a fence hid a paraphrased finding")
@@ -519,8 +532,10 @@ function checkAttestMode() {
   } else {
     fail(`the measured reviewer shape did not verify: ${JSON.stringify(measuredVerdict.problems)}`)
   }
-  const measuredTamper = JSON.parse(measuredPath ? readFileSync(measuredPath, "utf8") : "{}")
-  measuredTamper.findings[0].severity = "high"
+  const measuredTamper = tamperFinding(
+    JSON.parse(measuredPath ? readFileSync(measuredPath, "utf8") : "{}"),
+    (f) => { f.severity = "high" },
+  )
   writeFileSync(measuredPath, JSON.stringify(measuredTamper, null, 2))
   const measuredBad = JSON.parse(gate(["--verify", measuredPath, "--quiet"]).stdout)
   if (!measuredBad.valid) ok("without a pointer, a paraphrased finding is still rejected")

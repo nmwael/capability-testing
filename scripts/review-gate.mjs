@@ -13,13 +13,14 @@
 // envelope. The auditor still judges; it just no longer transcribes.
 //
 // --attest, WHY IT EXISTS: taking envelope AUTHORING away from the model was
-// not enough. Asked to echo an ~11.5 KB envelope (37 checks) verbatim the
+// not enough. Asked to echo an ~11.5 KB envelope (37 checks, the checklist has
+// since grown to ~21.7 KB / 69 checks) verbatim the
 // auditor still recomposed it — dropping 5 checks, truncating 21 evidence
 // strings, altering a path and inventing 2 checks, then wrapping the JSON in a
 // fence — because copying ~3k tokens byte-exactly is beyond it. So the bulk is
 // taken away: --attest writes the whole envelope (checks[] included) to a file
-// and prints a ~1.4 KB attestation carrying that file's path, size and sha256,
-// plus the findings. --verify then re-hashes the file.
+// and prints an attestation under 2 KB carrying that file's path, size and
+// sha256, plus the findings. --verify then re-hashes the file.
 //
 // MEASURED, and why --verify does not demand byte-identity: on the pinned 3B
 // reviewer the message came out byte-identical once, fenced once, and — third

@@ -2,9 +2,6 @@
 description: Writing new code, editing files, fixing bugs, implementing features (no direct delegation — research needs round-trip through `architect`)
 mode: subagent
 permissions:
-  - action: execute
-    resource: "*"
-    effect: deny
   - action: skill
     resource: "*"
     effect: deny

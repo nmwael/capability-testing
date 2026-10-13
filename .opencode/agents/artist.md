@@ -2,9 +2,6 @@
 description: Visual assets and artwork as code (SVG/CSS), image analysis via vision models (Gemma4 under the gemma profile)
 mode: subagent
 permissions:
-  - action: execute
-    resource: "*"
-    effect: deny
   - action: skill
     resource: "*"
     effect: deny

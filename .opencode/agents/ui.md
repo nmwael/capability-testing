@@ -2,9 +2,6 @@
 description: Designing user interfaces and turning them into UI code (HTML/CSS)
 mode: subagent
 permissions:
-  - action: execute
-    resource: "*"
-    effect: deny
   - action: skill
     resource: "*"
     effect: deny

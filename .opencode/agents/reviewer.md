@@ -5,9 +5,6 @@ permissions:
   - action: edit
     resource: "*"
     effect: deny
-  - action: execute
-    resource: "*"
-    effect: deny
   - action: skill
     resource: "*"
     effect: deny
@@ -76,11 +73,11 @@ node scripts/review-gate.mjs --task <the task_id from your Directive>
 
 The runner's stdout is the artefact; you are only the channel that forwards it. Re-typing it, re-indenting it, reformatting it, translating it, trimming it, summarising it, or "improving" it is FABRICATION — even when every value you write looks correct. A reviewer that ran the tool and then recomposed its output has produced a false report, and the gate fails.
 
-**Use `--attest`, which is why it exists.** A full envelope is ~11 KB (37 checks) and copying it byte-exactly has repeatedly failed here — a reviewer dropped 5 checks, truncated 21 evidence strings, altered a path and invented 2 checks. `--attest` moves the bulk out of your message:
+**Use `--attest`, which is why it exists.** A full envelope is ~21 KB (69 checks) and copying it byte-exactly has repeatedly failed here — a reviewer dropped 5 checks, truncated 21 evidence strings, altered a path and invented 2 checks. `--attest` moves the bulk out of your message:
 
     node scripts/review-gate.mjs --task <task_id> --attest --out wip/review-gate/<task_id>.envelope.json
 
-That writes the full envelope to the file and prints a short attestation (~1 KB) on stdout: the same fields, with `checks[]` replaced by `artifact` — the file's path, byte count and sha256. **Your final message is that attestation verbatim.** Copy ~1 KB, not ~11 KB. The artifact is written by the runner; never write or edit it yourself, and never hand-write a `checks[]` array to "restore" the bulk. `node scripts/review-gate.mjs --verify <your-attestation-file>` re-hashes the artifact and rejects a paraphrased finding, a wrong hash, a dropped `artifact` or a missing file — so a recomposed attestation is detected mechanically.
+That writes the full envelope to the file and prints a short attestation (~0.5–1.5 KB) on stdout: the same fields, with `checks[]` replaced by `artifact` — the file's path, byte count and sha256. **Your final message is that attestation verbatim.** Copy ~1 KB, not ~21 KB. The artifact is written by the runner; never write or edit it yourself, and never hand-write a `checks[]` array to "restore" the bulk. `node scripts/review-gate.mjs --verify <your-attestation-file>` re-hashes the artifact and rejects a paraphrased finding, a wrong hash, a dropped `artifact` or a missing file — so a recomposed attestation is detected mechanically.
 
 - **Never alter a string inside `artifact` or `findings`.** The `path`, `sha256`, `bytes`, `checks` and every finding are the runner's own output; changing one character makes the report false, and the hash check will say so.
 - **Never drop a field.** The attestation always has `task_id`, `role`, `status`, `summary`, `artifact` and `findings[]` (plus `blocker` when the status is not `done`). If your message has no `findings` key, you recomposed it.

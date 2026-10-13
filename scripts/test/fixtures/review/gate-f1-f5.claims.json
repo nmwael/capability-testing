@@ -487,24 +487,41 @@
           "expect_stdout": "redirection honoured"
         }
       ]
-    }
-  ],
-  "advisories": [
-    {
-      "severity": "medium",
-      "claim": "F4",
-      "path": ".opencode/agents/reviewer.md",
-      "line": 9,
-      "issue": "the frontmatter denies action 'execute', which is not a permission action in OpenCode 2.0.26 — the shell tool maps to 'shell' and write/patch map to 'edit' (see $A/oh/A$ in the opencode build) — so this rule is inert. The enforced read-only guarantee is 'edit: deny'; shell remains allowed and must stay allowed, because the reviewer runs check commands to gather evidence.",
-      "suggestion": "drop the inert 'execute' rule (the same inert rule is in .opencode/agents/fact-checker.md) and, if command execution really must be forbidden, say 'shell: deny' — but then the reviewer can no longer run scripts such as scripts/review-gate.mjs, so 'edit: deny' plus the read-only discipline section is the workable guarantee"
     },
     {
-      "severity": "medium",
-      "claim": "F4b",
-      "path": "opencode.json",
-      "line": 1,
-      "issue": "the other seven agent blocks (architect, researcher, fact-checker, build, ui, artist, coder) still nest their temperature under request.body, which OpenCode 2.0.26's AgentConfig does not define, so that setting is as inert for them as it was for the reviewer.",
-      "suggestion": "migrate each block to a top-level \"temperature\" (the reviewer is the only one migrated here, because it was the block under review); until then their temperature is whatever the provider defaults to"
+      "id": "K21",
+      "statement": "F4 + F4b: no inert agent config remains - every agent on the roster (architect, researcher, reviewer, fact-checker, build, ui, artist, coder) carries a top-level `temperature` (the V2.0.26 `AgentConfig` has no `request` field, so the old nested blocks never took effect), and no .opencode/agents/*.md frontmatter denies the non-existent permission action 'execute'",
+      "severity": "high",
+      "suggestion": "keep agent temperature top-level and restrict permission rules to real actions (`shell`, `edit`, `subagent`, `skill`, `question`); an `action: execute` rule matches nothing, so removing it is a no-op while leaving it in misleads the next reader",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node -e '\nconst fs=require(\"fs\")\nconst cfg=JSON.parse(fs.readFileSync(\"opencode.json\",\"utf8\"))\nconst bad=Object.entries(cfg.agents).filter(([,a])=>a.request).map(([k])=>k)\nif(bad.length)throw new Error(\"inert request.body still on: \"+bad.join(\", \"))\nconst roster=[\"architect\",\"researcher\",\"reviewer\",\"fact-checker\",\"build\",\"ui\",\"artist\",\"coder\"]\nconst missing=roster.filter(n=>typeof (cfg.agents[n]||{}).temperature!==\"number\")\nif(missing.length)throw new Error(\"no top-level temperature on: \"+missing.join(\", \"))\nconst files=fs.readdirSync(\".opencode/agents\").filter(n=>n.endsWith(\".md\"))\nconst inert=files.filter(n=>fs.readFileSync(\".opencode/agents/\"+n,\"utf8\").includes(\"action: execute\"))\nif(inert.length)throw new Error(\"inert execute permission still in: \"+inert.join(\", \"))\nconsole.log(\"no inert agent config; \"+roster.length+\" agents on top-level temperature (\"+roster.map(n=>n+\"=\"+cfg.agents[n].temperature).join(\" \")+\"), \"+files.length+\" agent files clean\")\n'",
+          "expect_exit": 0,
+          "expect_stdout": "no inert agent config"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "action: edit"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "action: edit"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "action: execute"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "action: execute"
+        }
+      ]
     }
-  ]
+  ],
+  "advisories": []
 }
