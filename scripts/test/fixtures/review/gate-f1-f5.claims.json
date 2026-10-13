@@ -230,6 +230,54 @@
           "path": "scripts/test/fixtures/plans/plan-empty.md"
         }
       ]
+    },
+    {
+      "id": "K14",
+      "statement": "F6: the fact-checker may only report evidence-backed findings — it must quit the fabrication mode measured in the RV-F12345 dry run (findings with no path:line, no quoted command output, and conditional 'passes if ...' verdicts)",
+      "severity": "high",
+      "suggestion": "restore the Evidence (binding) rules, the banned-phrasing list and the pre-return self-check in .opencode/agents/fact-checker.md",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "## Evidence \\(binding\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "Quote the bytes, never the impression"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "Assert only what you ran this session"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "## Banned phrasings"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "## Pre-return self-check"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "`path` is never `null`"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "Label the outcome by what the evidence shows"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "Do not emit a `checks` array"
+        }
+      ]
     }
   ],
   "advisories": [
