@@ -13,10 +13,7 @@ permissions:
     effect: deny
   - action: question
     resource: "*"
-    effect: deny
-  - action: execute
-    resource: "*"
-    effect: deny
+    effect: allow
   - action: skill
     resource: "*"
     effect: deny
