@@ -12,6 +12,16 @@
 // auditor runs this script and its stdout — and only its stdout — is the
 // envelope. The auditor still judges; it just no longer transcribes.
 //
+// --attest, WHY IT EXISTS: taking envelope AUTHORING away from the model was
+// not enough. Asked to echo an ~11.5 KB envelope (37 checks) verbatim the
+// auditor still recomposed it — dropping 5 checks, truncating 21 evidence
+// strings, altering a path and inventing 2 checks, then wrapping the JSON in a
+// fence — because copying ~3k tokens byte-exactly is beyond it. So the copying
+// is taken away too: --attest writes the full envelope to a file and prints a
+// short attestation carrying that file's path, size and sha256 plus the
+// findings. The auditor echoes ~1 KB, and --verify re-hashes the file to prove
+// the attestation was not paraphrased. The echo stops being a competence test.
+//
 // The checklist is data, not code: a JSON file naming claims and the checks
 // that substantiate them. Nothing here is reviewer-specific — the checklist
 // declares its own `role`, so any role's envelope can be produced the same way.
@@ -29,6 +39,9 @@
 // Usage
 //   node scripts/review-gate.mjs --task RV-F12345
 //   node scripts/review-gate.mjs --checklist scripts/test/fixtures/review/gate-f1-f5.claims.json
+//   node scripts/review-gate.mjs --attest [--out <path>]  # full envelope to a file,
+//                                                         # short attestation on stdout
+//   node scripts/review-gate.mjs --verify result.json     # hash-check an attestation
 //   node scripts/review-gate.mjs --list                  # claim ids + statements
 //   node scripts/review-gate.mjs --validate result.json  # shape-check an envelope
 //
@@ -50,7 +63,8 @@
 //     ]
 //   }
 
-import { readFileSync, existsSync, statSync } from "node:fs"
+import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { resolve, dirname, isAbsolute } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -61,17 +75,33 @@ const DEFAULT_CHECKLIST = "scripts/test/fixtures/review/gate-f1-f5.claims.json"
 const COMMAND_TIMEOUT_MS = 180000
 const EVIDENCE_MAX = 220
 const ENVELOPE_ROLES_NEEDING_FINDINGS = ["reviewer", "fact-checker"]
+const ATTEST_DIR = "wip/review-gate"
 
 const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <path>] [--quiet]
+       node scripts/review-gate.mjs --attest [--out <path>] [--task <id>]
        node scripts/review-gate.mjs --list [--checklist <path>]
        node scripts/review-gate.mjs --validate <file|->
+       node scripts/review-gate.mjs --verify <file|->
 
   --task <id>         envelope task_id (default: the checklist's task_id)
   --checklist <path>  checklist JSON (default: ${DEFAULT_CHECKLIST})
   --quiet             no progress on stderr
   --list              print claim ids and statements as JSON, run nothing
+  --attest            run the gate, WRITE the full envelope to a file and print a
+                      short attestation (its path, bytes and sha256) instead, so
+                      the caller echoes ~1 KB rather than the whole envelope
+  --out <path>        where --attest writes the full envelope
+                      (default: ${ATTEST_DIR}/<task_id>.envelope.json)
+  --force             with --attest, overwrite an existing artifact whose
+                      content differs. Refused by default: an artifact is
+                      evidence, and rewriting it invalidates any attestation
+                      already pointing at its hash
   --validate <file>   read a Result envelope from <path> ('-' = stdin) and
                       report {"valid":bool,"problems":[...]}
+  --verify <file>     read an ATTESTATION, re-hash the file it points at, and
+                      report whether the envelope on disk matches it; one
+                      wrapping markdown fence is tolerated and reported as
+                      "fenced": true (a fence is a wrapper, not a paraphrase)
   --help              this text (stdout)
 
 stdout is exactly one JSON Result object on every normal run.`
@@ -87,6 +117,10 @@ function parseArgs(argv) {
     quiet: false,
     list: false,
     validate: undefined,
+    verify: undefined,
+    attest: false,
+    out: null,
+    force: false,
     help: false,
     problem: null,
   }
@@ -109,6 +143,18 @@ function parseArgs(argv) {
       const v = takeValue()
       if (v === null) opts.problem = opts.problem || "--validate needs a file"
       else opts.validate = v
+    } else if (arg === "--verify") {
+      const v = takeValue()
+      if (v === null) opts.problem = opts.problem || "--verify needs a file"
+      else opts.verify = v
+    } else if (arg === "--attest") {
+      opts.attest = true
+    } else if (arg === "--force") {
+      opts.force = true
+    } else if (arg === "--out") {
+      const v = takeValue()
+      if (v === null) opts.problem = opts.problem || "--out needs a path"
+      else opts.out = v
     } else if (arg === "--quiet") {
       opts.quiet = true
     } else if (arg === "--list") {
@@ -119,6 +165,7 @@ function parseArgs(argv) {
       opts.problem = opts.problem || `unknown argument '${arg}'`
     }
   }
+  if (opts.out && !opts.attest) opts.problem = opts.problem || "--out only applies with --attest"
   return opts
 }
 
@@ -373,6 +420,130 @@ function blockedEnvelope(taskId, role, detail, type = "tool_error", path = DEFAU
 }
 
 // ---------------------------------------------------------------------------
+// --attest mode: the full envelope goes to a file, a short attestation to stdout
+// ---------------------------------------------------------------------------
+
+function sha256Hex(body) {
+  return createHash("sha256").update(body).digest("hex")
+}
+
+function safeName(taskId) {
+  return String(taskId || "(unknown)").replace(/[^A-Za-z0-9._-]/g, "_")
+}
+
+// The attestation is a valid Result envelope in its own right (role-appropriate
+// findings included) that replaces checks[] with an `artifact` pointer. The
+// pointer is what makes paraphrase detectable: --verify re-hashes the file.
+function attestEnvelope(full, artifactPath, body) {
+  const artifact = {
+    path: artifactPath,
+    sha256: sha256Hex(body),
+    bytes: Buffer.byteLength(body),
+    checks: Array.isArray(full.checks) ? full.checks.length : 0,
+  }
+  const attestation = {
+    task_id: full.task_id,
+    role: full.role,
+    status: full.status,
+    summary: `${full.summary} Full envelope: ${artifactPath} (${artifact.checks} checks, ${artifact.bytes} bytes, sha256 ${artifact.sha256.slice(0, 12)}…).`,
+    artifact,
+    findings: full.findings,
+  }
+  if (full.blocker !== undefined) attestation.blocker = full.blocker
+  return attestation
+}
+
+const HEX64 = /^[0-9a-f]{64}$/
+
+// A model that otherwise copies an envelope exactly may still wrap it in a
+// markdown fence (measured: a trailing ``` line). A fence is a wrapper, not a
+// paraphrase — it cannot hide the content, because the sha256 check re-hashes
+// the artifact — so --verify tolerates ONE leading/trailing fence and reports
+// it, rather than failing a Result whose content is provably intact. Prose that
+// a fence does not delimit is still a parse error. --validate stays strict: it
+// pins the authored-envelope contract, not the forwarding step.
+function stripFence(raw) {
+  const m = raw.match(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n?```$/)
+  if (m) return { text: m[1].trim(), fenced: true }
+  return { text: raw, fenced: false }
+}
+
+function verifyAttestation(rawInput) {
+  const { text: raw, fenced } = stripFence(rawInput)
+  let attestation
+  try {
+    attestation = JSON.parse(raw)
+  } catch (err) {
+    return { valid: false, fenced, problems: [`not valid JSON: ${err.message}`] }
+  }
+  if (attestation === null || typeof attestation !== "object" || Array.isArray(attestation)) {
+    return { valid: false, fenced, problems: ["attestation must be one JSON object"] }
+  }
+
+  const problems = []
+  const a = attestation.artifact
+  if (a === undefined) {
+    problems.push("artifact: missing — a full envelope carries checks[], an attestation carries artifact")
+  } else if (a === null || typeof a !== "object" || Array.isArray(a)) {
+    problems.push("artifact: must be an object")
+  } else {
+    if (!isNonEmptyString(a.path)) problems.push("artifact.path: missing")
+    if (!HEX64.test(String(a.sha256))) problems.push("artifact.sha256: not a 64-character lowercase hex digest")
+    if (typeof a.bytes !== "number") problems.push("artifact.bytes: missing")
+    if (typeof a.checks !== "number") problems.push("artifact.checks: missing")
+  }
+  if (problems.length) return { valid: false, problems }
+
+  const full = resolveUnderRoot(a.path)
+  if (!existsSync(full)) return { valid: false, problems: [`artifact.path '${a.path}' not found`] }
+  const body = readFileSync(full)
+  const digest = sha256Hex(body)
+  if (digest !== a.sha256) problems.push(`artifact.sha256 mismatch: attestation says ${a.sha256}, file hashes to ${digest}`)
+  if (Buffer.byteLength(body) !== a.bytes) {
+    problems.push(`artifact.bytes mismatch: attestation says ${a.bytes}, file is ${Buffer.byteLength(body)} bytes`)
+  }
+
+  const text = body.toString("utf8")
+  let envelope = null
+  try {
+    envelope = JSON.parse(text)
+  } catch (err) {
+    problems.push(`artifact is not JSON: ${err.message}`)
+  }
+  if (envelope) {
+    for (const key of ["task_id", "role", "status"]) {
+      if (JSON.stringify(attestation[key]) !== JSON.stringify(envelope[key])) {
+        problems.push(`${key}: attestation ${JSON.stringify(attestation[key])} but artifact ${JSON.stringify(envelope[key])}`)
+      }
+    }
+    // The findings are the reviewer's judgement and the contract requires them
+    // inline, so they are the one part a model could still paraphrase by hand.
+    // Comparing them to the artefact is what closes that hole.
+    if (JSON.stringify(attestation.findings) !== JSON.stringify(envelope.findings)) {
+      problems.push("findings: the attestation's findings[] do not match the artifact's — paraphrased, not copied")
+    }
+    if (JSON.stringify(attestation.blocker) !== JSON.stringify(envelope.blocker)) {
+      problems.push("blocker: the attestation's blocker does not match the artifact's")
+    }
+    if (a.checks !== (Array.isArray(envelope.checks) ? envelope.checks.length : 0)) {
+      problems.push(`artifact.checks: attestation says ${a.checks}, artifact has ${(envelope.checks || []).length}`)
+    }
+    const inner = validateEnvelope(text)
+    inner.problems.forEach((p) => problems.push(`artifact is not a valid envelope: ${p}`))
+  }
+
+  return {
+    valid: problems.length === 0,
+    fenced,
+    problems,
+    artifact: a.path,
+    sha256: a.sha256,
+    bytes: a.bytes,
+    checks: a.checks,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // --validate mode
 // ---------------------------------------------------------------------------
 
@@ -417,7 +588,17 @@ function validateEnvelope(raw) {
   }
 
   if (payload.checks === undefined) {
-    problems.push("checks: missing")
+    if (payload.artifact === undefined) {
+      problems.push("checks: missing (an attestation instead carries 'artifact')")
+    } else if (payload.artifact === null || typeof payload.artifact !== "object" || Array.isArray(payload.artifact)) {
+      problems.push("artifact: must be an object")
+    } else {
+      const a = payload.artifact
+      if (!isNonEmptyString(a.path)) problems.push("artifact.path: missing")
+      if (!HEX64.test(String(a.sha256))) problems.push("artifact.sha256: not a 64-character lowercase hex digest")
+      if (typeof a.bytes !== "number") problems.push("artifact.bytes: missing")
+      if (typeof a.checks !== "number") problems.push("artifact.checks: missing")
+    }
   } else if (!Array.isArray(payload.checks)) {
     problems.push("checks: must be an array")
   } else {
@@ -459,9 +640,9 @@ function roleNeedsFindings(role) {
 // main
 // ---------------------------------------------------------------------------
 
-function usageEnvelope(role, detail) {
+function usageEnvelope(role, detail, taskId = "(unknown)") {
   return {
-    task_id: "(unknown)",
+    task_id: taskId,
     role,
     status: "blocked",
     summary: `Cannot run the gate: ${detail}`,
@@ -503,6 +684,22 @@ function main() {
       text === null
         ? { valid: false, problems: [`${opts.validate} not found`] }
         : validateEnvelope(text.trim())
+    process.stdout.write(`${JSON.stringify(verdict, null, 2)}\n`)
+    return verdict.valid ? 0 : 1
+  }
+
+  if (opts.verify !== undefined) {
+    let text = null
+    if (opts.verify === "-") {
+      text = readFileSync(0, "utf8")
+    } else {
+      const full = resolveUnderRoot(opts.verify)
+      if (existsSync(full)) text = readFileSync(full, "utf8")
+    }
+    const verdict =
+      text === null
+        ? { valid: false, problems: [`${opts.verify} not found`] }
+        : verifyAttestation(text.trim())
     process.stdout.write(`${JSON.stringify(verdict, null, 2)}\n`)
     return verdict.valid ? 0 : 1
   }
@@ -559,6 +756,39 @@ function main() {
   })
 
   const envelope = buildEnvelope(checklist, taskId, claimResults)
+
+  if (opts.attest) {
+    const rel = opts.out || `${ATTEST_DIR}/${safeName(taskId)}.envelope.json`
+    const full = resolveUnderRoot(rel)
+    const body = `${JSON.stringify(envelope, null, 2)}\n`
+    try {
+      mkdirSync(dirname(full), { recursive: true })
+      // An artifact is evidence: some attestation may already point at this
+      // file by sha256. Rewriting it with different content invalidates that
+      // attestation silently, so refuse unless --force says so deliberately.
+      if (existsSync(full) && !opts.force) {
+        const existing = readFileSync(full, "utf8")
+        if (existing !== body) {
+          emit(
+            usageEnvelope(
+              role,
+              `--attest would overwrite ${rel}, whose content differs (the tree or the checklist changed since it was written). Any attestation already pointing at that file would be invalidated; pass --force to overwrite deliberately, or --out to write elsewhere.`,
+              taskId,
+            ),
+          )
+          return 1
+        }
+      }
+      writeFileSync(full, body)
+      emit(attestEnvelope(envelope, rel, body))
+    } catch (err) {
+      process.stderr.write(`review-gate: --attest could not write ${rel}: ${err.message}\n`)
+      emit(usageEnvelope(role, `--attest could not write ${rel}: ${err.message}`, taskId))
+      return 1
+    }
+    return envelope.status === "done" ? 0 : 1
+  }
+
   emit(envelope)
   return envelope.status === "done" ? 0 : 1
 }

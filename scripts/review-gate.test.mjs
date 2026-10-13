@@ -20,6 +20,15 @@
 //   6. --validate accepts the runner's own stdout, rejects broken envelopes
 //   7. running the gate mutates nothing (the auditor is read-only)
 //   8. checklist advisories reach findings[] without flipping status
+//   9. --attest keeps the bulk out of the echo: a short attestation pointing at
+//      the full envelope, which is itself valid
+//  10. --verify re-hashes that artifact and rejects a paraphrased finding, a
+//      corrupted sha256, a dropped artifact pointer and a missing artifact file
+//  11. --attest also leaves the working tree unchanged (its default artifact
+//      path is gitignored scratch)
+//  12. --attest refuses to overwrite a DIFFERING artifact (an artifact is
+//      evidence and an attestation already points at it by hash) while an
+//      unchanged one is rewritten harmlessly; --force overwrites deliberately
 //
 // Deliberately NOT here: a case that runs the shipped F1-F5 checklist from
 // inside the shipped F1-F5 checklist. That is infinite recursion, so the
@@ -30,7 +39,7 @@
 // ---------------------------------------------------------------------------
 
 import { spawnSync } from "node:child_process"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -338,6 +347,131 @@ function checkReadOnly() {
   const after = gitStatus()
   if (after.stdout === before.stdout) ok("working tree unchanged by a gate run")
   else fail(`the gate modified the working tree:\n${after.stdout}`)
+
+  // --attest writes its artifact to wip/ (gitignored scratch) by default, so it
+  // must not dirty the working tree either. Clear the default artifact first:
+  // this run is about where the file lands, and --attest (correctly) refuses to
+  // rewrite a stale artifact whose content no longer matches.
+  rmSync(resolve(ROOT, "wip/review-gate/RV-F12345.envelope.json"), { force: true })
+  gate(["--attest", "--quiet"])
+  const attested = gitStatus()
+  if (attested.stdout === before.stdout) ok("working tree unchanged by an --attest run")
+  else fail(`--attest modified the working tree:\n${attested.stdout}`)
+}
+
+function checkAttestMode() {
+  console.log("--attest mode")
+
+  const out = join(TMP, "attested.envelope.json")
+  const res = gate(["--attest", "--out", out, "--quiet"])
+  if (res.status !== 0) return fail(`--attest exit ${res.status}, expected 0`)
+
+  const attestation = expectSingleJsonObject(res.stdout, "--attest")
+  if (!attestation) return
+  expectValid(res.stdout, "--attest attestation")
+
+  if (attestation.checks !== undefined) fail("--attest printed checks[]: the bulk is meant to stay in the artifact")
+  else ok("the attestation carries no checks[]")
+
+  const artifact = attestation.artifact
+  if (!artifact || typeof artifact !== "object") return fail("--attest printed no artifact pointer")
+  ok(`artifact pointer: ${artifact.path} (${artifact.bytes} bytes, sha256 ${String(artifact.sha256).slice(0, 12)}…)`)
+
+  // The whole point: the echo burden must shrink. If the attestation is not
+  // substantially smaller than the file it points at, nothing was gained.
+  const shortBytes = Buffer.byteLength(res.stdout)
+  if (artifact.bytes <= shortBytes) {
+    fail(`artifact ${artifact.bytes} bytes is not larger than the ${shortBytes}-byte attestation`)
+  } else {
+    ok(`echo burden ${shortBytes} bytes against ${artifact.bytes} in the artifact (${(artifact.bytes / shortBytes).toFixed(1)}x smaller)`)
+  }
+
+  // The artifact must be the full envelope, and still a valid one.
+  expectValid(readFileSync(resolve(ROOT, artifact.path), "utf8"), "--attest artifact")
+
+  const again = gate(["--attest", "--out", out, "--quiet"])
+  if (again.stdout === res.stdout) ok("--attest is deterministic")
+  else fail("--attest differs between runs")
+
+  // --verify is the guarantee: it re-hashes the file the attestation names.
+  const attPath = join(TMP, "attestation.json")
+  writeFileSync(attPath, res.stdout)
+  const verified = gate(["--verify", attPath, "--quiet"])
+  const verdict = JSON.parse(verified.stdout)
+  if (verified.status === 0 && verdict.valid) ok("--verify accepts the attestation it produced")
+  else fail(`--verify rejected its own attestation: ${verdict.problems.join("; ")}`)
+
+  // ...and it must reject every way a model could paraphrase it, which is the
+  // failure this mode exists to catch.
+  const tampers = [
+    { label: "a paraphrased finding", edit: (a) => { a.findings[0].suggestion = "fix it" } },
+    { label: "a corrupted sha256", edit: (a) => { a.artifact.sha256 = "0".repeat(64) } },
+    { label: "a dropped artifact (hand-written passing envelope)", edit: (a) => { delete a.artifact } },
+    { label: "an artifact path that does not exist", edit: (a) => { a.artifact.path = "wip/no-such-envelope.json" } },
+  ]
+  for (const t of tampers) {
+    const copy = JSON.parse(res.stdout)
+    t.edit(copy)
+    const tamperedPath = join(TMP, `tampered-${tampers.indexOf(t)}.json`)
+    writeFileSync(tamperedPath, JSON.stringify(copy, null, 2))
+    const bad = gate(["--verify", tamperedPath, "--quiet"])
+    const badVerdict = JSON.parse(bad.stdout)
+    if (badVerdict.valid || bad.status !== 1) fail(`${t.label}: accepted (exit ${bad.status})`)
+    else ok(`${t.label}: rejected — ${badVerdict.problems[0]}`)
+  }
+
+  // A model that copies the attestation exactly may still wrap it in a fence
+  // (measured: a trailing ``` line). --verify tolerates one fence and reports
+  // it, but the fence must not hide a paraphrase.
+  const fencedPath = join(TMP, "fenced.json")
+  writeFileSync(fencedPath, `\`\`\`json\n${res.stdout.trim()}\n\`\`\`\n`)
+  const fenced = gate(["--verify", fencedPath, "--quiet"])
+  const fencedVerdict = JSON.parse(fenced.stdout)
+  if (fenced.status === 0 && fencedVerdict.valid && fencedVerdict.fenced === true) {
+    ok("a wrapping fence is tolerated and reported (fenced: true)")
+  } else {
+    fail(`a wrapping fence was rejected: ${fencedVerdict.problems.join("; ")}`)
+  }
+  const fencedTamper = JSON.parse(res.stdout)
+  fencedTamper.findings[0].severity = "high"
+  writeFileSync(fencedPath, `\`\`\`json\n${JSON.stringify(fencedTamper, null, 2)}\n\`\`\``)
+  const fencedBad = JSON.parse(gate(["--verify", fencedPath, "--quiet"]).stdout)
+  if (fencedBad.valid) fail("a fence hid a paraphrased finding")
+  else ok("a fence does not hide a paraphrased finding")
+
+  // An artifact is EVIDENCE, and an attestation already points at it by hash.
+  // Rewriting it with different content would invalidate that attestation
+  // silently (measured in practice: a later --attest to the default path made an
+  // earlier, correct attestation fail --verify). So a differing artifact must
+  // be refused unless --force overwrites deliberately.
+  const immutable = join(TMP, "immutable.envelope.json")
+  writeFileSync(immutable, '{"stale":true}\n')
+  const refused = gate(["--attest", "--out", immutable, "--quiet"])
+  const refusal = (() => {
+    try {
+      return JSON.parse(refused.stdout)
+    } catch {
+      return null
+    }
+  })()
+  if (refused.status === 1 && refusal && refusal.status === "blocked" && /--force/.test(String(refusal.summary))) {
+    ok("refuses to overwrite a differing artifact without --force")
+  } else {
+    fail(`expected a blocked refusal, got exit ${refused.status}: ${String(refused.stdout).slice(0, 120)}`)
+  }
+  if (readFileSync(immutable, "utf8") === '{"stale":true}\n') ok("the refused artifact is left untouched")
+  else fail("the refused artifact was modified")
+  const forced = gate(["--attest", "--out", immutable, "--force", "--quiet"])
+  if (forced.status === 0 && JSON.parse(forced.stdout).artifact) ok("--force overwrites deliberately")
+  else fail(`--force did not produce an attestation (exit ${forced.status})`)
+  expectValid(readFileSync(immutable, "utf8"), "--attest --force artifact")
+  const forcedVerify = JSON.parse(gate(["--verify", (() => {
+    const p = join(TMP, "forced-attestation.json")
+    writeFileSync(p, forced.stdout)
+    return p
+  })()], "--quiet").stdout)
+  if (forcedVerify.valid) ok("the forced artifact re-hashes against a fresh attestation")
+  else fail(`the forced attestation did not verify: ${forcedVerify.problems.join("; ")}`)
 }
 
 function checkShippedChecklistIsComplete() {
@@ -357,6 +491,7 @@ checkUsageErrors()
 checkValidateMode()
 checkListMode()
 checkReadOnly()
+checkAttestMode()
 rmSync(TMP, { recursive: true, force: true })
 
 console.log(failures ? `\nRESULT: FAIL — ${failures} assertion(s) failed.` : "\nRESULT: PASS — the gate runner honoured every envelope guarantee.")

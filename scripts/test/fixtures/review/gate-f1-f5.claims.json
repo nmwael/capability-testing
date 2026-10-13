@@ -293,17 +293,75 @@
         {
           "kind": "file_contains",
           "path": ".opencode/agents/reviewer.md",
-          "pattern": "Copy, never compose"
+          "pattern": "Use `--attest`, which is why it exists"
         },
         {
           "kind": "file_contains",
           "path": ".opencode/agents/reviewer.md",
-          "pattern": "Never alter a string inside `checks\\[\\]`"
+          "pattern": "Never alter a string inside `artifact` or `findings`"
         },
         {
           "kind": "file_contains",
           "path": ".opencode/agents/reviewer.md",
           "pattern": "If your message has no `findings` key"
+        }
+      ]
+    },
+    {
+      "id": "K16",
+      "statement": "F8: the reviewer's echo burden is mechanically reduced - --attest writes the full envelope to a file and prints a short attestation that --verify re-hashes, so a paraphrased envelope is detectable rather than merely forbidden",
+      "severity": "high",
+      "suggestion": "restore the --attest/--verify path in scripts/review-gate.mjs, its pinned contract in scripts/review-gate.test.mjs, and the --attest instruction in .opencode/agents/reviewer.md",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node scripts/review-gate.mjs --help",
+          "expect_exit": 0,
+          "expect_stdout": "--attest"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "artifact.sha256: not a 64-character lowercase hex digest"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "checkAttestMode"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "a paraphrased finding"
+        }
+      ]
+    },
+    {
+      "id": "K17",
+      "statement": "F9: an attestation artifact is immutable evidence - if the target already exists with differing content, --attest refuses (status blocked, summary naming --force) rather than silently invalidating the attestation that already points at its hash; --force overwrites deliberately",
+      "severity": "high",
+      "suggestion": "restore the existence check and the usageEnvelope refusal in scripts/review-gate.mjs, and the artifact immutability cases in scripts/review-gate.test.mjs",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node scripts/review-gate.mjs --help",
+          "expect_exit": 0,
+          "expect_stdout": "--force"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "would overwrite"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "refuses to overwrite a differing artifact without --force"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "the refused artifact is left untouched"
         }
       ]
     }

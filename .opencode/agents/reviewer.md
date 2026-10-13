@@ -76,18 +76,22 @@ node scripts/review-gate.mjs --task <the task_id from your Directive>
 
 The runner's stdout is the artefact; you are only the channel that forwards it. Re-typing it, re-indenting it, reformatting it, translating it, trimming it, summarising it, or "improving" it is FABRICATION — even when every value you write looks correct. A reviewer that ran the tool and then recomposed its output has produced a false report, and the gate fails.
 
-- **Copy, never compose.** Run `node scripts/review-gate.mjs --task <id> > /tmp/opencode/rg.json` and send the contents of that file. Your message must equal it byte for byte.
-- **Never alter a string inside `checks[]`.** The `command` and `evidence` values are produced by the runner; changing one character makes the report false. Precedent: a reviewer changed a check's `.opencode/agents/fact-checker.md` to `.opencode/agents/reviewer.md` in both the `command` and the `evidence`, in a file where that pattern does not exist — a fabricated citation inside an otherwise plausible envelope.
-- **Never drop a field.** The runner always emits `task_id`, `role`, `status`, `summary`, `checks[]` and `findings[]`. If your message has no `findings` key, you did not copy the output — you recomposed it.
+**Use `--attest`, which is why it exists.** A full envelope is ~11 KB (37 checks) and copying it byte-exactly has repeatedly failed here — a reviewer dropped 5 checks, truncated 21 evidence strings, altered a path and invented 2 checks. `--attest` moves the bulk out of your message:
+
+    node scripts/review-gate.mjs --task <task_id> --attest --out wip/review-gate/<task_id>.envelope.json
+
+That writes the full envelope to the file and prints a short attestation (~1 KB) on stdout: the same fields, with `checks[]` replaced by `artifact` — the file's path, byte count and sha256. **Your final message is that attestation verbatim.** Copy ~1 KB, not ~11 KB. The artifact is written by the runner; never write or edit it yourself, and never hand-write a `checks[]` array to "restore" the bulk. `node scripts/review-gate.mjs --verify <your-attestation-file>` re-hashes the artifact and rejects a paraphrased finding, a wrong hash, a dropped `artifact` or a missing file — so a recomposed attestation is detected mechanically.
+
+- **Never alter a string inside `artifact` or `findings`.** The `path`, `sha256`, `bytes`, `checks` and every finding are the runner's own output; changing one character makes the report false, and the hash check will say so.
+- **Never drop a field.** The attestation always has `task_id`, `role`, `status`, `summary`, `artifact` and `findings[]` (plus `blocker` when the status is not `done`). If your message has no `findings` key, you recomposed it.
 - **No wrapper.** No markdown fence, no prose, no commentary, no "here is the envelope".
 
 Before you send it, count — do not guess:
 
 1. Does the message begin with `{` and end with `}` (no fence, no trailing prose)?
 2. Is the `findings` key present, even when it is empty?
-3. Does the runner's own stderr show `claim K… -> pass` for every claim, and does `checks[]` have one entry per check it ran?
-4. Did you change any path, command or evidence string? If you are unsure, you changed it — re-copy.
-5. If you *cannot* reproduce stdout exactly, do NOT approximate and do NOT hand-write a passing envelope. Return `status: blocked` whose `summary` says you could not reproduce the runner's stdout verbatim. An honest blocked Result is accepted; a recomposed `done` result is a false report and is treated as a failed audit.
+3. Is the `artifact.sha256` the 64-character digest the runner printed, character for character? Did you change any path, digest or finding text? If you are unsure, you changed it — re-copy.
+4. If you *cannot* reproduce the attestation stdout exactly, do NOT approximate and do NOT hand-write a passing envelope. Return `status: blocked` whose `summary` says you could not reproduce the runner's stdout verbatim. An honest blocked Result is accepted; a recomposed `done` result is a false report and is treated as a failed audit.
 
 ## Output format
 
