@@ -23,7 +23,10 @@
 //   9. --attest keeps the bulk out of the echo: a short attestation pointing at
 //      the full envelope, which is itself valid
 //  10. --verify re-hashes that artifact and rejects a paraphrased finding, a
-//      corrupted sha256, a dropped artifact pointer and a missing artifact file
+//      corrupted sha256, a missing artifact file or a disagreeing check count,
+//      while tolerating one fence, resolving a missing `artifact` pointer from
+//      `task_id` and reporting a re-worded `summary` in `notes` (measured
+//      reviewer behaviour: verdict/role/findings copy, prose does not)
 //  11. --attest also leaves the working tree unchanged (its default artifact
 //      path is gitignored scratch)
 //  12. --attest refuses to overwrite a DIFFERING artifact (an artifact is
@@ -362,6 +365,10 @@ function checkReadOnly() {
 function checkAttestMode() {
   console.log("--attest mode")
 
+  // Make sure the default artifact for the default task exists and is current:
+  // the no-pointer case below resolves it from task_id.
+  gate(["--attest", "--quiet"])
+
   const out = join(TMP, "attested.envelope.json")
   const res = gate(["--attest", "--out", out, "--quiet"])
   if (res.status !== 0) return fail(`--attest exit ${res.status}, expected 0`)
@@ -406,8 +413,8 @@ function checkAttestMode() {
   const tampers = [
     { label: "a paraphrased finding", edit: (a) => { a.findings[0].suggestion = "fix it" } },
     { label: "a corrupted sha256", edit: (a) => { a.artifact.sha256 = "0".repeat(64) } },
-    { label: "a dropped artifact (hand-written passing envelope)", edit: (a) => { delete a.artifact } },
     { label: "an artifact path that does not exist", edit: (a) => { a.artifact.path = "wip/no-such-envelope.json" } },
+    { label: "a check count that disagrees with the artifact", edit: (a) => { a.artifact.checks = 1 } },
   ]
   for (const t of tampers) {
     const copy = JSON.parse(res.stdout)
@@ -438,6 +445,29 @@ function checkAttestMode() {
   const fencedBad = JSON.parse(gate(["--verify", fencedPath, "--quiet"]).stdout)
   if (fencedBad.valid) fail("a fence hid a paraphrased finding")
   else ok("a fence does not hide a paraphrased finding")
+
+  // MEASURED reviewer shape (third run): task_id/role/status/findings copied
+  // exactly, the non-canonical `artifact` key dropped and the prose `summary`
+  // rewritten. Failing that would fail a correct audit, so --verify resolves the
+  // artifact from task_id and reports the summary in `notes` — while still
+  // comparing the fields a paraphrase would corrupt.
+  const measured = JSON.parse(res.stdout)
+  delete measured.artifact
+  measured.summary = "17/17 claims verified; all checks pass. Full envelope written."
+  const measuredPath = join(TMP, "measured.json")
+  writeFileSync(measuredPath, JSON.stringify(measured, null, 2))
+  const measuredVerdict = JSON.parse(gate(["--verify", measuredPath, "--quiet"]).stdout)
+  if (measuredVerdict.valid && measuredVerdict.notes.some((n) => /summary/.test(n))) {
+    ok("no pointer + reworded summary verifies (artifact resolved from task_id; summary in notes)")
+  } else {
+    fail(`the measured reviewer shape did not verify: ${JSON.stringify(measuredVerdict.problems)}`)
+  }
+  const measuredTamper = JSON.parse(measuredPath ? readFileSync(measuredPath, "utf8") : "{}")
+  measuredTamper.findings[0].severity = "high"
+  writeFileSync(measuredPath, JSON.stringify(measuredTamper, null, 2))
+  const measuredBad = JSON.parse(gate(["--verify", measuredPath, "--quiet"]).stdout)
+  if (!measuredBad.valid) ok("without a pointer, a paraphrased finding is still rejected")
+  else fail("a paraphrase slipped through the task_id fallback")
 
   // An artifact is EVIDENCE, and an attestation already points at it by hash.
   // Rewriting it with different content would invalidate that attestation

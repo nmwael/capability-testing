@@ -86,6 +86,8 @@ That writes the full envelope to the file and prints a short attestation (~1 KB)
 - **Never drop a field.** The attestation always has `task_id`, `role`, `status`, `summary`, `artifact` and `findings[]` (plus `blocker` when the status is not `done`). If your message has no `findings` key, you recomposed it.
 - **No wrapper.** No markdown fence, no prose, no commentary, no "here is the envelope".
 
+**What is actually checked, so you know what verbatim buys.** `node scripts/review-gate.mjs --verify <your-message>` finds the artifact (the `artifact.path`, or the default `wip/review-gate/<task_id>.envelope.json` when you omit that key), re-hashes it, and requires your `task_id`, `role`, `status` and `findings[]` to equal the runner's, one character for character. A hand-written `summary` is reported in `notes` but is not load-bearing — the findings are the review. Everything else (findings, status, role, the artifact a `blocker` describes) is a failed audit if it differs, so copy those keys, never compose them.
+
 Before you send it, count — do not guess:
 
 1. Does the message begin with `{` and end with `}` (no fence, no trailing prose)?

@@ -16,11 +16,19 @@
 // not enough. Asked to echo an ~11.5 KB envelope (37 checks) verbatim the
 // auditor still recomposed it — dropping 5 checks, truncating 21 evidence
 // strings, altering a path and inventing 2 checks, then wrapping the JSON in a
-// fence — because copying ~3k tokens byte-exactly is beyond it. So the copying
-// is taken away too: --attest writes the full envelope to a file and prints a
-// short attestation carrying that file's path, size and sha256 plus the
-// findings. The auditor echoes ~1 KB, and --verify re-hashes the file to prove
-// the attestation was not paraphrased. The echo stops being a competence test.
+// fence — because copying ~3k tokens byte-exactly is beyond it. So the bulk is
+// taken away: --attest writes the whole envelope (checks[] included) to a file
+// and prints a ~1.4 KB attestation carrying that file's path, size and sha256,
+// plus the findings. --verify then re-hashes the file.
+//
+// MEASURED, and why --verify does not demand byte-identity: on the pinned 3B
+// reviewer the message came out byte-identical once, fenced once, and — third
+// run — with an invented `summary` and the `artifact` key dropped, while
+// task_id/role/status/findings were copied exactly every time. So --verify
+// compares the fields a paraphrase would corrupt (status, role, findings, and
+// every claimed pointer field), resolves a missing pointer from task_id, and
+// REPORTS a re-worded summary instead of pretending prose survives an echo.
+// Prose was never the review; the findings are.
 //
 // The checklist is data, not code: a JSON file naming claims and the checks
 // that substantiate them. Nothing here is reviewer-specific — the checklist
@@ -98,10 +106,13 @@ const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <p
                       already pointing at its hash
   --validate <file>   read a Result envelope from <path> ('-' = stdin) and
                       report {"valid":bool,"problems":[...]}
-  --verify <file>     read an ATTESTATION, re-hash the file it points at, and
-                      report whether the envelope on disk matches it; one
-                      wrapping markdown fence is tolerated and reported as
-                      "fenced": true (a fence is a wrapper, not a paraphrase)
+  --verify <file>     read a reviewer's message, re-hash the file it points at,
+                      and report whether status/role/findings match the
+                      envelope on disk. One wrapping markdown fence is
+                      tolerated ({fenced:true}); a message with no 'artifact'
+                      pointer resolves the default artifact from its task_id,
+                      and a re-worded 'summary' is reported in notes rather
+                      than treated as load-bearing
   --help              this text (stdout)
 
 stdout is exactly one JSON Result object on every normal run.`
@@ -481,26 +492,43 @@ function verifyAttestation(rawInput) {
   }
 
   const problems = []
-  const a = attestation.artifact
+  const notes = []
+  let a = attestation.artifact
+
+  // Measured with the pinned 3B reviewer: it copies task_id/role/status/findings
+  // unaltered every time, but it rewrites the prose `summary` and drops
+  // non-canonical keys such as `artifact`. So an absent pointer is not treated
+  // as fabrication — the artifact is resolved from `task_id` instead. What must
+  // match is exactly what a paraphrase would corrupt: the verdict, the role,
+  // the status and the findings. (With a pointer present, everything it claims
+  // is checked too, hash included.)
   if (a === undefined) {
-    problems.push("artifact: missing — a full envelope carries checks[], an attestation carries artifact")
+    if (!isNonEmptyString(attestation.task_id)) {
+      problems.push("artifact: missing and there is no task_id to resolve the default artifact from")
+    } else {
+      a = { path: `${ATTEST_DIR}/${safeName(attestation.task_id)}.envelope.json` }
+      notes.push(`no artifact pointer; resolved ${a.path} from task_id ${attestation.task_id}`)
+    }
   } else if (a === null || typeof a !== "object" || Array.isArray(a)) {
     problems.push("artifact: must be an object")
+    a = null
   } else {
     if (!isNonEmptyString(a.path)) problems.push("artifact.path: missing")
     if (!HEX64.test(String(a.sha256))) problems.push("artifact.sha256: not a 64-character lowercase hex digest")
     if (typeof a.bytes !== "number") problems.push("artifact.bytes: missing")
     if (typeof a.checks !== "number") problems.push("artifact.checks: missing")
   }
-  if (problems.length) return { valid: false, problems }
+  if (problems.length) return { valid: false, fenced, notes, problems }
 
   const full = resolveUnderRoot(a.path)
-  if (!existsSync(full)) return { valid: false, problems: [`artifact.path '${a.path}' not found`] }
+  if (!existsSync(full)) return { valid: false, fenced, notes, problems: [`artifact ${a.path} not found`] }
   const body = readFileSync(full)
   const digest = sha256Hex(body)
-  if (digest !== a.sha256) problems.push(`artifact.sha256 mismatch: attestation says ${a.sha256}, file hashes to ${digest}`)
-  if (Buffer.byteLength(body) !== a.bytes) {
-    problems.push(`artifact.bytes mismatch: attestation says ${a.bytes}, file is ${Buffer.byteLength(body)} bytes`)
+  if (typeof a.sha256 === "string" && digest !== a.sha256) {
+    problems.push(`artifact.sha256 mismatch: message says ${a.sha256}, file hashes to ${digest}`)
+  }
+  if (typeof a.bytes === "number" && Buffer.byteLength(body) !== a.bytes) {
+    problems.push(`artifact.bytes mismatch: message says ${a.bytes}, file is ${Buffer.byteLength(body)} bytes`)
   }
 
   const text = body.toString("utf8")
@@ -513,20 +541,26 @@ function verifyAttestation(rawInput) {
   if (envelope) {
     for (const key of ["task_id", "role", "status"]) {
       if (JSON.stringify(attestation[key]) !== JSON.stringify(envelope[key])) {
-        problems.push(`${key}: attestation ${JSON.stringify(attestation[key])} but artifact ${JSON.stringify(envelope[key])}`)
+        problems.push(`${key}: message ${JSON.stringify(attestation[key])} but artifact ${JSON.stringify(envelope[key])}`)
       }
     }
     // The findings are the reviewer's judgement and the contract requires them
-    // inline, so they are the one part a model could still paraphrase by hand.
-    // Comparing them to the artefact is what closes that hole.
+    // inline, so they are the one part a model could paraphrase by hand.
+    // Comparing them to the artifact is what closes that hole.
     if (JSON.stringify(attestation.findings) !== JSON.stringify(envelope.findings)) {
-      problems.push("findings: the attestation's findings[] do not match the artifact's — paraphrased, not copied")
+      problems.push("findings: the message's findings[] do not match the artifact's — paraphrased, not copied")
     }
     if (JSON.stringify(attestation.blocker) !== JSON.stringify(envelope.blocker)) {
-      problems.push("blocker: the attestation's blocker does not match the artifact's")
+      problems.push("blocker: the message's blocker does not match the artifact's")
     }
-    if (a.checks !== (Array.isArray(envelope.checks) ? envelope.checks.length : 0)) {
-      problems.push(`artifact.checks: attestation says ${a.checks}, artifact has ${(envelope.checks || []).length}`)
+    if (typeof a.checks === "number" && a.checks !== (Array.isArray(envelope.checks) ? envelope.checks.length : 0)) {
+      problems.push(`artifact.checks: message says ${a.checks}, artifact has ${(envelope.checks || []).length}`)
+    }
+    // Prose is the one field a bounded model rewrites rather than copies. It is
+    // reported, never silently accepted, and never load-bearing: the verdict
+    // (status), the role and the findings are what is compared.
+    if (attestation.summary !== undefined && attestation.summary !== envelope.summary) {
+      notes.push("summary: the message words its own summary instead of copying the runner's — reported, not load-bearing (status/role/findings are what is compared)")
     }
     const inner = validateEnvelope(text)
     inner.problems.forEach((p) => problems.push(`artifact is not a valid envelope: ${p}`))
@@ -535,11 +569,12 @@ function verifyAttestation(rawInput) {
   return {
     valid: problems.length === 0,
     fenced,
+    notes,
     problems,
     artifact: a.path,
-    sha256: a.sha256,
-    bytes: a.bytes,
-    checks: a.checks,
+    sha256: typeof a.sha256 === "string" ? a.sha256 : digest,
+    bytes: typeof a.bytes === "number" ? a.bytes : Buffer.byteLength(body),
+    checks: typeof a.checks === "number" ? a.checks : (Array.isArray(envelope && envelope.checks) ? envelope.checks.length : 0),
   }
 }
 

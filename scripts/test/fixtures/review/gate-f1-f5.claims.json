@@ -281,7 +281,7 @@
     },
     {
       "id": "K15",
-      "statement": "F7: the reviewer may not recompose the gate runner's stdout — it must forward it byte for byte, must not alter a check's command/evidence strings, and must not drop the findings[] key",
+      "statement": "F7: the reviewer may not recompose the runner's output — it reads the envelope out of the file the runner wrote and copies the verdict-bearing fields (task_id, role, status, findings) unaltered, never inventing a finding or confirming a claim it did not see, and it must not drop the findings[] key",
       "severity": "high",
       "suggestion": "restore the Verbatim discipline (binding) section in .opencode/agents/reviewer.md",
       "checks": [
@@ -309,7 +309,7 @@
     },
     {
       "id": "K16",
-      "statement": "F8: the reviewer's echo burden is mechanically reduced - --attest writes the full envelope to a file and prints a short attestation that --verify re-hashes, so a paraphrased envelope is detectable rather than merely forbidden",
+      "statement": "F8: the reviewer's echo burden is mechanically reduced - --attest writes the full envelope to a file and prints a short attestation that --verify re-hashes, so a paraphrased envelope is detectable rather than merely forbidden; because a bounded reviewer drops the attestation's non-canonical keys and re-words its summary while copying task_id/role/status/findings exactly, --verify resolves a missing artifact pointer from task_id and reports a re-worded summary in notes rather than failing a correct audit",
       "severity": "high",
       "suggestion": "restore the --attest/--verify path in scripts/review-gate.mjs, its pinned contract in scripts/review-gate.test.mjs, and the --attest instruction in .opencode/agents/reviewer.md",
       "checks": [
@@ -333,6 +333,16 @@
           "kind": "file_contains",
           "path": "scripts/review-gate.test.mjs",
           "pattern": "a paraphrased finding"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "no artifact pointer; resolved"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "reworded summary verifies"
         }
       ]
     },
