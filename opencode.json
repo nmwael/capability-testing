@@ -19,6 +19,14 @@
             "output": 32768
           }
         },
+        "granite-4.2-3b-bounded": {
+          "name": "granite-4.2-3b - bounded step (reviewer)",
+          "modelID": "granite-4.2-3b-s0",
+          "limit": {
+            "context": 131072,
+            "output": 16384
+          }
+        },
         "granite-4.2-3b-s0": {
           "name": "granite-4.2-3b - Slot 0",
           "limit": {
@@ -80,8 +88,8 @@
       }
     },
     "reviewer": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "steps": 60,
+      "model": "local-granite-4.2-3b/granite-4.2-3b-bounded",
+      "steps": 14,
       "request": {
         "body": {
           "temperature": 0.1

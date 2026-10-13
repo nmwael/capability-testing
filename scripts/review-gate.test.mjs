@@ -1,0 +1,363 @@
+#!/usr/bin/env node
+// ---------------------------------------------------------------------------
+// Regression test for scripts/review-gate.mjs
+//
+//   node scripts/review-gate.test.mjs
+//
+// WHY THIS FILE EXISTS: the gate runner's whole value is that its stdout is
+// ALWAYS exactly one valid Result envelope, on every path — success, failed
+// claim, missing --checklist, malformed checklist JSON, unknown flag. A local
+// auditor echoes that stdout verbatim as its final message, so one stray byte of
+// prose, a missing `findings` array, or a `status: done` on a failed claim is
+// the difference between a valid delegation Result and a rejected turn. This
+// suite pins the contract:
+//
+//   1. the shipped F1-F5 checklist passes, and its envelope is valid
+//   2. stdout is exactly one JSON object (no fence, no banner, no trailing text)
+//   3. two runs of the same checklist are byte-identical (deterministic)
+//   4. a claim that cannot hold -> exit 1, status blocked, blocker present
+//   5. usage/config errors still yield a valid blocked envelope
+//   6. --validate accepts the runner's own stdout, rejects broken envelopes
+//   7. running the gate mutates nothing (the auditor is read-only)
+//   8. checklist advisories reach findings[] without flipping status
+//
+// Deliberately NOT here: a case that runs the shipped F1-F5 checklist from
+// inside the shipped F1-F5 checklist. That is infinite recursion, so the
+// runner's own evidence is this suite's RESULT line, and the shipped checklist
+// stays a list of claims about the change set under review.
+//
+// Exit 0 = every case matched. Exit 1 = at least one mismatch.
+// ---------------------------------------------------------------------------
+
+import { spawnSync } from "node:child_process"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { dirname, join, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+const ROOT = resolve(SCRIPT_DIR, "..")
+const GATE = resolve(SCRIPT_DIR, "review-gate.mjs")
+const SHIPPED_CHECKLIST = "scripts/test/fixtures/review/gate-f1-f5.claims.json"
+
+let failures = 0
+const fail = (msg) => {
+  failures += 1
+  console.log(`    FAIL  ${msg}`)
+}
+const ok = (msg) => console.log(`    ok    ${msg}`)
+
+const gate = (args, opts = {}) =>
+  spawnSync(process.execPath, [GATE, ...args], { cwd: ROOT, encoding: "utf8", ...opts })
+
+// The runner's own --validate is the envelope contract, so it is the oracle:
+// the test cannot drift from the definition it pins.
+const validateText = (text) => {
+  const res = spawnSync(process.execPath, [GATE, "--validate", "-"], { cwd: ROOT, input: text, encoding: "utf8" })
+  return { exit: res.status, verdict: JSON.parse(res.stdout) }
+}
+
+const expectValid = (text, label) => {
+  const { exit, verdict } = validateText(text)
+  if (verdict.valid && exit === 0) return ok(`${label}: envelope valid`)
+  return fail(`${label}: envelope rejected — exit ${exit}, ${verdict.problems.join("; ")}`)
+}
+
+// stdout must be exactly one JSON object: the strictness is the point, so parse
+// the whole string (trailing prose or a closing fence makes JSON.parse throw).
+const expectSingleJsonObject = (stdout, label) => {
+  if (stdout.includes("```")) return fail(`${label}: stdout contains a markdown fence`)
+  let payload
+  try {
+    payload = JSON.parse(stdout.trim())
+  } catch (err) {
+    return fail(`${label}: stdout is not exactly one JSON object — ${err.message}`)
+  }
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    return fail(`${label}: stdout is not a JSON object`)
+  }
+  return payload
+}
+
+const TMP = mkdtempSync(join(tmpdir(), "review-gate-test-"))
+const writeChecklist = (name, body) => {
+  const path = join(TMP, name)
+  writeFileSync(path, typeof body === "string" ? body : JSON.stringify(body, null, 2))
+  return path
+}
+
+// ---------------------------------------------------------------------------
+
+function checkShippedGate() {
+  console.log("shipped F1-F5 checklist")
+
+  const first = gate(["--quiet"])
+  if (first.status !== 0) {
+    fail(`exit ${first.status}, expected 0 — a shipped-checklist failure means F1-F5 regressed: ${first.stderr.trim()}`)
+    return
+  }
+  ok("exit 0")
+
+  if (first.stderr !== "") fail(`--quiet still wrote to stderr: ${JSON.stringify(first.stderr.slice(0, 120))}`)
+  else ok("--quiet leaves stderr empty")
+
+  const envelope = expectSingleJsonObject(first.stdout, "shipped gate")
+  if (!envelope) return
+  ok("stdout is exactly one JSON object")
+  expectValid(first.stdout, "shipped gate")
+
+  if (envelope.task_id !== "RV-F12345") fail(`task_id ${JSON.stringify(envelope.task_id)}`)
+  else ok("task_id RV-F12345")
+  if (envelope.role !== "reviewer") fail(`role ${JSON.stringify(envelope.role)}`)
+  if (envelope.status !== "done") fail(`status ${JSON.stringify(envelope.status)}, expected done`)
+  else ok("status done")
+
+  // checks[].length must equal the sum of the checklist's checks, so a claim
+  // silently dropped from the checklist is caught here.
+  const listed = JSON.parse(gate(["--list", "--quiet"]).stdout)
+  const declared = listed.claims.reduce((n, c) => n + c.checks, 0)
+  if (envelope.checks.length !== declared) fail(`checks ${envelope.checks.length}, expected ${declared}`)
+  else ok(`${envelope.checks.length} checks, matching the checklist`)
+  if (envelope.checks.some((c) => c.outcome !== "pass")) fail("a checks[] entry did not pass on the shipped checklist")
+
+  // Advisories are findings that do not affect the status: a done gate may still
+  // carry a reviewer's defect note, and the count must match the checklist.
+  if (!Array.isArray(envelope.findings)) fail("findings is not an array")
+  else if (envelope.findings.length !== listed.advisories) {
+    fail(`${envelope.findings.length} findings, expected the checklist's ${listed.advisories} advisor(y/ies)`)
+  } else {
+    ok(`${envelope.findings.length} advisory finding(s), status still done`)
+  }
+
+  // Determinism: same checklist, same bytes. Evidence must be reproducible.
+  const second = gate(["--quiet"])
+  if (second.stdout === first.stdout) ok("second run is byte-identical")
+  else fail("second run differs — the gate is not deterministic")
+
+  // --task overrides the checklist's task_id.
+  const overridden = gate(["--quiet", "--task", "T-OVERRIDE"])
+  const payload = expectSingleJsonObject(overridden.stdout, "--task override")
+  if (payload && payload.task_id === "T-OVERRIDE") ok("--task overrides the checklist task_id")
+  else fail("--task did not override the envelope task_id")
+}
+
+function checkFailedClaims() {
+  console.log("failed claims")
+
+  const path = writeChecklist("negative.claims.json", {
+    task_id: "T-BAD",
+    role: "reviewer",
+    title: "negative-control",
+    claims: [
+      {
+        id: "B1",
+        statement: "a claim that cannot hold",
+        severity: "high",
+        checks: [{ kind: "file_contains", path: "AGENTS.md", pattern: "THIS_STRING_IS_NOT_IN_AGENTS_MD" }],
+      },
+      {
+        id: "B2",
+        statement: "a file that is not there",
+        severity: "medium",
+        checks: [{ kind: "file_exists", path: "no/such/file.md" }],
+      },
+      {
+        id: "B3",
+        statement: "a command that fails",
+        severity: "high",
+        checks: [
+          { kind: "command", run: "printf 'partial evidence\\n'; exit 3" },
+          { kind: "command", run: "true" },
+        ],
+      },
+    ],
+  })
+
+  const res = gate(["--checklist", path, "--quiet"])
+  if (res.status !== 1) fail(`exit ${res.status}, expected 1`)
+  else ok("exit 1")
+
+  const envelope = expectSingleJsonObject(res.stdout, "failed-claim gate")
+  if (!envelope) return
+  expectValid(res.stdout, "failed-claim gate")
+
+  if (envelope.status !== "blocked") fail(`status ${JSON.stringify(envelope.status)}, expected blocked`)
+  else ok("status blocked")
+
+  if (envelope.findings.length !== 3) fail(`${envelope.findings.length} findings, expected 3 (one per failing claim)`)
+  else ok("3 findings, one per failing claim")
+  for (const id of ["B1", "B2", "B3"]) {
+    if (envelope.findings.some((f) => f.claim === id)) ok(`${id}: finding present`)
+    else fail(`${id}: no finding`)
+  }
+  for (const finding of envelope.findings) {
+    if (!["high", "medium", "low"].includes(finding.severity)) fail(`findings severity ${JSON.stringify(f.severity)}`)
+  }
+  if (!envelope.summary.includes("3")) fail(`summary does not report the failing claim count: ${envelope.summary}`)
+  else ok(`summary: ${envelope.summary}`)
+
+  const byClaim = {}
+  envelope.findings.forEach((f) => {
+    byClaim[f.claim] = f
+  })
+  const wanted = { B1: "high", B2: "medium", B3: "high" }
+  Object.entries(wanted).forEach(([id, severity]) => {
+    const finding = byClaim[id]
+    if (!finding) fail(`${id}: no finding`)
+    else if (finding.severity !== severity) fail(`${id}: severity ${finding.severity}, expected ${severity}`)
+    else ok(`${id}: severity ${severity} preserved`)
+  })
+
+  const blocker = JSON.parse(envelope.blocker)
+  if (blocker.type !== "validation_failed") fail(`blocker.type ${blocker.type}`)
+  else if (!blocker.detail || !blocker.suggested_action) fail("blocker is missing detail or suggested_action")
+  else ok("blocker decodes to validation_failed with detail + suggested_action")
+
+  const findingsCount = envelope.findings.length
+  const checksFailed = envelope.checks.filter((c) => c.outcome === "fail").length
+  if (checksFailed === findingsCount) ok(`${findingsCount} findings for ${checksFailed} failed checks`)
+  else fail(`${findingsCount} findings for ${checksFailed} failed checks`)
+}
+
+function checkUsageErrors() {
+  console.log("usage and config errors")
+
+  const cases = [
+    { label: "missing checklist", argv: ["--checklist", "no/such/checklist.json"] },
+    { label: "unknown flag", argv: ["--nope"] },
+    { label: "checklist without a value", argv: ["--checklist"] },
+    { label: "unparseable checklist", argv: ["--checklist", writeChecklist("broken.claims.json", "{ not json")] },
+  ]
+
+  for (const c of cases) {
+    const res = gate([...c.argv, "--quiet"])
+    if (res.status !== 1) fail(`${c.label}: exit ${res.status}, expected 1`)
+    const envelope = expectSingleJsonObject(res.stdout, c.label)
+    if (!envelope) continue
+    if (envelope.status !== "blocked") fail(`${c.label}: status ${envelope.status}, expected blocked`)
+    const { verdict } = validateText(res.stdout)
+    if (!verdict.valid) fail(`${c.label}: envelope rejected — ${verdict.problems.join("; ")}`)
+    else ok(`${c.label}: blocked envelope, valid`)
+  }
+}
+
+function checkValidateMode() {
+  console.log("--validate mode")
+
+  const shipped = gate(["--quiet"])
+  const accepted = validateText(shipped.stdout)
+  if (accepted.verdict.valid && accepted.exit === 0) ok("accepts the runner's own stdout")
+  else fail(`rejected the runner's own stdout: ${accepted.verdict.problems.join("; ")}`)
+
+  const broken = [
+    {
+      label: "done with no checks and no findings",
+      text: JSON.stringify({ task_id: "T9", role: "reviewer", status: "done", summary: "looks done" }),
+    },
+    {
+      label: "blocked with no blocker",
+      text: JSON.stringify({ task_id: "T9", role: "reviewer", status: "blocked", summary: "x", checks: [], findings: [] }),
+    },
+    {
+      label: "blocker as prose, not a JSON string",
+      text: JSON.stringify({
+        task_id: "T9",
+        role: "reviewer",
+        status: "blocked",
+        summary: "x",
+        checks: [],
+        findings: [],
+        blocker: "scripts/fetch.sh not found",
+      }),
+    },
+    {
+      label: "prose before the JSON",
+      text: `Here is my result:\n${JSON.stringify({
+        task_id: "T9",
+        role: "reviewer",
+        status: "done",
+        summary: "x",
+        checks: [{ command: "x", outcome: "pass", evidence: "y" }],
+        findings: [],
+      })}`,
+    },
+    {
+      label: "invalid check outcome",
+      text: JSON.stringify({
+        task_id: "T9",
+        role: "reviewer",
+        status: "done",
+        summary: "x",
+        checks: [{ command: "x", outcome: "ok", evidence: "y" }],
+        findings: [],
+      }),
+    },
+  ]
+
+  for (const c of broken) {
+    const { exit, verdict } = validateText(c.text)
+    if (verdict.valid || exit !== 1) fail(`${c.label}: accepted (exit ${exit})`)
+    else ok(`${c.label}: rejected`)
+  }
+
+  const missing = spawnSync(process.execPath, [GATE, "--validate", "no/such/result.json"], { cwd: ROOT, encoding: "utf8" })
+  const verdict = JSON.parse(missing.stdout)
+  if (!verdict.valid && missing.status === 1) ok("missing file: rejected")
+  else fail("missing file was accepted")
+}
+
+function checkListMode() {
+  console.log("--list mode")
+
+  const res = gate(["--list"])
+  if (res.status !== 0) return fail(`--list exit ${res.status}`)
+  let payload
+  try {
+    payload = JSON.parse(res.stdout)
+  } catch (err) {
+    return fail(`--list stdout is not JSON: ${err.message}`)
+  }
+  if (!Array.isArray(payload.claims) || payload.claims.length < 10) {
+    fail(`--list reported ${payload.claims ? payload.claims.length : 0} claims, expected the full shipped checklist`)
+  } else {
+    ok(`--list reports ${payload.claims.length} claims`)
+  }
+  if (payload.claims.some((c) => !c.id || !c.statement || typeof c.checks !== "number")) {
+    fail("--list claim entries are missing id/statement/checks")
+  } else {
+    ok("every claim has an id, a statement and a check count")
+  }
+}
+
+function checkReadOnly() {
+  console.log("read-only invariant")
+  const gitStatus = () => spawnSync("git", ["status", "--porcelain"], { cwd: ROOT, encoding: "utf8" })
+  const before = gitStatus()
+  if (before.status !== 0) return ok("skipped (git unavailable)")
+  gate(["--quiet"])
+  const after = gitStatus()
+  if (after.stdout === before.stdout) ok("working tree unchanged by a gate run")
+  else fail(`the gate modified the working tree:\n${after.stdout}`)
+}
+
+function checkShippedChecklistIsComplete() {
+  console.log("shipped checklist sanity")
+  const res = gate(["--list", "--checklist", SHIPPED_CHECKLIST])
+  if (res.status !== 0) return fail(`shipped checklist is not loadable: ${res.stderr.trim()}`)
+  ok(`shipped checklist loads (${SHIPPED_CHECKLIST})`)
+}
+
+// ---------------------------------------------------------------------------
+
+console.log("review-gate regression suite")
+checkShippedChecklistIsComplete()
+checkShippedGate()
+checkFailedClaims()
+checkUsageErrors()
+checkValidateMode()
+checkListMode()
+checkReadOnly()
+rmSync(TMP, { recursive: true, force: true })
+
+console.log(failures ? `\nRESULT: FAIL — ${failures} assertion(s) failed.` : "\nRESULT: PASS — the gate runner honoured every envelope guarantee.")
+process.exit(failures ? 1 : 0)

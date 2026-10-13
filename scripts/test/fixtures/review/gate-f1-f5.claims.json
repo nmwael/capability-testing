@@ -1,0 +1,245 @@
+{
+  "task_id": "RV-F12345",
+  "role": "reviewer",
+  "title": "F1-F5",
+  "claims": [
+    {
+      "id": "K1",
+      "statement": "F1: the plan-claim checker regression suite passes offline and matches all four fixtures",
+      "severity": "high",
+      "suggestion": "fix scripts/verify-plan-claims.mjs or the fixture it mismatches, then re-run the suite",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node scripts/verify-plan-claims.test.mjs",
+          "expect_exit": 0,
+          "expect_stdout": "RESULT: PASS . all 4 cases matched"
+        }
+      ]
+    },
+    {
+      "id": "K2",
+      "statement": "F1: the plan-claim checker parses",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node --check scripts/verify-plan-claims.mjs",
+          "expect_exit": 0
+        }
+      ]
+    },
+    {
+      "id": "K3",
+      "statement": "F1: the checker suite is offline-deterministic (every checker invocation passes --no-network)",
+      "severity": "high",
+      "suggestion": "pass --no-network in the suite's checker invocations so the test cannot depend on a registry round-trip",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/verify-plan-claims.test.mjs",
+          "pattern": "--no-network"
+        }
+      ]
+    },
+    {
+      "id": "K4",
+      "statement": "F1: the suite guards against fixture rot and against unexpected blocking claims",
+      "severity": "medium",
+      "suggestion": "keep the coverage guard and the unexpected-blocker check so a fixture cannot rot unwatched",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/verify-plan-claims.test.mjs",
+          "pattern": "fixture\\(s\\) on disk with no test case"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/verify-plan-claims.test.mjs",
+          "pattern": "unexpected blocking claim"
+        }
+      ]
+    },
+    {
+      "id": "K5",
+      "statement": "F2: a dedicated fact-checker subagent exists, denies delegation, and carries the (a)-(h) checklist",
+      "severity": "high",
+      "suggestion": "restore .opencode/agents/fact-checker.md's frontmatter and its (a)-(h) claim checklist",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "mode: subagent"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "action: subagent[\\s\\S]*?effect: deny",
+          "whole_file": true
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "\\(a\\) \\*\\*Shape \\(BNF\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "\\(h\\) \\*\\*Symbols"
+        }
+      ]
+    },
+    {
+      "id": "K6",
+      "statement": "F2: the fact-check playbook exists for the fact-checker to read",
+      "severity": "medium",
+      "suggestion": "restore library/architect/fact-check.mini.md",
+      "checks": [
+        {
+          "kind": "file_exists",
+          "path": "library/architect/fact-check.mini.md"
+        }
+      ]
+    },
+    {
+      "id": "K7",
+      "statement": "F3: AGENTS.md's hard gate makes an approved architect plan the precondition of any code change",
+      "severity": "high",
+      "suggestion": "restore the HARD GATE paragraph in AGENTS.md",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "AGENTS.md",
+          "pattern": "MUST NOT create, edit, or modify any code files until the human has explicitly approved an architect's plan"
+        }
+      ]
+    },
+    {
+      "id": "K8",
+      "statement": "F3: AGENTS.md carries the gate backstop that forbids forwarding a plan without a fact-checker Result",
+      "severity": "high",
+      "suggestion": "restore the 'Gate backstop (orchestrator duty)' paragraph",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "AGENTS.md",
+          "pattern": "Gate backstop \\(orchestrator duty\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": "AGENTS.md",
+          "pattern": "MUST NOT be forwarded to the human"
+        }
+      ]
+    },
+    {
+      "id": "K9",
+      "statement": "F4: the AGENTS.md roster describes the reviewer as read-only",
+      "severity": "medium",
+      "suggestion": "restore the read-only reviewer roster row in AGENTS.md",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "AGENTS.md",
+          "pattern": "\\| `reviewer` \\| Read-only audit"
+        }
+      ]
+    },
+    {
+      "id": "K10",
+      "statement": "F4: the reviewer frontmatter carries deny rules for edit, skill and subagent (the real V2 permission actions)",
+      "severity": "high",
+      "suggestion": "restore every effect: deny block in .opencode/agents/reviewer.md's frontmatter",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "- action: edit\\s+resource: \"\\*\"\\s+effect: deny",
+          "whole_file": true
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "- action: skill\\s+resource: \"\\*\"\\s+effect: deny",
+          "whole_file": true
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "- action: subagent\\s+resource: \"\\*\"\\s+effect: deny",
+          "whole_file": true
+        }
+      ]
+    },
+    {
+      "id": "K11",
+      "statement": "F4: the reviewer body carries its read-only, scope and bounded-iteration discipline",
+      "severity": "high",
+      "suggestion": "restore the Read-only discipline, Scope discipline and budget sections in .opencode/agents/reviewer.md",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "## Read-only discipline \\(enforced\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "## Scope discipline"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "Budget: at most 12 tool calls"
+        }
+      ]
+    },
+    {
+      "id": "K12",
+      "statement": "F4: the reviewer's blocked example shows a blocker escaped as a JSON string",
+      "severity": "medium",
+      "suggestion": "replace the blocked example's blocker with a JSON-encoded string containing type/detail/suggested_action",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "\"blocker\":\"\\{\\\\\"type\\\\\":\\\\\"missing_file"
+        }
+      ]
+    },
+    {
+      "id": "K13",
+      "statement": "F5: the suite's four fixtures are all present on disk",
+      "severity": "high",
+      "suggestion": "restore the missing fixture under scripts/test/fixtures/plans/",
+      "checks": [
+        {
+          "kind": "file_exists",
+          "path": "scripts/test/fixtures/plans/plan-rf-clean.md"
+        },
+        {
+          "kind": "file_exists",
+          "path": "scripts/test/fixtures/plans/plan-rf.md"
+        },
+        {
+          "kind": "file_exists",
+          "path": "scripts/test/fixtures/plans/plan-vague.md"
+        },
+        {
+          "kind": "file_exists",
+          "path": "scripts/test/fixtures/plans/plan-empty.md"
+        }
+      ]
+    }
+  ],
+  "advisories": [
+    {
+      "severity": "medium",
+      "claim": "F4",
+      "path": ".opencode/agents/reviewer.md",
+      "line": 9,
+      "issue": "the frontmatter denies action 'execute', which is not a permission action in OpenCode 2.0.26 — the shell tool maps to 'shell' and write/patch map to 'edit' (see $A/oh/A$ in the opencode build) — so this rule is inert. The enforced read-only guarantee is 'edit: deny'; shell remains allowed and must stay allowed, because the reviewer runs check commands to gather evidence.",
+      "suggestion": "drop the inert 'execute' rule (the same inert rule is in .opencode/agents/fact-checker.md) and, if command execution really must be forbidden, say 'shell: deny' — but then the reviewer can no longer run scripts such as scripts/review-gate.mjs, so 'edit: deny' plus the read-only discipline section is the workable guarantee"
+    }
+  ]
+}

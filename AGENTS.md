@@ -66,7 +66,7 @@ The primary orchestrator of this system. Its function is the logical decompositi
 | `coder` | Writing new code, editing files, fixing bugs, implementing features (no direct delegation — research needs round-trip through `architect`) |
 | `fact-checker` | Pre-approval fact-check of an architect's plan — verifies every coordinate, version, path, and imported symbol against registries/filesystem/reference before the human is asked to approve. Read-only; never delegates |
 | `researcher` | Exploring the codebase (+ web via webfetch), searching for patterns, understanding architecture |
-| `reviewer` | Reviewing code for bugs, style, security issues, and suggesting improvements |
+| `reviewer` | Read-only audit of implemented code — bugs, style, security issues, and suggested improvements; never edits (fixes go back through the architect) |
 | `ui` | Designing user interfaces and turning them into UI code (HTML/CSS) |
 | `artist` | Visual assets and artwork as code (SVG/CSS), image analysis via vision models (Gemma4 under the `gemma` profile) |
 
@@ -172,6 +172,8 @@ A blocked result is only `{task_id, role, status: "blocked", summary, blocker}`;
 Every task involving code generation, modification, or refactoring must follow a mandatory Reviewer check. The Coder agent produces the implementation, and the Reviewer agent must then perform a full audit (Correctness, Security, Style, Performance, Error handling) before the Architect can finalize the task. No code should be considered 'complete' without an explicit pass from the Reviewer.
 
 Agents can run in parallel when their work is independent (e.g., two unrelated code edits, or researcher + reviewer on different files).
+
+**Gate runner (optional, recommended).** A reviewer Directive MAY name a checklist instead of asking for prose findings: the reviewer runs `node scripts/review-gate.mjs --task <task_id>` (add `--checklist <path>` for anything other than the shipped default) and its stdout is the `Result` envelope, verbatim. The runner verifies each declared claim mechanically — live command output, `path:line` matches — and emits `status: blocked` with a JSON `blocker` when a claim fails, so a small local auditor never has to hand-write the envelope. The reviewer still owns the verdict: a checklist it cannot substantiate with its own evidence is a finding, not a pass.
 
 ## Rules
 
