@@ -44,7 +44,7 @@ import { fileURLToPath } from "node:url"
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, "..")
 const GATE = join(ROOT, "scripts", "review-gate.mjs")
-const ATTEST_DIR = "wip/review-gate"
+const ATTEST_DIR = process.env.REVIEW_GATE_ATTEST_DIR || "wip/review-gate"
 const DEFAULT_DB = join(homedir(), ".local", "share", "opencode", "opencode.db")
 const DEFAULT_TASK = "RV-F12345"
 

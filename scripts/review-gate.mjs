@@ -53,6 +53,11 @@
 //   node scripts/review-gate.mjs --list                  # claim ids + statements
 //   node scripts/review-gate.mjs --validate result.json  # shape-check an envelope
 //
+// Environment
+//   REVIEW_GATE_ATTEST_DIR  overrides the default attestation directory
+//                           (wip/review-gate). Point it at scratch space to run
+//                           the default path without disturbing a real artefact.
+//
 // Checklist shape
 //   {
 //     "task_id": "RV-F12345",          // default task id; --task overrides
@@ -83,7 +88,13 @@ const DEFAULT_CHECKLIST = "scripts/test/fixtures/review/gate-f1-f5.claims.json"
 const COMMAND_TIMEOUT_MS = 180000
 const EVIDENCE_MAX = 220
 const ENVELOPE_ROLES_NEEDING_FINDINGS = ["reviewer", "fact-checker"]
-const ATTEST_DIR = "wip/review-gate"
+// Where --attest writes by default, and where --verify resolves a message whose
+// `artifact` pointer is missing. Overridable so a test or CI run can exercise
+// the default path without touching a real artefact: rewriting one invalidates
+// every attestation already pointing at its hash. Measured in practice — this
+// suite's own `--attest` case rewrote wip/review-gate/RV-F12345.envelope.json
+// and orphaned two correct reviewer attestations.
+const ATTEST_DIR = process.env.REVIEW_GATE_ATTEST_DIR || "wip/review-gate"
 
 const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <path>] [--quiet]
        node scripts/review-gate.mjs --attest [--out <path>] [--task <id>]
@@ -114,6 +125,11 @@ const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <p
                       and a re-worded 'summary' is reported in notes rather
                       than treated as load-bearing
   --help              this text (stdout)
+
+Environment
+  REVIEW_GATE_ATTEST_DIR  default attestation directory (default:
+                          ${ATTEST_DIR}). Point it at scratch space to exercise
+                          the default path without disturbing a real artifact.
 
 stdout is exactly one JSON Result object on every normal run.`
 

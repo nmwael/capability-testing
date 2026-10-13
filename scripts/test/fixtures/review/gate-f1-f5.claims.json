@@ -437,6 +437,56 @@
           "pattern": "the session store is byte-identical after every case"
         }
       ]
+    },
+    {
+      "id": "K20",
+      "statement": "F9: a gate or suite run cannot invalidate an existing attestation - scripts/review-gate.mjs (and scripts/echo-check.mjs) resolve the default attestation directory through REVIEW_GATE_ATTEST_DIR, and scripts/review-gate.test.mjs runs every default-path --attest case against scratch space and asserts the shipped wip/review-gate/ directory is byte-identical before and after the suite",
+      "severity": "high",
+      "suggestion": "restore the REVIEW_GATE_ATTEST_DIR default in scripts/review-gate.mjs and scripts/echo-check.mjs, the ATTEST_SCRATCH redirection in scripts/review-gate.test.mjs, and its shipped-directory assertion; a test run must never delete or rewrite an artefact under wip/review-gate/ (measured regression: the suite's own --attest case rewrote wip/review-gate/RV-F12345.envelope.json and orphaned two correct reviewer attestations that cited its sha256)",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "process\\.env\\.REVIEW_GATE_ATTEST_DIR"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/echo-check.mjs",
+          "pattern": "process\\.env\\.REVIEW_GATE_ATTEST_DIR"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "REVIEW_GATE_ATTEST_DIR: ATTEST_SCRATCH"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "const SHIPPED_BEFORE = dirSnapshot\\(SHIPPED_ATTEST_DIR\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "checkShippedArtefactsUntouched\\(\\)"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "rmSync\\(resolve\\(ROOT, \"wip/review-gate"
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/review-gate.mjs --help",
+          "expect_exit": 0,
+          "expect_stdout": "REVIEW_GATE_ATTEST_DIR"
+        },
+        {
+          "kind": "command",
+          "run": "node -e '\nconst {execFileSync}=require(\"child_process\")\nconst {existsSync,mkdtempSync,readFileSync,writeFileSync}=require(\"fs\")\nconst {createHash}=require(\"crypto\")\nconst {tmpdir}=require(\"os\")\nconst {join}=require(\"path\")\nconst shipped=\"wip/review-gate/RV-F12345.envelope.json\"\nconst digest=()=>existsSync(shipped)?createHash(\"sha256\").update(readFileSync(shipped)).digest(\"hex\"):\"absent\"\nconst before=digest()\nconst scratch=mkdtempSync(join(tmpdir(),\"rg-attest-probe-\"))\nconst probe=join(scratch,\"probe.claims.json\")\nwriteFileSync(probe,JSON.stringify({task_id:\"RV-PROBE\",role:\"reviewer\",claims:[{id:\"P1\",severity:\"high\",statement:\"trivial probe claim\",checks:[{kind:\"command\",run:\"node --version\",expect_exit:0}]}]}))\nconst out=execFileSync(process.execPath,[\"scripts/review-gate.mjs\",\"--checklist\",probe,\"--attest\",\"--quiet\"],{encoding:\"utf8\",env:{...process.env,REVIEW_GATE_ATTEST_DIR:scratch}})\nconst pointer=JSON.parse(out).artifact.path\nif(!pointer.startsWith(scratch))throw new Error(\"default path escaped REVIEW_GATE_ATTEST_DIR: \"+pointer)\nif(!existsSync(join(scratch,\"RV-PROBE.envelope.json\")))throw new Error(\"no artefact written into REVIEW_GATE_ATTEST_DIR\")\nif(digest()!==before)throw new Error(\"a gate run changed the shipped artefact\")\nconsole.log(\"redirection honoured; shipped artefact stable \"+before.slice(0,12))\n'",
+          "expect_exit": 0,
+          "expect_stdout": "redirection honoured"
+        }
+      ]
     }
   ],
   "advisories": [

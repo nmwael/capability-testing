@@ -32,6 +32,12 @@
 //  12. --attest refuses to overwrite a DIFFERING artifact (an artifact is
 //      evidence and an attestation already points at it by hash) while an
 //      unchanged one is rewritten harmlessly; --force overwrites deliberately
+//  13. a suite run cannot invalidate an existing attestation: every --attest
+//      case runs against scratch space via REVIEW_GATE_ATTEST_DIR, and the
+//      shipped wip/review-gate/ directory is byte-identical before and after
+//      the suite. (Measured regression: an earlier version of this suite
+//      rewrote wip/review-gate/RV-F12345.envelope.json and orphaned two correct
+//      reviewer attestations that pointed at its hash.)
 //
 // Deliberately NOT here: a case that runs the shipped F1-F5 checklist from
 // inside the shipped F1-F5 checklist. That is infinite recursion, so the
@@ -42,7 +48,8 @@
 // ---------------------------------------------------------------------------
 
 import { spawnSync } from "node:child_process"
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -59,8 +66,18 @@ const fail = (msg) => {
 }
 const ok = (msg) => console.log(`    ok    ${msg}`)
 
+// The runner's default attestation directory (wip/review-gate) holds real
+// evidence: an attestation points at an artefact by hash, so a test run that
+// rewrote one would silently orphan a correct reviewer attestation (measured).
+// REVIEW_GATE_ATTEST_DIR redirects the default path at scratch space, which is
+// also how the two default-path cases below stay harmless.
 const gate = (args, opts = {}) =>
-  spawnSync(process.execPath, [GATE, ...args], { cwd: ROOT, encoding: "utf8", ...opts })
+  spawnSync(process.execPath, [GATE, ...args], {
+    cwd: ROOT,
+    encoding: "utf8",
+    ...opts,
+    env: { ...process.env, REVIEW_GATE_ATTEST_DIR: ATTEST_SCRATCH, ...(opts.env || {}) },
+  })
 
 // The runner's own --validate is the envelope contract, so it is the oracle:
 // the test cannot drift from the definition it pins.
@@ -92,6 +109,20 @@ const expectSingleJsonObject = (stdout, label) => {
 }
 
 const TMP = mkdtempSync(join(tmpdir(), "review-gate-test-"))
+
+// Scratch space for every default-path --attest case (see `gate` above).
+const ATTEST_SCRATCH = join(TMP, "attest-scratch")
+
+const SHIPPED_ATTEST_DIR = resolve(ROOT, "wip/review-gate")
+const dirSnapshot = (dir) => {
+  if (!existsSync(dir)) return "(absent)"
+  return readdirSync(dir)
+    .sort()
+    .map((name) => `${name} ${createHash("sha256").update(readFileSync(join(dir, name))).digest("hex")}`)
+    .join("\n")
+}
+// Captured before any case runs; the shipped-artefact case compares afterwards.
+const SHIPPED_BEFORE = dirSnapshot(SHIPPED_ATTEST_DIR)
 const writeChecklist = (name, body) => {
   const path = join(TMP, name)
   writeFileSync(path, typeof body === "string" ? body : JSON.stringify(body, null, 2))
@@ -351,22 +382,48 @@ function checkReadOnly() {
   if (after.stdout === before.stdout) ok("working tree unchanged by a gate run")
   else fail(`the gate modified the working tree:\n${after.stdout}`)
 
-  // --attest writes its artifact to wip/ (gitignored scratch) by default, so it
-  // must not dirty the working tree either. Clear the default artifact first:
-  // this run is about where the file lands, and --attest (correctly) refuses to
-  // rewrite a stale artifact whose content no longer matches.
-  rmSync(resolve(ROOT, "wip/review-gate/RV-F12345.envelope.json"), { force: true })
+  // --attest writes its artifact to gitignored scratch by default, so it must
+  // not dirty the working tree either. Earlier versions of this case deleted the
+  // shipped artifact first and let --attest rewrite it — which invalidated any
+  // attestation already pointing at its hash. The artifact now lands in
+  // REVIEW_GATE_ATTEST_DIR (scratch, outside the repo), and the default path is
+  // only asserted to be gitignored, never written.
   gate(["--attest", "--quiet"])
   const attested = gitStatus()
   if (attested.stdout === before.stdout) ok("working tree unchanged by an --attest run")
   else fail(`--attest modified the working tree:\n${attested.stdout}`)
+
+  const ignored = spawnSync("git", ["check-ignore", "-q", "wip/review-gate/RV-F12345.envelope.json"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  })
+  if (ignored.status === 0) ok("the default artifact path is gitignored scratch")
+  else fail("wip/review-gate/RV-F12345.envelope.json is not gitignored")
+}
+
+// Case 13. The suite must not be able to damage evidence. Everything above runs
+// against scratch space; this asserts the shipped evidence directory is exactly
+// as it was, and that the default path really was redirected (a redirect that
+// silently did nothing would otherwise look identical to a clean run).
+function checkShippedArtefactsUntouched() {
+  console.log("shipped attestation directory")
+  if (existsSync(join(ATTEST_SCRATCH, "RV-F12345.envelope.json"))) {
+    ok("default-path --attest cases landed in REVIEW_GATE_ATTEST_DIR, not wip/review-gate/")
+  } else {
+    fail("the default-path --attest cases did not run against REVIEW_GATE_ATTEST_DIR")
+  }
+  const after = dirSnapshot(SHIPPED_ATTEST_DIR)
+  const count = after === "(absent)" ? 0 : after.split("\n").length
+  if (after === SHIPPED_BEFORE) ok(`wip/review-gate/ is byte-identical after the suite (${count} file(s), ${SHIPPED_BEFORE === "(absent)" ? "directory absent" : `sha256 ${String(SHIPPED_BEFORE.split(" ")[1]).slice(0, 12)}…`})`)
+  else fail(`the suite changed wip/review-gate/:\n  before: ${SHIPPED_BEFORE}\n  after:  ${after}`)
 }
 
 function checkAttestMode() {
   console.log("--attest mode")
 
   // Make sure the default artifact for the default task exists and is current:
-  // the no-pointer case below resolves it from task_id.
+  // the no-pointer case below resolves it from task_id. This lands in
+  // REVIEW_GATE_ATTEST_DIR (scratch), never in the shipped wip/review-gate/.
   gate(["--attest", "--quiet"])
 
   const out = join(TMP, "attested.envelope.json")
@@ -522,6 +579,7 @@ checkValidateMode()
 checkListMode()
 checkReadOnly()
 checkAttestMode()
+checkShippedArtefactsUntouched()
 rmSync(TMP, { recursive: true, force: true })
 
 console.log(failures ? `\nRESULT: FAIL — ${failures} assertion(s) failed.` : "\nRESULT: PASS — the gate runner honoured every envelope guarantee.")

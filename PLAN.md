@@ -10,9 +10,11 @@ environment facts needed to pick it up without re-deriving them.
 > **2026-10-13 progress.** Every §4 item except the retrofit is done and reviewer-gated:
 > config-drift `987162f`, Track 1 `e822292`, LSP `27fbdb4`, fact-check stage `bc7d082`,
 > F4/F5 + gate runner `1882a3c`, the gate's echo mechanic `a4aa9f5` + `71b3a90`,
-> fact-checker hardening `1771fb2`, reviewer hardening `8daef2b`, GPU offload `8e93fbf`.
-> §2, §3 and §5 below have been rewritten to match; §6 gained the verified V2.0.26 config
-> facts. The one deliberate exception: the reviewer's temperature (below, §3 "after e8d240a").
+> fact-checker hardening `1771fb2`, reviewer hardening `8daef2b`, GPU offload `8e93fbf`,
+> then `c6851f5` closed the tooling round (`echo-check` promoted; the reviewer's inert
+> temperature fixed), and **F9 (this commit)** makes a test run unable to invalidate a
+> shipped attestation. §2, §3 and §5 below have been rewritten to match; §6 gained the verified
+> V2.0.26 config facts.
 
 ---
 
@@ -44,15 +46,19 @@ Requirements that shaped the design:
 | Fact-checker hardening (evidence, banned phrasing, self-check) | done, pushed | `1771fb2` |
 | Reviewer hardening (`--attest`, bounded output, verbatim discipline) | done, pushed | `8daef2b` |
 | GPU offload made permanent in `scripts/auto-startup.sh` | done, pushed, measured | `8e93fbf` |
-| `scripts/echo-check.mjs` — the witness for "the message was the runner's stdout" | done, pushed, tested offline | this commit |
-| Reviewer temperature moved off inert `request.body` | done, pushed | this commit |
+| `scripts/echo-check.mjs` — the witness for "the message was the runner's stdout" | done, pushed, tested offline | `c6851f5` |
+| Reviewer temperature moved off inert `request.body` | done, pushed | `c6851f5` |
+| F9 — a test run can no longer invalidate a shipped attestation | done, pushed, gated | this commit |
 | React Flow / Drools retrofit | **not started — the only open item** | — |
 
-**The old caveat is closed: `e8d240a` has now been gated.** `RV-F12345` passes end-to-end
-(`node scripts/review-gate.mjs --task RV-F12345` → 19 claims / 56 checks / `status: done` /
-2 medium advisories), and two live reviewer sessions verify against the attested artifact
-(`scripts/echo-check.mjs <session> --verify` → `valid`). The reviewer no longer has to hand-copy
-anything: `--attest` writes the envelope and prints a short attestation that `--verify` re-hashes.
+**The gate is green and the artefact is current.** `RV-F12345` passes end-to-end
+(`node scripts/review-gate.mjs --task RV-F12345` → 20 claims / 64 checks / `status: done` /
+2 medium advisories, exit 0), and `wip/review-gate/RV-F12345.envelope.json` is the deliberate
+`--attest --force` output of exactly that run (21 002 bytes, 64 checks, sha256 `97984608…`).
+The reviewer no longer hand-copies anything: `--attest` writes the envelope and prints a short
+attestation that `--verify` re-hashes. **Honest caveat:** the three earlier live reviewer
+attestations no longer verify — their cited digests were destroyed by the very suite regression F9
+fixes (recorded in §5, "attestation invalidation").
 
 ## 3. What landed in `e8d240a` (5 files, +452/−29)
 
@@ -89,27 +95,44 @@ anything: `--attest` writes the envelope and prints a short attestation that `--
 - **Hardening — `1771fb2` (fact-checker), `8daef2b` (reviewer).** Evidence rules and banned phrasing
   for the fact-checker; `--attest` as the reviewer's primary path, a bounded-output alias
   (`granite-4.2-3b-bounded`, `limit.output: 16384`) and the "Verbatim discipline (binding)" section.
-- **`scripts/echo-check.mjs` + `scripts/echo-check.test.mjs` (this commit).** The witness for the
+- **`scripts/echo-check.mjs` + `scripts/echo-check.test.mjs` (`c6851f5`).** The witness for the
   verbatim claim: it reads the session store the runtime wrote (read-only) and grades the final
   message `byte-identical` / `identical-ignoring-fence` / `findings-only` / `differs`, with `--verify`
   driving the runner's own `--verify` over the extracted message. The scratch `wip/rg/` pair is
-  promoted here, not merely moved. Live proof: two reviewer sessions verify `valid` against
-  `wip/review-gate/RV-F12345.envelope.json` (14 497 bytes, 47 checks).
-- **Reviewer temperature (this commit).** `opencode.json` nested it under `request.body`, but the
+  promoted there, not merely moved. **Live proof at the time of that commit:** two reviewer sessions
+  verified `valid` against the then-current `wip/review-gate/RV-F12345.envelope.json` (14 497 bytes,
+  47 checks). That artefact no longer exists on disk — a later suite run rewrote it — so both
+  attestations now return `invalid-attestation` (§5, "attestation invalidation").
+- **Reviewer temperature (`c6851f5`).** `opencode.json` nested it under `request.body`, but the
   V2.0.26 `AgentConfig` defines **no `request` field** (see §6), so the setting was inert; the reviewer
   block now carries a top-level `"temperature": 0.1`, which the schema does define. The other seven
   agent blocks still nest theirs under `request.body` — recorded as advisory `F4b`, not silently fixed.
+- **F9 — a test run can no longer invalidate an attestation (this commit).** `checkReadOnly` in
+  `scripts/review-gate.test.mjs` used to `rmSync` the shipped artefact and then let `--attest` rewrite
+  it — and `checkAttestMode` attested to the same default path — so **every suite run silently
+  replaced** `wip/review-gate/RV-F12345.envelope.json` and orphaned any attestation citing its hash.
+  Now `scripts/review-gate.mjs` *and* `scripts/echo-check.mjs` resolve the default directory through
+  `REVIEW_GATE_ATTEST_DIR`; the suite runs every default-path `--attest` case against scratch space
+  (`ATTEST_SCRATCH`), and a new case asserts `wip/review-gate/` is **byte-identical before and after**
+  the suite. The only remaining write to the shipped path is a deliberate `--attest --force`. Pinned
+  as `K20` (8 checks), including a `file_not_contains` that keeps the destructive `rmSync` from coming
+  back and a probe that proves the redirect is honoured rather than vacuously true.
 
 ### Verification already run (all green)
 
 ```sh
 node --check scripts/verify-plan-claims.mjs
+node --check scripts/review-gate.mjs
+node --check scripts/review-gate.test.mjs
 node scripts/verify-capabilities.js                 # PASS
 node scripts/verify-plan-claims.test.mjs            # PASS — 4 fixtures
-node scripts/review-gate.test.mjs                   # PASS
+node scripts/review-gate.test.mjs                   # PASS — incl. "wip/review-gate/ is byte-identical after the suite"
 node scripts/echo-check.test.mjs                    # PASS — 18 assertions
-node scripts/review-gate.mjs --task RV-F12345       # exit 0, status done
+node scripts/review-gate.mjs --task RV-F12345       # exit 0, status done — 20 claims / 64 checks
 ```
+
+(The F9 claim was verified by hashing `wip/review-gate/RV-F12345.envelope.json` around a run of every
+one of those suites: unchanged, sha256 `97984608…`.)
 
 Acceptance fixtures (committed by F5, no longer gitignored `wip/`):
 
@@ -127,8 +150,9 @@ Acceptance fixtures (committed by F5, no longer gitignored `wip/`):
 2. ~~**F5 — commit the acceptance fixtures as a regression test.**~~ **DONE** (`1882a3c`):
    `scripts/test/fixtures/plans/*.md` + `scripts/verify-plan-claims.test.mjs`.
 3. ~~**Run the mandatory `reviewer` gate** over F1–F4.~~ **DONE**: `RV-F12345` is green
-   (19 claims / 56 checks / `status: done`), the artifact is attested, and two live reviewer sessions
-   verify through `scripts/echo-check.mjs --verify`.
+   (20 claims / 64 checks / `status: done`, exit 0) and the artefact is attested. The two live sessions
+   this line originally cited are now `invalid-attestation` — their artefact was rewritten by the suite
+   (F9, §5). The fix is in; the lost bytes are not recoverable.
 4. **Retrofit — the only open item.** Re-run `@architect` on: *"please make this repo be about react
    flow for front end and apache drools using quarkus for backend"* — confirm the gate fires (a
    `fact-checker` `Result` must be attached **before** approval), approve, execute the corrected plan,
@@ -145,11 +169,28 @@ Acceptance fixtures (committed by F5, no longer gitignored `wip/`):
   F4 (read-only discipline + `edit: deny`), F5 (fixtures committed, so loss is visible in `git status`)
   and the echo rework: the reviewer now runs `--attest`, and `scripts/echo-check.mjs --verify` proves
   the audit mechanically. Historical detail kept above in git history.
-- **The architect still will not reliably emit tool calls on a broad brief.** Measured four times
-  before the tooling round: it deliberates (24k–79k reasoning chars) and then either returns a stub
-  plan or *prints* the Directive JSON as prose. The workaround — "your one action this turn is a
-  `subagent` TOOL CALL", with the plan inlined verbatim and nothing else in the turn — is what `F3`
-  and `AGENTS.md § Orchestration Flow` step 2 encode. **Still the retrofit's biggest execution risk.**
+- **The architect still will not reliably emit tool calls on a broad brief.** Measured six times now:
+  it deliberates (24k–79k reasoning chars) and then either returns a stub plan, *prints* the Directive
+  JSON as prose (4×), spawns 17 `fact-checker` children without converging and then emits
+  `status:"done"` with a **fabricated** summary ("verified … no high severity findings") and a
+  `findings[]` of non-findings ("file exists on disk") — i.e. **no valid fact-check `Result` at all**,
+  so the turn is invalid per the gate backstop — or, handed the atomic one-action re-delegation,
+  delegates to a `researcher` instead of the mandated single `fact-checker` call. The workaround —
+  "your one action this turn is a `subagent` TOOL CALL", with the plan inlined verbatim and nothing
+  else in the turn — is what `F3` and `AGENTS.md § Orchestration Flow` step 2 encode. **Still the
+  retrofit's biggest execution risk**; the retrofit has *not* been approved and no code has been
+  written for it (`wip/fact-check/plan.md` fails `scripts/verify-plan-claims.mjs`: `MISSING` subtask
+  shape, `Check:` lines that name no executable command, a Check that asserts its own tautology).
+- **Attestation invalidation (F9 — fixed, damage is not reversible).** A suite run used to rewrite
+  `wip/review-gate/RV-F12345.envelope.json`, and the artefact's own history on this checkout proves
+  it: 12 737 B / 41 checks → 14 497 B / 47 → 17 478 B / 56 → 21 002 B / 64 (the last one deliberate,
+  `--attest --force`). Consequence: **all three** reviewer sessions that attested an earlier state now
+  fail `node scripts/echo-check.mjs <session> --verify` with `invalid-attestation` — two mismatch on
+  `findings[]` (they carry no `artifact` pointer, so the runner resolves the *current* artefact from
+  `task_id`), and one still cites sha256 `ac1b930e…`, 12 737 bytes, 41 checks. The destroyed bytes are
+  unrecoverable (the file is gitignored scratch, never committed), so F9 prevents recurrence without
+  restoring the evidence: the redirect plus the byte-identity assertion are the fix, and the shipped
+  artefact was refreshed deliberately rather than silently.
 - **The fact-checker is improved but noisy when live.** It records the (a)–(h) checklist in `summary`
   and emits a step-3 `high`, but it has produced duplicate findings, one invalid `severity:"pass"`,
   extra `checks`/`artifacts` fields, and dismissed `UNKNOWN` package names. One later iteration also
@@ -159,6 +200,8 @@ Acceptance fixtures (committed by F5, no longer gitignored `wip/`):
   its severity.**
 - **The gate verifies shape, not freshness.** `--verify` re-hashes the artefact but does not re-run the
   gate, so it is only meaningful while the tree is unchanged — the echo is a point-in-time witness.
+  Corollary (F9): a checklist change makes the shipped artefact stale, and `--attest` then *refuses*
+  to overwrite it; refresh deliberately with `--attest --force` when you intend to re-baseline.
 - **`library/architect/stack-coordinates.mini.md` is not registered** in `library/manifest.json` or
   `library/README.md` (pre-existing gap, deliberately out of scope — the checker reads it by path).
 - **Doc drift:** `AGENTS.md` references `scripts/generate-opencode.jq`, which does not exist.
@@ -215,6 +258,14 @@ where the **last match wins**; the real actions are `shell` (the shell tool), `e
 enforced read-only guarantee; there is no `lsp` action and `*` matches everything. A per-model
 `limit.output` (e.g. the `granite-4.2-3b-bounded` alias, 16384) is what bounds a step, not
 `request.body`.
+
+**Attestation scratch (F9):** the default attestation directory is `wip/review-gate`, overridable with
+`REVIEW_GATE_ATTEST_DIR` — honoured by `scripts/review-gate.mjs` (default path *and* the `--verify`
+`task_id` fallback), by `scripts/echo-check.mjs`, and documented in `--help`.
+`scripts/review-gate.test.mjs` points it at scratch space, so **a suite run cannot touch a real
+artefact**; it asserts `wip/review-gate/` is byte-identical before and after. A checklist change leaves
+the shipped artefact stale and `--attest` then refuses it — re-baseline deliberately with
+`node scripts/review-gate.mjs --task RV-F12345 --attest --force`.
 
 **The session store (for `scripts/echo-check.mjs`):** `~/.local/share/opencode/opencode.db` (SQLite,
 open **read-only**), table `session_message(session_id, type, data, seq)`; an assistant row's
