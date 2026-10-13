@@ -7,8 +7,8 @@ export default {
       name: 'no-cross-feature',
       comment: 'Prevent cross-feature imports',
       severity: 'error',
-      from: { path: 'src/features/(billing|invoicing)' },
-      to: { path: 'src/features/(billing|invoicing)' }
+      from: { path: 'src/features/(alerting|publication)' },
+      to: { path: 'src/features/(alerting|publication)' }
     }
   ]
 };

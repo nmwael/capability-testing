@@ -11,3 +11,6 @@ dist/
 # Python bytecode
 __pycache__/
 *.pyc
+config.db
+config.db-shm
+config.db-wal

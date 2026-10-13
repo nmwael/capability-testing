@@ -1,30 +1,36 @@
 capabilities:
-  - id: invoice.recalculate-penalty
-    intent: "Apply late-payment penalty to a closed invoice"
-    owner: billing
-    status: active  # active | deprecated | retired
-    since: 3.2.0
-    verified_by:
-      - "InvoiceRecalculationIT"        # backend integration test class (FQCN or simple name)
-      - "billing/recalculate-penalty.feature"  # cucumber feature path
-
-  - id: bulk-csv-export
-    intent: "Export multiple invoices as CSV"
-    owner: invoicing
-    status: retired
-    since: 3.1.0
-    retired_at: 2026-10-03
-    reason: "Modulith split - replaced by export-batch module"
-    restore_after: 2027-Q1  # CI will fail if this date has passed and still retired
-    tracked_by: PROJ-889
-    pr: "#1234"
-    verified_by: []  # retired capabilities need not be enforced
-
-  - id: invoice.list
-    intent: "List invoices with filtering/pagination"
-    owner: invoicing
+  - id: alert.publish
+    intent: "Publish an alert as a CAP v1.2 message that validates against the OASIS schema"
+    owner: publication
     status: active
-    since: 3.0.0
+    since: 1.0.0
     verified_by:
-      - "InvoiceListIT"
-      - "invoicing/invoice-list.feature"
+      - "AlertPublishIT"                          # backend integration test class
+      - "features/publication/alert-publish.feature"
+
+  - id: alert.route
+    intent: "Route a CAP alert by its severity, urgency and certainty"
+    owner: alerting
+    status: active
+    since: 1.0.0
+    verified_by:
+      - "AlertRouteIT"
+      - "features/alerting/alert-route.feature"
+
+  - id: alert.rule-design
+    intent: "Draw routing rules as a React Flow graph; compile and execute them in Drools"
+    owner: publication
+    status: active
+    since: 1.0.0
+    verified_by:
+      - "AlertRuleDesignIT"
+      - "features/publication/alert-rule-design.feature"    # compile + execute (Quarkus/Cucumber/Drools)
+      - "features/frontend/alert-rule-designer.feature"     # React Flow authoring surface (vitest)
+
+  - id: alert.flow
+    intent: "Show an alert's distribution as a React Flow canvas"
+    owner: publication
+    status: active
+    since: 1.0.0
+    verified_by:
+      - "features/frontend/alert-flow.feature"

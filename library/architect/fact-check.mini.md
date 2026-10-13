@@ -16,12 +16,12 @@ be auditable on these axes:
 | npm name shape | `@types/vitejs/plugin-react` (invalid: 2 slashes) | name grammar |
 | Bare package name | `@xyflow/react` named with no version, `React-Flow` | `registry.npmjs.org` |
 | Maven coordinate | `org.drools:drools-bom:10.2.0`, `org.kie:kie-api` | `repo1.maven.org` |
-| Repo path | `backend/invoicing/src/main/resources/rules/penalty.drl` | the working tree |
+| Repo path | `backend/alerting/src/main/resources/rules/alert-routing.drl`, `backend/common/src/main/resources/cap-v1.2.xsd` | the working tree |
 | Imported module | `import { ReactFlow } from '@xyflow/react'` | registry + the plan's declared deps |
 | CLI flag / subcommand | `vite --no-quiet --devtools` | the tool's `--help` / docs |
 | API symbol / prop | `<ReactFlow controlled={false}>` | package types / docs |
 | Ground rule | "DRL under `backend/src/**`" | `library/architect/stack-coordinates.mini.md` |
-| Command + expected exit | `mvn -q -pl invoicing -am validate` exits 0 | PATH + the working directory it runs from |
+| Command + expected exit | `mvn -q -pl alerting -am validate` exits 0 | PATH + the working directory it runs from |
 | Plan shape (BNF) | a subtask with no `- Check:` line, a bad `Role:` | the grammar in `.opencode/agents/architect.md` |
 
 The mechanical checker (`scripts/verify-plan-claims.mjs`) covers the coordinate, name, path, import,

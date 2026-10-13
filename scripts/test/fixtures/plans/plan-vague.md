@@ -4,10 +4,10 @@
   - Change: Add <dependencyManagement> section with Quarkus BOM and Drools BOM; add required Quarkus and Drools dependencies
   - Check: `mvn -q -pl backend -am validate` exits 0
   - Role: coder
-* T2 — Implement Drools rule in invoicing module
-  - Files: backend/invoicing/src/main/resources/rules/penalty.drl
-  - Change: Create RULE "recalculate-penalty" with logic defining penalty calculation
-  - Check: `grep -c 'RULE' backend/invoicing/src/main/resources/rules/*.drl` is 1
+* T2 — Implement Drools rule in alerting module
+  - Files: backend/alerting/src/main/resources/rules/alert-routing.drl
+  - Change: Create RULE "route-extreme-alert" with logic defining alert routing
+  - Check: `grep -c 'RULE' backend/alerting/src/main/resources/rules/*.drl` is 1
   - Role: coder
 
 ## Phase 2 — Frontend: React Flow

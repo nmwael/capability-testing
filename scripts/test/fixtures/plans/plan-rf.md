@@ -17,17 +17,17 @@
 
 ## Phase 2 — Backend: Drools on Quarkus
 
-* T3a — Add the Drools dependencies to the invoicing module
-  - Files: backend/invoicing/pom.xml
+* T3a — Add the Drools dependencies to the alerting module
+  - Files: backend/alerting/pom.xml
   - Change: add org.kie:kie-api:7.74.1.Final plus org.drools:drools-core; do NOT use a BOM
-  - Check: `mvn -q -pl invoicing -am validate` exits 0
+  - Check: `mvn -q -pl alerting -am validate` exits 0
   - Role: coder
 
-* T3b — Add the penalty rule
-  - Files: backend/invoicing/src/main/resources/rules/penalty.drl
-  - Change: create the rule with `fact { invoice.penalty > 0 }` and
-    `eval( dueDate.isBefore(currentDate()) )`
-  - Check: `test -f backend/invoicing/src/main/resources/rules/penalty.drl` exits 0
+* T3b — Add the alert routing rule
+  - Files: backend/alerting/src/main/resources/rules/alert-routing.drl
+  - Change: create the rule with `fact { info.severity == "Extreme" }` and
+    `eval( urgency.compareTo("Immediate") == 0 )`
+  - Check: `test -f backend/alerting/src/main/resources/rules/alert-routing.drl` exits 0
   - Role: coder
 
 ## Phase 3 — Verify

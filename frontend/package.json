@@ -1,8 +1,8 @@
 {
-  "name": "react-flow-app",
+  "name": "cap-alert-app",
   "version": "0.1.0",
-  "description": "Frontend visualization for the Drools/Quarkus backend.",
-  "main": "src/index.js",
+  "description": "Frontend for the CAP v1.2 alerting backend: distribution canvas and routing rule designer.",
+  "main": "src/index.tsx",
   "scripts": {
     "start": "echo 'Development server starting...'"
   },

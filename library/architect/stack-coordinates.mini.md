@@ -45,8 +45,11 @@ as a plain library and expose a `KieServices`/`KieContainer` through a CDI produ
 
 ## Repo-specific ground rules
 
-- Maven modules: `backend/common`, `backend/billing`, `backend/invoicing`.
+- Maven modules: `backend/common`, `backend/alerting`, `backend/publication`.
 - `backend/src/**` is a stray tree **outside** the modules — no build resource belongs there.
 - Capability registry: `capabilities/capabilities.yml`, validated by `scripts/verify-capabilities.js`.
+- BDD: every capability is pinned by a spec under `features/` before implementation; `@todo` scenarios
+  are implementation work and are excluded from `mvn test` by `cucumber.filter.tags`.
+- CAP backing model: `backend/common/src/main/resources/cap-v1.2.xsd` (OASIS CAP v1.2 schema).
 - Frontend today: `frontend/package.json` (broken placeholder — `"react": "^^"`, no build tool),
-  `frontend/tsconfig.json`, `frontend/src/features/{invoicing,billing}/*.tsx`.
+  `frontend/tsconfig.json`, `frontend/src/features/{alerting,publication}/*.tsx`.

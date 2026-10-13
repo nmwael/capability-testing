@@ -5,9 +5,9 @@
   - Check: `node -e "JSON.parse(require('fs').readFileSync('frontend/package.json'))"` exits 0
   - Role: coder
 ## Phase 2 — Backend: Drools
-* T2 — Add Drools to the invoicing module
-  - Files: backend/invoicing/pom.xml
+* T2 — Add Drools to the alerting module
+  - Files: backend/alerting/pom.xml
   - Change: import org.drools:drools-bom:10.2.0 (type pom, scope import); add org.drools:drools-core, org.kie:kie-api (versions managed by the BOM)
-  - Check: `mvn -q -pl invoicing -am validate` exits 0
+  - Check: `mvn -q -pl alerting -am validate` exits 0
   - Role: coder
 I am waiting for approval
