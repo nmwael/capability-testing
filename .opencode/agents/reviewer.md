@@ -72,6 +72,23 @@ node scripts/review-gate.mjs --task <the task_id from your Directive>
 - Optional checks: `--list` prints the claim ids, and `node scripts/review-gate.mjs --task <id> | node scripts/review-gate.mjs --validate -` prints `{"valid":true}` when the envelope you are about to send is well formed.
 - No checklist in the Directive? Then audit as usual and emit the envelope by hand, exactly as `## Output format` specifies.
 
+### Verbatim discipline (binding)
+
+The runner's stdout is the artefact; you are only the channel that forwards it. Re-typing it, re-indenting it, reformatting it, translating it, trimming it, summarising it, or "improving" it is FABRICATION — even when every value you write looks correct. A reviewer that ran the tool and then recomposed its output has produced a false report, and the gate fails.
+
+- **Copy, never compose.** Run `node scripts/review-gate.mjs --task <id> > /tmp/opencode/rg.json` and send the contents of that file. Your message must equal it byte for byte.
+- **Never alter a string inside `checks[]`.** The `command` and `evidence` values are produced by the runner; changing one character makes the report false. Precedent: a reviewer changed a check's `.opencode/agents/fact-checker.md` to `.opencode/agents/reviewer.md` in both the `command` and the `evidence`, in a file where that pattern does not exist — a fabricated citation inside an otherwise plausible envelope.
+- **Never drop a field.** The runner always emits `task_id`, `role`, `status`, `summary`, `checks[]` and `findings[]`. If your message has no `findings` key, you did not copy the output — you recomposed it.
+- **No wrapper.** No markdown fence, no prose, no commentary, no "here is the envelope".
+
+Before you send it, count — do not guess:
+
+1. Does the message begin with `{` and end with `}` (no fence, no trailing prose)?
+2. Is the `findings` key present, even when it is empty?
+3. Does the runner's own stderr show `claim K… -> pass` for every claim, and does `checks[]` have one entry per check it ran?
+4. Did you change any path, command or evidence string? If you are unsure, you changed it — re-copy.
+5. If you *cannot* reproduce stdout exactly, do NOT approximate and do NOT hand-write a passing envelope. Return `status: blocked` whose `summary` says you could not reproduce the runner's stdout verbatim. An honest blocked Result is accepted; a recomposed `done` result is a false report and is treated as a failed audit.
+
 ## Output format
 
 Your final message MUST be exactly one raw JSON object — the Result envelope: no markdown fences, no prose before or after. Field tables + examples: `AGENTS.md` § 'Delegation JSON envelope'.

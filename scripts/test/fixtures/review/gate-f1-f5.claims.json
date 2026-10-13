@@ -278,6 +278,34 @@
           "pattern": "Do not emit a `checks` array"
         }
       ]
+    },
+    {
+      "id": "K15",
+      "statement": "F7: the reviewer may not recompose the gate runner's stdout — it must forward it byte for byte, must not alter a check's command/evidence strings, and must not drop the findings[] key",
+      "severity": "high",
+      "suggestion": "restore the Verbatim discipline (binding) section in .opencode/agents/reviewer.md",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "Verbatim discipline \\(binding\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "Copy, never compose"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "Never alter a string inside `checks\\[\\]`"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/reviewer.md",
+          "pattern": "If your message has no `findings` key"
+        }
+      ]
     }
   ],
   "advisories": [
