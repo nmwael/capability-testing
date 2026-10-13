@@ -164,6 +164,7 @@ else
             nohup llama-server -m "$model_file" --host 0.0.0.0 --port "$port" \
                 --jinja \
                 --ctx-size "$ctx" --alias "$name" --parallel "$par" \
+                --reasoning-budget-message "Reasoning budget exhausted. Please wrap up your analysis and provide your final answer now." \
                 ${ngl_args[@]+"${ngl_args[@]}"} \
                 ${kv_args[@]+"${kv_args[@]}"} \
                 ${spec_args[@]+"${spec_args[@]}"} \

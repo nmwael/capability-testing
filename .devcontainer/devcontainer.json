@@ -89,7 +89,8 @@
     "TS_HOSTNAME": "${localEnv:TS_HOSTNAME}",
     "GOOGLE_API_KEY": "${localEnv:GOOGLE_API_KEY}",
     "NVIDIA_API_KEY": "${localEnv:NVIDIA_API_KEY}",
-    "SKIP_LLAMA_START": "${localEnv:SKIP_LLAMA_START}"
+    "SKIP_LLAMA_START": "${localEnv:SKIP_LLAMA_START}",
+    "BIFROST_SETUP_TOKEN": "${localEnv:BIFROST_SETUP_TOKEN}"
   },
   "postCreateCommand": "bash scripts/post-create.sh",
   "postStartCommand": "bash scripts/auto-startup.sh"
