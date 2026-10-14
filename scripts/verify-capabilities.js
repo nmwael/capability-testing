@@ -107,6 +107,54 @@ function checkQuarterPast(qstr) {
   return q < qNow;
 }
 
+// A feature file states its side as a tag, and the tag must agree with its directory.
+const LANE_TAGS = { publication: '@backend', alerting: '@backend', frontend: '@frontend' };
+
+function readTagsBeforeFeature(text) {
+  // Tags are the @-lines above `Feature:`. Splitting there keeps a later @-word in a
+  // scenario step from being mistaken for a tag.
+  const head = text.split(/^[ \t]*Feature:/m)[0];
+  return head.match(/^@[\w:.-]+/gm) || [];
+}
+
+function checkLaneTags(repoRoot, errors) {
+  const featuresDir = path.join(repoRoot, 'features');
+  if (!fs.existsSync(featuresDir)) return;
+
+  for (const lane of fs.readdirSync(featuresDir)) {
+    const laneDir = path.join(featuresDir, lane);
+    if (!fs.statSync(laneDir).isDirectory()) {
+      if (lane.endsWith('.feature')) {
+        errors.push(`features/${lane}: a feature file must live in a lane directory`);
+      }
+      continue;
+    }
+
+    const expected = LANE_TAGS[lane];
+    for (const file of fs.readdirSync(laneDir)) {
+      if (!file.endsWith('.feature')) continue;
+      const rel = `features/${lane}/${file}`;
+      const tags = readTagsBeforeFeature(fs.readFileSync(path.join(laneDir, file), 'utf8'));
+
+      const capTags = tags.filter(t => t.startsWith('@cap:'));
+      if (capTags.length !== 1) {
+        errors.push(`${rel}: expected exactly one @cap: tag, found ${capTags.length}`);
+      }
+
+      const laneTags = tags.filter(t => t === '@frontend' || t === '@backend');
+      if (!expected) {
+        errors.push(`${rel}: no lane mapping for 'features/${lane}/' (add it to LANE_TAGS)`);
+      } else if (laneTags.length === 0) {
+        errors.push(`${rel}: missing its lane tag (expected ${expected})`);
+      } else if (laneTags.length > 1) {
+        errors.push(`${rel}: more than one lane tag (${laneTags.join(', ')}); a file is one side`);
+      } else if (laneTags[0] !== expected) {
+        errors.push(`${rel}: lane tag ${laneTags[0]} does not match features/${lane}/ (expected ${expected})`);
+      }
+    }
+  }
+}
+
 function main() {
   const repoRoot = process.cwd();
   const capsPath = path.join(repoRoot, 'capabilities', 'capabilities.yml');
@@ -147,6 +195,8 @@ function main() {
     }
   }
   
+  checkLaneTags(repoRoot, errors);
+
   if (errors.length > 0) {
     console.error('Capability traceability check FAILED:');
     for (const e of errors) console.error('  - ' + e);
