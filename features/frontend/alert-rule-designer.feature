@@ -5,6 +5,7 @@
 # feeds lives in features/publication/alert-rule-design.feature.
 
 @cap:alert.rule-design
+@frontend
 @todo
 Feature: Alert routing rule designer canvas
   As a warning officer
@@ -56,3 +57,116 @@ Feature: Alert routing rule designer canvas
     Given the graph "tornado-routing" was saved in an earlier session
     When I open the rule designer
     Then the canvas shows the saved graph "tornado-routing"
+
+  # --- Changing what has been drawn ---
+
+  Scenario: Removing an edge keeps both of its nodes
+    Given the canvas holds a condition node "severe" connected to an action node "broadcast"
+    When I remove the edge from "severe" to "broadcast"
+    Then the canvas still holds "severe" and "broadcast"
+    And "broadcast" has no incoming edge
+
+  Scenario: Undo restores the graph to its previous state
+    Given the canvas holds a condition node "severe" connected to an action node "broadcast"
+    When I add a condition node "minor"
+    And I undo the last change
+    Then the canvas holds no condition node "minor"
+    And "severe" is still connected to "broadcast"
+
+  Scenario: Redo reapplies what undo removed
+    Given the canvas holds a condition node "severe" connected to an action node "broadcast"
+    When I add a condition node "minor"
+    And I undo the last change
+    And I redo the last change
+    Then the canvas holds the condition node "minor"
+
+  # --- Validation while drawing ---
+
+  Scenario: A duplicate node id is refused as it is typed
+    Given the canvas holds a condition node "severe"
+    And the canvas holds a second condition node
+    When I rename the second condition node to "severe"
+    Then the name "severe" is marked as taken
+    And the generate action is disabled
+
+  Scenario: A cycle cannot be connected
+    Given the canvas holds a condition node "a" connected to an action node "b"
+    When I try to draw an edge from "b" to "a"
+    Then the edge is refused
+    And the only edge on the canvas is the one from "a" to "b"
+
+  Scenario: Connecting an orphan action node enables generate
+    Given the canvas holds an action node "orphan" with no incoming edge
+    Then the generate action is disabled
+    When I connect a condition node to "orphan"
+    Then the generate action is enabled
+
+  # --- What an action node can fire ---
+
+  Scenario: An action node offers the channels the alerting module can fire
+    Given the rule designer is open
+    When I inspect an action node
+    Then the channels offered are the ones the alerting module can fire
+
+  # --- Moving around the canvas ---
+
+  Scenario: The canvas can be zoomed and panned
+    Given the canvas holds a condition node "severe" connected to an action node "broadcast"
+    When I zoom the canvas out
+    And I pan the canvas
+    Then both nodes are still on the canvas
+    And the connection between them is unchanged
+
+  Scenario: The canvas can be fitted back to the graph
+    Given the canvas has been zoomed and panned away from its nodes
+    When I choose fit to view
+    Then every node is inside the visible area
+
+  # --- Naming the graph and leaving the designer ---
+
+  Scenario: An unnamed graph is named before it can be generated
+    Given the canvas holds a valid rule path
+    And the graph has no name
+    When I choose generate rules
+    Then I am asked for a graph name
+    And nothing is posted before a name is given
+
+  Scenario: Leaving with unsaved changes warns first
+    Given I have changed a condition and not saved
+    When I try to leave the designer
+    Then I am warned about the unsaved change
+
+  # --- Keyboard ---
+
+  Scenario: A node can be added without a mouse
+    Given the rule designer is open
+    When I add a condition node from the palette with the keyboard
+    Then the canvas holds one condition node
+    And the new node has focus
+
+  Scenario: Every node can be reached and selected with the keyboard
+    Given the canvas holds a condition node "severe" connected to an action node "broadcast"
+    When I move focus through the canvas with the keyboard
+    Then each node can be reached
+    And each node can be selected
+
+  # --- Backend states ---
+
+  Scenario: A slow rule design endpoint shows a loading state, not an empty canvas
+    Given the rule design endpoint is slow to answer
+    When I open the graph "tornado-routing"
+    Then a loading state is shown
+    And the canvas is not shown as empty
+
+  Scenario: An unreachable backend leaves the browser's graph editable
+    Given the rule design endpoint is unreachable
+    When I open the graph "tornado-routing"
+    Then the graph already in the browser is still editable
+    And the failure to reach the backend is reported
+
+  # --- First run ---
+
+  Scenario: An empty canvas says how to start
+    Given I have cleared the canvas
+    Then the canvas suggests starting from the palette
+    And the canvas offers a way to open a saved graph

@@ -1,4 +1,5 @@
 @cap:alert.rule-design
+@backend
 @todo
 Feature: Design alert routing rules as a graph
   As a warning officer

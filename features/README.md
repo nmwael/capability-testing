@@ -13,19 +13,26 @@ spec may say "validates against the CAP 1.2 schema" and mean one specific artefa
 
 ```
 features/
-  publication/  alert.publish, alert.rule-design  → backend/publication (Quarkus, Cucumber, Drools)
-  alerting/     alert.route                        → backend/alerting (Quarkus, Cucumber, Drools)
-  frontend/     alert.flow, alert.rule-design      → frontend (React Flow; vitest runner, see below)
+  publication/  alert.publish, alert.rule-design, alert.rule-edit, alert.flow  → backend/publication (Quarkus, Cucumber, Drools)
+  alerting/     alert.route                                                    → backend/alerting (Quarkus, Cucumber, Drools)
+  frontend/     alert.flow, alert.rule-design, alert.rule-edit                  → frontend (React Flow; vitest runner, see below)
 ```
+
+Every file also states its side as a tag — **`@backend`** under `publication/` and `alerting/`,
+**`@frontend`** under `frontend/`. The tag and the directory are checked against each other by
+`scripts/verify-capabilities.js`, so a spec cannot sit silently on the wrong side.
 
 Backend modules consume their specs by copying `features/<module>/*.feature` into the module's test
 resources (`<testResource>` in each `backend/<module>/pom.xml`), so the capability path in
-`capabilities/capabilities.yml` keeps resolving from the repo root.
+`capabilities/capabilities.yml` keeps resolving from the repo root. A `@frontend` file is never
+copied into a backend module, so the Maven filter stays as it is (`not @todo`).
 
 ## Rules
 
-1. **One capability ↔ one feature file.** The file carries the capability tag
-   (`@cap:<capability.id>`), matching `verified_by` in `capabilities/capabilities.yml`.
+1. **One capability ↔ one feature file per lane.** A capability that spans both sides gets one
+   `@backend` file and one `@frontend` file — never a single mixed file. Each file carries the
+   capability tag (`@cap:<capability.id>`), matching `verified_by` in
+   `capabilities/capabilities.yml`, and exactly one lane tag (`@backend` / `@frontend`).
 2. **Every step must be executable.** A scenario whose steps do not exist yet is not a bug — it is
    the work, but it must be marked.
 3. **`@todo` means "not implemented yet".** `backend/pom.xml` filters these out of the default run
@@ -40,7 +47,8 @@ resources (`<testResource>` in each `backend/<module>/pom.xml`), so the capabili
 ## Running
 
 ```sh
-node scripts/verify-capabilities.js      # every active capability's verified_by resolves
+node scripts/verify-capabilities.js      # verified_by resolves; each file's lane tag matches its directory
+node scripts/capability-report.js       # capability matrix + progress (--summary FILE for a job summary)
 cd backend && mvn -B test                # backend specs (green; @todo excluded)
 cd frontend && npm run test:unit         # frontend specs (lands with the retrofit)
 ```

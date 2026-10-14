@@ -27,10 +27,20 @@ capabilities:
       - "features/publication/alert-rule-design.feature"    # compile + execute (Quarkus/Cucumber/Drools)
       - "features/frontend/alert-rule-designer.feature"     # React Flow authoring surface (vitest)
 
+  - id: alert.rule-edit
+    intent: "Edit a saved routing rule graph in the designer and exchange it with the backend as JSON"
+    owner: publication
+    status: active
+    since: 1.0.0
+    verified_by:
+      - "features/frontend/alert-rule-edit.feature"         # designer: load, edit, post JSON (vitest)
+      - "features/publication/alert-rule-edit.feature"      # endpoint: accept, replace, echo JSON
+
   - id: alert.flow
     intent: "Show an alert's distribution as a React Flow canvas"
     owner: publication
     status: active
     since: 1.0.0
     verified_by:
-      - "features/frontend/alert-flow.feature"
+      - "features/publication/alert-flow.feature"          # the distribution endpoint (JSON)
+      - "features/frontend/alert-flow.feature"             # React Flow canvas (vitest)

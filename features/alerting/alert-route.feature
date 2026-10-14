@@ -1,4 +1,5 @@
 @cap:alert.route
+@backend
 @todo
 Feature: Route CAP alerts by danger level
   As a dispatcher

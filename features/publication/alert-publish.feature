@@ -1,5 +1,5 @@
 @cap:alert.publish
-@todo
+@backend
 Feature: Publish CAP alerts
   As a warning officer
   I want to publish an alert as a CAP v1.2 message
