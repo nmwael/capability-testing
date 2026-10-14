@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
+# Publishing a check run needs checks: write. Naming contents: read explicitly
+# matters because setting a permissions block replaces the implicit defaults, and
+# actions/checkout needs contents: read.
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   traceability:
     runs-on: ubuntu-latest
@@ -15,6 +22,11 @@ jobs:
         with:
           node-version: 24
       - run: node scripts/verify-capabilities.js
+      # Capability matrix + progress in the job summary. Test failures are left to
+      # mikepenz/action-junit-report in each lane — this reports the specs.
+      - name: Capability report
+        if: always()
+        run: node scripts/capability-report.js --summary "$GITHUB_STEP_SUMMARY"
 
   backend:
     runs-on: ubuntu-latest
@@ -24,9 +36,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+      # Surefire already writes backend/*/target/surefire-reports/TEST-*.xml;
+      # the action reads that and posts counts + failures to the job summary and
+      # a check run. No reporting code of our own.
       - name: Maven test
         working-directory: backend
         run: mvn -B -q test
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: 'Backend tests'
+          report_paths: 'backend/**/target/surefire-reports/TEST-*.xml'
 
   frontend:
     runs-on: ubuntu-latest
@@ -40,3 +61,15 @@ jobs:
           npm ci
           npm run typecheck
           npx depcruise src --config .depcruiser.js
+      # vitest's built-in junit reporter emits the same schema as Surefire, so the
+      # one action covers both lanes. This also puts the unit tests into CI, which
+      # the frontend lane did not run before.
+      - name: Frontend tests
+        working-directory: frontend
+        run: mkdir -p reports && npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: 'Frontend tests'
+          report_paths: 'frontend/reports/junit.xml'
