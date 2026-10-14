@@ -1,9 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
+  "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
   "providers": {
-    "local-granite-4.2-3b": {
-      "name": "Bifrost (local granite-4.2-3b)",
+    "local-qwen3.5-4b": {
+      "name": "Bifrost (local qwen3.5-4b)",
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
         "baseURL": "http://127.0.0.1:8082/v1"
@@ -12,23 +12,23 @@
         "x-bf-passthrough-extra-params": "true"
       },
       "models": {
-        "granite-4.2-3b": {
-          "name": "granite-4.2-3b (unpinned fallback)",
+        "qwen3.5-4b": {
+          "name": "qwen3.5-4b (unpinned fallback)",
           "limit": {
-            "context": 131072,
-            "output": 32768
+            "context": 65536,
+            "output": 8192
           }
         },
-        "granite-4.2-3b-bounded": {
-          "name": "granite-4.2-3b - bounded step (reviewer)",
-          "modelID": "granite-4.2-3b-s0",
+        "qwen3.5-4b-bounded": {
+          "name": "qwen3.5-4b - bounded step (reviewer)",
+          "modelID": "qwen3.5-4b-s0",
           "limit": {
             "context": 65536,
             "output": 4096
           }
         },
-        "granite-4.2-3b-s0": {
-          "name": "granite-4.2-3b - Slot 0",
+        "qwen3.5-4b-s0": {
+          "name": "qwen3.5-4b - Slot 0",
           "limit": {
             "context": 65536,
             "output": 8192
@@ -49,14 +49,14 @@
         "qwen3.5-9b-mtp": {
           "name": "qwen3.5-9b-mtp (unpinned fallback)",
           "limit": {
-            "context": 32768,
+            "context": 65536,
             "output": 8192
           }
         },
         "qwen3.5-9b-mtp-s0": {
           "name": "qwen3.5-9b-mtp - Slot 0",
           "limit": {
-            "context": 32768,
+            "context": 65536,
             "output": 8192
           }
         }
@@ -70,8 +70,8 @@
   },
   "agents": {
     "architect": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "steps": 12,
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "steps": 150,
       "temperature": 0.1,
       "reasoning": {
         "effort": "medium",
@@ -79,7 +79,7 @@
       }
     },
     "researcher": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -88,8 +88,8 @@
       }
     },
     "reviewer": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-bounded",
-      "steps": 14,
+      "model": "local-qwen3.5-4b/qwen3.5-4b-bounded",
+      "steps": 30,
       "temperature": 0.1,
       "reasoning": {
         "effort": "medium",
@@ -97,16 +97,16 @@
       }
     },
     "fact-checker": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
-      "steps": 40,
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "steps": 60,
       "temperature": 0.1,
       "reasoning": {
-        "effort": "low",
-        "max_tokens": 512
+        "effort": "medium",
+        "max_tokens": 1024
       }
     },
     "build": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
       "steps": 80,
       "temperature": 0.2,
       "reasoning": {
@@ -115,7 +115,7 @@
       }
     },
     "ui": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
       "steps": 60,
       "temperature": 0.2,
       "reasoning": {
@@ -124,7 +124,7 @@
       }
     },
     "artist": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
       "steps": 40,
       "temperature": 0.3,
       "reasoning": {
@@ -142,7 +142,7 @@
       }
     },
     "title": {
-      "model": "local-granite-4.2-3b/granite-4.2-3b-s0",
+      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
       "reasoning": {
         "effort": "minimal",
         "max_tokens": 128
@@ -167,7 +167,7 @@
       },
       {
         "action": "provider.use",
-        "resource": "local-granite-4.2-3b",
+        "resource": "local-qwen3.5-4b",
         "effect": "allow"
       },
       {

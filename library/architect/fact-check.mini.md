@@ -91,7 +91,7 @@ One Directive, the plan inlined verbatim (the specialist sees nothing else):
   "role": "fact-checker",
   "objective": "Fact-check plan P1 before human approval",
   "context": "<FULL plan text, verbatim — every phase and subtask>",
-  "files": ["frontend/package.json", "backend/invoicing/pom.xml"],
+  "files": ["frontend/package.json", "backend/alerting/pom.xml"],
   "success_criteria": [
     "scripts/verify-plan-claims.mjs run against the inlined plan",
     "every high finding cites path:line, a URL, or raw checker output"

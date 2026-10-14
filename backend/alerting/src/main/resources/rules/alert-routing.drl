@@ -1,0 +1,50 @@
+package com.example.alerting.rules
+
+import com.example.alerting.CapAlertFact
+import com.example.alerting.ChannelFact
+import com.example.alerting.Dispatch
+import com.example.alerting.RoutingDecision
+
+// Default CAP alert routing ruleset.
+//
+// The calling code inserts one CapAlertFact (the alert), one ChannelFact per configured
+// channel and one RoutingDecision; after the rules fire it reads channelCount(), broadcast()
+// and firedRules() off the decision. A channel is "eligible" for an alert when its area is the
+// alert's area (or region-wide) and the alert meets the channel's minimum severity — that gate
+// lives in ChannelFact.eligibleFor(CapAlertFact).
+
+rule "route-extreme-alert"
+when
+    $alert : CapAlertFact( severity == "Extreme", urgency == "Immediate", certainty == "Observed", status != "Test" )
+    $decision : RoutingDecision()
+    $channel : ChannelFact( eligibleFor($alert) )
+then
+    $decision.add(new Dispatch($channel, "route-extreme-alert", true));
+end
+
+rule "route-moderate-alert"
+when
+    $alert : CapAlertFact( status != "Test", severity in ("Severe", "Moderate") )
+    $decision : RoutingDecision()
+    $channel : ChannelFact( eligibleFor($alert) )
+then
+    $decision.add(new Dispatch($channel, "route-moderate-alert", false));
+end
+
+rule "route-minor-alert"
+when
+    $alert : CapAlertFact( severity == "Minor", status != "Test" )
+    $decision : RoutingDecision()
+    $channel : ChannelFact( eligibleFor($alert) )
+then
+    $decision.add(new Dispatch($channel, "route-minor-alert", false));
+end
+
+rule "route-test-alert"
+when
+    $alert : CapAlertFact( status == "Test" )
+    $decision : RoutingDecision()
+    $channel : ChannelFact( testOnly == true )
+then
+    $decision.add(new Dispatch($channel, "route-test-alert", false));
+end
