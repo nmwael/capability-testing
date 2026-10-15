@@ -8,7 +8,6 @@
 
 @cap:alert.flow
 @backend
-@todo
 Feature: Serve an alert's distribution
   As a warning officer
   I want the channels one alert reached and those it skipped

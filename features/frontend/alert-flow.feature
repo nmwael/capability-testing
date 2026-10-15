@@ -6,7 +6,6 @@
 
 @cap:alert.flow
 @frontend
-@todo
 Feature: Alert distribution canvas
   As a dispatcher
   I want to see an alert's distribution as a graph

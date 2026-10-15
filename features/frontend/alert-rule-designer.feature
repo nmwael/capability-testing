@@ -6,7 +6,6 @@
 
 @cap:alert.rule-design
 @frontend
-@todo
 Feature: Alert routing rule designer canvas
   As a warning officer
   I want to draw the routing rules as a graph

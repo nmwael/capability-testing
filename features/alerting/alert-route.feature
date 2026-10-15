@@ -1,6 +1,5 @@
 @cap:alert.route
 @backend
-@todo
 Feature: Route CAP alerts by danger level
   As a dispatcher
   I want an alert's severity, urgency and certainty to decide how it is sent

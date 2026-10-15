@@ -8,7 +8,6 @@
 
 @cap:alert.rule-edit
 @backend
-@todo
 Feature: Exchange a routing rule graph as JSON
   As the publication module
   I want to accept and return a routing graph as JSON

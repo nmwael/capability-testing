@@ -12,7 +12,6 @@
 
 @cap:alert.rule-edit
 @frontend
-@todo
 Feature: Edit a saved routing rule graph
   As a warning officer
   I want to change a routing rule that is already saved

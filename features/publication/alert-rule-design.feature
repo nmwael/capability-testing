@@ -1,6 +1,5 @@
 @cap:alert.rule-design
 @backend
-@todo
 Feature: Design alert routing rules as a graph
   As a warning officer
   I want to draw the routing rules as a graph

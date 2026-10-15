@@ -228,3 +228,114 @@ exactly that).
    requests were answered by `:8089` (the 4B). Any result from the recent coder era should be treated
    as *4B-authored* until re-run post-fix.
 4. **Scope.** Keep this journal architect-only, or grow a section per role?
+
+## Pipeline run — underway issues (2026-10-15, autonomous)
+
+Running the single-9B seat through the full HITL pipeline against `PLAN.md` while the human is away.
+Issues surfaced **so far**, recorded as they happen (not a post-mortem):
+
+1. **Stale-plan premise (caught by the fact-checker).** The first architect plan assumed
+   `AlertRouteResource.java` referenced a cross-module `CapValidator.CAP_NAMESPACE` at lines 80/104.
+   The fact-checker read the file: it **already has its own** `private static final String CAP_NAMESPACE`
+   at **line 26**, used at lines 82/106; there is **no** `CapValidator` reference anywhere in
+   `backend/alerting`. The "backend compile error" carried in from the prior session was **stale** — the
+   file had since been rewritten. Lesson: the architect must be given **freshly read** ground truth, not a
+   summary from an earlier turn.
+2. **Plan wrote invalid Java.** That same plan rendered the constant value as
+   `"urn:oasis:names:tc:emergency:cap:1.2;` — a stray semicolon *inside* the string literal. Would not
+   have compiled. The fact-checker flagged it `high`.
+3. **Wrong role assignment.** F4 (implement `AlertRuleDesigner.tsx`, a React/TSX component) was assigned
+   to the `ui` agent. Per `AGENTS.md`, TypeScript/React implementation is the **coder**'s job (`ui` is
+   HTML/CSS). Fact-checker flagged it `high`.
+4. **Per-subtask check diverged from the gate.** The plan's per-subtask check
+   (`mvn -B clean test -pl alerting -am`) is narrower than the statement's full-lane
+   `mvn -B clean test`; a targeted module check does not prove the whole backend lane is green.
+5. **The real backend failure is a *test* failure, not a compile error.** `AlertRouteCucumberTest`
+   fails **5 of 11** scenarios in `features/alerting/alert-route.feature` (lines 14, 20, 31, 36, 40):
+   two scenarios get HTTP **400** where 200 is expected, plus the area-scoped channel, the test-channel,
+   and the fired-rule scenarios. `publication` was **skipped** in that run (reactor short-circuited on
+   `alerting`), so its state is still unverified.
+6. **Frontend lane confirmed.** `tsc --noEmit` → 9 errors (side-effect CSS import, unused `fireEvent`/`vi`/
+   `setSelected`/`AlertFlow`, `never[]` inference on `useNodesState`/`useEdgesState`). `vitest` →
+   **30 failed / 14 passed**: `AlertRuleDesigner.test.tsx` 21/24, `AlertRuleEdit.test.tsx` 6/8,
+   `AlertFlow.test.tsx` 2/10, `smoke.test.tsx` 1/2. `AlertRuleDesigner.tsx` is still a ~2-line stub.
+7. **4th bifrost stale-provider recurrence (hijack variant).** On the seat swap, the live store kept a
+   dead `ministral-3-3b` provider at `:8089` whose key listed `qwen3.5-9b-mtp` + `-s0` — i.e. it could
+   have captured coder traffic and served a dead port. Deleted it; the single remaining key now lists
+   `-s0` **and** `-s1`.
+8. **The frontend unit specs are over-constrained — this is the biggest open issue.** Measured, not
+   guessed (temporary `zz-probe.test.tsx`, deleted after use):
+   - `@testing-library`'s `getByText` **throws `Found multiple elements`** when >1 element matches, so
+     *every* regex must match **exactly one** leaf element (its own direct text node — parent text does
+     not count).
+   - `features/frontend/*` give `AlertRuleDesigner`+`AlertRuleEdit` **32 regexes** whose alternatives
+     *share words*: `json`∈{name/edges, save/post}, `save`∈{save/post, round-trip}, `reopen`∈{saved/
+     restore, round-trip}, `saved`∈{saved/restore, tornado/saved/edit}, `edge`∈{rule path, remove/edge/
+     node, cycle/refuse, rename/edge, name/edges}, `orphan`∈{orphan/invalid, orphan/connect, delete/
+     dangling/orphan}, `condition`∈{condition, condition/value/severity, delete/dangling/orphan}. Those
+     word-chains force most of the 32 into **one** leaf element — i.e. a word-salad "legend", which no
+     coherent palette/canvas UI can produce. `condition` is additionally forced to be the *clickable*
+     element (one test clicks `/condition/i` then expects `/condition node/i`), which also forces
+     `severity/urgency/certainty` to sit in that same button and forbids `delete/dangling/orphan`
+     anywhere else.
+   - **ReactFlow cannot appear in the designer at all**: it always injects two `display:none` a11y divs
+     (`react-flow__node-desc-1`, `react-flow__edge-desc-1`) whose text contains `node`/`remove`/`select`/
+     `edge`. Measured with ReactFlow mounted: `/remove|edge|node/`→**2 matches** and
+     `/keyboard|focus|select/`→**2 matches** *before the component adds any text of its own*. These divs
+     are rendered unconditionally (only their wording swaps under `disableKeyboardA11y`), and can only
+     be silenced by overriding the `ariaLabelConfig` prop — i.e. by neutering real a11y copy to dodge
+     assertions. `AlertFlow` is unaffected (its regexes never touch `node/edge/remove/select`).
+   - `AlertFlow.test.tsx` has no fetch mock (`vite.config.ts` `test` block has no `setupFiles`), so all
+     its cases observe the `loading` state; test 7 asserts `/sirens|broadcast/i` with **no** `|Loading`
+     fallback while its e2e twin uses `/sirens|broadcast|Loading/i` — an internal inconsistency.
+   - Also: `@xyflow/react` **throws `ResizeObserver is not defined`** under jsdom, so *any* ReactFlow
+     render needs `ResizeObserver` + `DOMMatrixReadOnly` polyfills in a vitest setup file.
+   - **Options for the human:** (a) implement a real canvas and correct the defective assertions
+     (use `getAllByText`/add the missing `|Loading`), (b) ship a legend-style designer that satisfies the
+     letters of all 32 without touching tests, or (c) override `ariaLabelConfig` + no-ReactFlow designer.
+     I am proceeding with the least-gamey option that still lands a real canvas, and will list every
+     test touched here for review.
+9. **The 9B coder burned its whole 100-step budget on one combined backend directive.** The directive
+   bundled "fix the URI typo + wire area channels + add a missing @When step". It landed *partial* work
+   — added the missing `@When("an alert with urgency {string} is received")` step (now
+   `AlertRouteSteps.java:91`) and added an `areaChannels` field + `setAreaChannels` seam to
+   `AlertRouteResource.java:31,39`, and reworked `defaultChannels(String area)` — but **did not apply
+   the actual typo fix**, and left `channelsForAreas` as a no-op comment. Lesson: for this seat, one
+   surgical literal per directive, with the exact file+line inlined; a multi-edit directive makes it
+   re-hunt and exhaust its budget.
+10. **I misattributed the typo's file to the architect — the 9B followed my error.** I told the architect
+    the `http://xml.org.sax/...` typo was in `AlertRouteSteps.java`. It is actually in
+    **`AlertRouteResource.java:90`** (inside the resource's own `parseAlert`, next to a *correct* line 89
+    `http://xml.org/sax/features/external-general-entities`). Because the coder was pointed at the wrong
+    file, the single change that unblocks the two `expected 200 but was 400` scenarios was never made.
+    The backend still fails on exactly this line.
+11. **A `publication` syntax error was *masked* until alerting went green.** Maven's reactor short-circuits
+    at the first failing module, so `publication` had never been compiled in the failing runs. The moment
+    alerting's 5 cucumber scenarios passed, the reactor reached `publication` and stopped at
+    `RuleDesignResource.java:[209,102] illegal character: '\'` — a mangled string concatenation in
+    `compileToDrl()` (line 209 splices `.append(field)` *inside* a string literal instead of closing the
+    literal first, unlike the correct sibling on line 211). So "backend green" was always two bugs behind
+    one another. Lesson: treat `mvn -B clean test` from `backend/` as the only backend gate — a module- or
+    test-scoped run hides downstream modules entirely.
+12. **Once `publication` finally compiled, it turned out the module was ~half-written, and the "failures"
+    are almost all unfinished *glue*, not broken production code.** With the app booting, the single
+    `AlertPublishCucumberTest` runs **all 34 publication scenarios** (I had wrongly assumed a runner was
+    needed per feature — `quarkus-cucumber` discovers every `*.feature` on the classpath from one
+    `CucumberQuarkusTest`). 12 fail, in three families — and, tellingly, **five of the twelve are
+    cucumber "undefined step" failures, not assertions**:
+    - **alert-flow (5):** every `@Given` in `AlertFlowSteps` is an empty stub (`alertPublished` literally
+      has the body `// Alert is stored via AlertResource`), so no alert is ever stored, the GET 404s, and
+      `lastDistribution` stays null → 3 NPEs + 2 "expected 200 but was 404". The `readDistributionTwice`
+      step also never sets `lastDistribution`.
+    - **alert-rule-design (5):** 3 × "expected 400 but was 200" + 2 undefined steps. The `@Given` steps
+      only set a `graphName` string and `saveGraph()` unconditionally calls `buildGraph()` — the
+      already-written helpers `buildOrphanGraph()`, `buildDuplicateIdGraph()`, `buildCycleGraph()` are
+      **dead code**, so the invalid graphs are never actually submitted. Two step definitions
+      (`the graph {string} has a condition on severity {string}`) are missing entirely.
+    - **alert-rule-edit (2):** 1 undefined step + 1 × "expected 404 but was 200". `RuleEditResource.save`
+      computes `boolean isCreate` and never uses it — the "an edit for a graph that was never stored is
+      refused" 404 case was simply never implemented, and the glue's `postEdit` calls the same `save` as
+      the create path, so it cannot be distinguished.
+    Reflection: the specs (`features/*.feature`) were frozen and mostly fine; the rot is in the **glue and
+    the thin resource bodies behind it**. Worth checking dead/unused helpers and empty-method stubs in any
+    lane that "compiles but fails" — that pattern flagged most of this without reading a single assertion.
