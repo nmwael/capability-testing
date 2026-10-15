@@ -20,15 +20,23 @@ observation or an explicit user report; anything else stays `?`. Newest evidence
 
 | Source | architect model |
 |---|---|
-| live `stack.json` (what `scripts/auto-startup.sh` reads) | `ministral-3-3b` — **being swapped in** on `:8089` (user directive 2026-10-15) |
-| `opencode.json` → `.agents.architect.model` | `local-ministral-3-3b/ministral-3-3b-s0` |
-| `.devcontainer/llm-lab-roles.json` | `ministral-3-3b` |
-| `.devcontainer/llm-lab-models.json` | `ministral-3-3b` on `:8089` |
+| live `stack.json` (what `scripts/auto-startup.sh` reads) | `qwen3.5-9b-mtp` **slot 1** — served on `:8090` (user directive 2026-10-15) |
+| `opencode.json` → `.agents.architect.model` | `local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1` |
+| `.devcontainer/llm-lab-roles.json` | `qwen3.5-9b-mtp`, slot 1 |
+| `.devcontainer/llm-lab-models.json` | `qwen3.5-9b-mtp` on `:8090`, ctx 131072, parallel 2 |
 | `.devcontainer/active-profile` | `q4` |
 
-The coder remains `qwen3.5-9b-mtp` on `:8090`. The 2-model stack is
-`ministral-3-3b` (all non-coder roles) + `qwen3.5-9b-mtp` (coder).
-`SmolLM3-3B` is retired from this seat (**dead end** — see trial 9).
+The stack is now a **single model**: `qwen3.5-9b-mtp` (Q3_K_M) on `:8090` with `parallel=2`
+(2 slots × 65536 ctx). Slot 0 serves the coder; slot 1 serves every non-coder role
+(architect, researcher, reviewer, fact-checker, build, ui, artist, title). Both `SmolLM3-3B`
+(**dead end**, trial 9) and `Ministral-3-3B` (fails the tool-driving flow, trial 11) are retired
+from the seat. This replaced the earlier 2-model stack.
+
+**Why one model.** Neither small model could hold the architect job: smol misidentified its own
+role and dropped plan halves; ministral's chat template refuses the tool-driving message flow the
+architect needs. The 9B is the one capable model on the box and is **hybrid** — only 8 of 32 layers
+are full attention — so its KV is ~1 GiB at 64k and a second slot costs almost nothing (measured:
+dropping the 3B frees 4188 MiB; 2 slots × 64k leaves ~3 GiB free).
 
 
 ✅ **Runtime (2026-10-15).** The stack now serves `qwen3.5-4b` end to end. `bash scripts/auto-startup.sh`
@@ -55,9 +63,10 @@ trial-7 LFM2.5 test below was loaded ad-hoc on `:8089` beside the coder on `:809
 | 8 | `unsloth/Qwen3.5-4B-GGUF` (Q4_K_M) | **"qwen 4b"** | live `stack.json` + `opencode.json`, served on `:8089`, routed via bifrost `:8082` | ✅ **works** | 2026-10-15, this session: smoke-tested through the real path (opencode → bifrost → `:8089`). Returned the requested 3 atomic subtasks with file paths and success criteria, no tool calls, well under budget. The earlier "failures" in this seat were **not** the model — trial 6 (granite) was a real model failure, but the first qwen3.5-4b attempt failed on bifrost's stale-provider misrouting, not on plan quality. |
 | 9 | `unsloth/SmolLM3-3B-GGUF` (Q4_K_M) | **"smollm3 3b"** | live `stack.json` + `opencode.json`, served on `:8089`, routed via bifrost `:8082` | ❌ **bad (architect) — DEAD END** | 2026-10-15, this session: first smoke test (ad-hoc) looked fine (3 subtasks, file scopes, checks) — so it was moved into the live architect seat. **Real-pipeline use then failed badly**: called itself a "researcher", dropped the frontend half of a plan, invented a non-existent `test_script.sh`, and suggested `npx tsc` to check a POSIX-shell task. A 3B model cannot hold the architect plan envelope on a multi-step task. Precision is not the cause (BF16 won't fit and wouldn't fix reasoning); the **size** is. Retired from this seat. |
 | 10 | `LiquidAI/LFM2.5-1.2B-Instruct-GGUF` (Q8_0) | **"lfm2.5 1.2b"** | ad-hoc load on `:8089` | ❌ **bad (architect)** | 2026-10-15: loaded 1.19 GiB Q8_0; returned 3 steps but failed to follow the required structure (missing explicit file paths and verifiable success criteria per subtask). Structurally weak for the plan envelope. |
-| 11 | `mistralai/Ministral-3-3B-Instruct-2512-GGUF` (Q4_K_M) | **"ministral 3b"** | ad-hoc load on `:8089` | ✅ **works (smoke)** | 2026-10-15: loaded 2.05 GiB Q4_K_M; returned a structured plan with 3 atomic subtasks, file paths, and verifiable success criteria per subtask; respected the "do not delegate/call tools" constraint. Matches well to the architect plan envelope. |
+| 11 | `mistralai/Ministral-3-3B-Instruct-2512-GGUF` (Q4_K_M) | **"ministral 3b"** | live seat `:8089` → then failed | ❌ **bad (architect) — fails tool-driving flow** | 2026-10-15: moved into the live seat on the strength of a plan-only smoke test (✅ 3 atomic subtasks, file paths, success criteria). **Then it failed the real job:** every prompt that told it to *use its `subagent` tool* — the core architect duty — threw `Jinja Exception: conversation roles must alternate user and assistant roles` from Mistral's chat template (5× in the server log, both foreground and backgrounded). A medium prompt also self-identified as "researcher". Short/medium plan-only prompts still worked, but the envelope-with-tools flow it needs is exactly what its template rejects. Retired from this seat. |
 | 12 | `unsloth/Qwen3.5-2B-GGUF` (Q6_K) | **"qwen3.5 2b"** | ad-hoc load on `:8089` | ⚠️ **partial (works with caveats)** | 2026-10-15: loaded 1.50 GiB Q6_K; mostly followed the required structure (3 atomic subtasks, file scopes). Example checks included a minor non-conforming flag (`bats --dry-run`) — acceptable for smoke test but not clean for the strict envelope. |
 | 13 | `LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF` (Q8_0) | **"exaone4 1.2b"** | ad-hoc load on `:8089` | ❌ **bad (architect)** | 2026-10-15: loaded 1.30 GiB Q8_0; produced 3 steps but failed to follow the required envelope (missing explicit file paths and verifiable success criteria per subtask). |
+| 14 | `unsloth/Qwen3.5-9B-MTP-GGUF` (Q3_K_M) | **"qwen 9b (shared)"** | **single-model stack**: `:8090`, ctx 131072, `parallel=2` (2×64k slots); slot 0 = coder, slot 1 = all non-coder roles | ✅ **works (architect)** | 2026-10-15, this session: dropped the small model entirely; the 9B serves both roles from one server. Architect smoke through the real path returned a **clean, complete envelope** — 3 atomic subtasks, real file paths (`scripts/fetch.sh`, `test/fetch.bats`), verifiable checks, and a genuine out-of-scope line (`backend/*`, `frontend/*`) — none of the smol/ministral failure modes. It is a **reasoning model** (~1450 chars of thinking, ~500 completion tokens even for "2+2"); opencode's `reasoning.max_tokens` covers it. Same model as the coder, so no second-class seat. |
 
 Also on disk with no recorded architect trial: `LFM2.5-2.6B` F16 (not downloaded — Q8_0 chosen), and `gemma-4-E4B-it`, `phi-4-mini`, `Qwen3-8B` from the early profiles.
 
@@ -151,6 +160,27 @@ Also on disk with no recorded architect trial: `LFM2.5-2.6B` F16 (not downloaded
   check commands — structured, no role confusion, no invented files (all of which sank smol). One
   envelope miss: the "files NOT in scope" line returned a *constraint* instead of naming files. Verdict
   holds: **✅ works (smoke)**, and materially more stable than `smollm3-3b` in this seat.
+- **2026-10-15** — **`Ministral-3B` retired: fails the tool-driving flow.** The plan-only pass above was
+  necessary but not sufficient. Every prompt that asked ministral to *use its `subagent` tool* — the
+  architect's core duty — failed at chat-template render time: `Jinja Exception: After the optional
+  system message, conversation roles must alternate user and assistant roles except for tool calls and
+  results` (Mistral's template; 5 occurrences in `/tmp/llama-server-ministral-3-3b.log`, both foreground
+  and backgrounded). Short/medium plan-only prompts still worked; a medium prompt self-identified as
+  "researcher" again. Not usable as an architect. Verdict corrected: ❌ bad (trial 11).
+- **2026-10-15** — **Seat moved to a single-model stack: `qwen3.5-9b-mtp` shared, 2 slots (user
+  directive).** Rather than trial a fourth small model, the box now runs one model for everything.
+  Measured the trade directly first: the 3B (ministral) footprint was **4188 MiB** (13:38 stop/start
+  delta), and `qwen3.5-9b-mtp` is a **hybrid** arch (`qwen35`: only blocks 3/7/11/15/19/23/27/31 are
+  full attention — 8 of 32), so its KV is **~17 KiB/token (~1.1 GiB at 64k)**, not the ~4.3 GiB a dense
+  9B would need. Config: `stack.json`/`llm-lab-models.json` → one model, `context 131072`, `parallel 2`;
+  `opencode.json` → provider `local-qwen3.5-9b-mtp` gains `-s1`, non-coder agents pinned to
+  `qwen3.5-9b-mtp-s1`, ministral provider + policy entry removed; `llm-lab-roles.json` → non-coder
+  slot 1. Restart: `:8090` reports `n_slots=2, n_ctx_slot=65536`; VRAM 2973 MiB free. **4th bifrost
+  stale-provider recurrence (hijack variant)**: the store kept a dead `ministral-3-3b` at `:8089` whose
+  key listed `qwen3.5-9b-mtp` + `-s0`; deleted it, after which the single key correctly lists `-s0`
+  *and* `-s1`, and both routes resolve to the provider. Architect smoke on slot 1 returned a **clean,
+  complete envelope** (3 atomic subtasks, real paths, verifiable checks, a real out-of-scope line) —
+  no template error, no role confusion, no invented files. Trial 14: ✅.
 
 
 

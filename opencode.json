@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "local-ministral-3-3b/ministral-3-3b-s0",
+  "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
   "providers": {
     "local-qwen3.5-9b-mtp": {
       "name": "Bifrost (local qwen3.5-9b-mtp)",
@@ -20,35 +20,16 @@
           }
         },
         "qwen3.5-9b-mtp-s0": {
-          "name": "qwen3.5-9b-mtp - Slot 0",
+          "name": "qwen3.5-9b-mtp - Slot 0 (coder)",
           "limit": {
             "context": 65536,
             "output": 8192
           }
-        }
-      }
-    },
-    "local-ministral-3-3b": {
-      "name": "Bifrost (local ministral-3-3b)",
-      "package": "@opencode/ai/providers/openai-compatible",
-      "settings": {
-        "baseURL": "http://127.0.0.1:8082/v1"
-      },
-      "headers": {
-        "x-bf-passthrough-extra-params": "true"
-      },
-      "models": {
-        "ministral-3-3b": {
-          "name": "ministral-3-3b (unpinned fallback)",
-          "limit": {
-            "context": 32768,
-            "output": 8192
-          }
         },
-        "ministral-3-3b-s0": {
-          "name": "ministral-3-3b - Slot 0",
+        "qwen3.5-9b-mtp-s1": {
+          "name": "qwen3.5-9b-mtp - Slot 1 (architect + non-coder roles)",
           "limit": {
-            "context": 32768,
+            "context": 65536,
             "output": 8192
           }
         }
@@ -62,7 +43,7 @@
   },
   "agents": {
     "architect": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 150,
       "temperature": 0.1,
       "reasoning": {
@@ -71,7 +52,7 @@
       }
     },
     "researcher": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -80,7 +61,7 @@
       }
     },
     "reviewer": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 30,
       "temperature": 0.1,
       "reasoning": {
@@ -89,7 +70,7 @@
       }
     },
     "fact-checker": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -98,7 +79,7 @@
       }
     },
     "build": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 80,
       "temperature": 0.2,
       "reasoning": {
@@ -107,7 +88,7 @@
       }
     },
     "ui": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 60,
       "temperature": 0.2,
       "reasoning": {
@@ -116,7 +97,7 @@
       }
     },
     "artist": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "steps": 40,
       "temperature": 0.3,
       "reasoning": {
@@ -134,7 +115,7 @@
       }
     },
     "title": {
-      "model": "local-ministral-3-3b/ministral-3-3b-s0",
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "reasoning": {
         "effort": "minimal",
         "max_tokens": 128
@@ -160,11 +141,6 @@
       {
         "action": "provider.use",
         "resource": "local-qwen3.5-9b-mtp",
-        "effect": "allow"
-      },
-      {
-        "action": "provider.use",
-        "resource": "local-ministral-3-3b",
         "effect": "allow"
       },
       {
