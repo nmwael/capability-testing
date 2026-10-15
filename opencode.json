@@ -1,41 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+  "model": "local-smollm3-3b/smollm3-3b-s0",
   "providers": {
-    "local-qwen3.5-4b": {
-      "name": "Bifrost (local qwen3.5-4b)",
-      "package": "@opencode/ai/providers/openai-compatible",
-      "settings": {
-        "baseURL": "http://127.0.0.1:8082/v1"
-      },
-      "headers": {
-        "x-bf-passthrough-extra-params": "true"
-      },
-      "models": {
-        "qwen3.5-4b": {
-          "name": "qwen3.5-4b (unpinned fallback)",
-          "limit": {
-            "context": 65536,
-            "output": 8192
-          }
-        },
-        "qwen3.5-4b-bounded": {
-          "name": "qwen3.5-4b - bounded step (reviewer)",
-          "modelID": "qwen3.5-4b-s0",
-          "limit": {
-            "context": 65536,
-            "output": 4096
-          }
-        },
-        "qwen3.5-4b-s0": {
-          "name": "qwen3.5-4b - Slot 0",
-          "limit": {
-            "context": 65536,
-            "output": 8192
-          }
-        }
-      }
-    },
     "local-qwen3.5-9b-mtp": {
       "name": "Bifrost (local qwen3.5-9b-mtp)",
       "package": "@opencode/ai/providers/openai-compatible",
@@ -62,6 +28,32 @@
         }
       }
     },
+    "local-smollm3-3b": {
+      "name": "Bifrost (local smollm3-3b)",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:8082/v1"
+      },
+      "headers": {
+        "x-bf-passthrough-extra-params": "true"
+      },
+      "models": {
+        "smollm3-3b": {
+          "name": "smollm3-3b (unpinned fallback)",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "smollm3-3b-s0": {
+          "name": "smollm3-3b - Slot 0",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        }
+      }
+    },
     "opencode": {
       "settings": {
         "setCacheKey": false
@@ -70,7 +62,7 @@
   },
   "agents": {
     "architect": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 150,
       "temperature": 0.1,
       "reasoning": {
@@ -79,7 +71,7 @@
       }
     },
     "researcher": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -88,7 +80,7 @@
       }
     },
     "reviewer": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-bounded",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 30,
       "temperature": 0.1,
       "reasoning": {
@@ -97,7 +89,7 @@
       }
     },
     "fact-checker": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -106,7 +98,7 @@
       }
     },
     "build": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 80,
       "temperature": 0.2,
       "reasoning": {
@@ -115,7 +107,7 @@
       }
     },
     "ui": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 60,
       "temperature": 0.2,
       "reasoning": {
@@ -124,7 +116,7 @@
       }
     },
     "artist": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "steps": 40,
       "temperature": 0.3,
       "reasoning": {
@@ -142,7 +134,7 @@
       }
     },
     "title": {
-      "model": "local-qwen3.5-4b/qwen3.5-4b-s0",
+      "model": "local-smollm3-3b/smollm3-3b-s0",
       "reasoning": {
         "effort": "minimal",
         "max_tokens": 128
@@ -167,12 +159,12 @@
       },
       {
         "action": "provider.use",
-        "resource": "local-qwen3.5-4b",
+        "resource": "local-qwen3.5-9b-mtp",
         "effect": "allow"
       },
       {
         "action": "provider.use",
-        "resource": "local-qwen3.5-9b-mtp",
+        "resource": "local-smollm3-3b",
         "effect": "allow"
       },
       {
