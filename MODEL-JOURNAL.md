@@ -20,14 +20,16 @@ observation or an explicit user report; anything else stays `?`. Newest evidence
 
 | Source | architect model |
 |---|---|
-| live `stack.json` (what `scripts/auto-startup.sh` reads) | `smollm3-3b` — **now served** on `:8089` (user directive 2026-10-15) |
-| `opencode.json` → `.agents.architect.model` | `local-smollm3-3b/smollm3-3b-s0` |
-| `.devcontainer/llm-lab-roles.json` | `smollm3-3b` |
-| `.devcontainer/llm-lab-models.json` | `smollm3-3b` on `:8089` |
+| live `stack.json` (what `scripts/auto-startup.sh` reads) | `ministral-3-3b` — **being swapped in** on `:8089` (user directive 2026-10-15) |
+| `opencode.json` → `.agents.architect.model` | `local-ministral-3-3b/ministral-3-3b-s0` |
+| `.devcontainer/llm-lab-roles.json` | `ministral-3-3b` |
+| `.devcontainer/llm-lab-models.json` | `ministral-3-3b` on `:8089` |
 | `.devcontainer/active-profile` | `q4` |
 
-The coder remains `qwen3.5-9b-mtp` on `:8090`. The 2-model stack is now
-`smollm3-3b` (all non-coder roles) + `qwen3.5-9b-mtp` (coder).
+The coder remains `qwen3.5-9b-mtp` on `:8090`. The 2-model stack is
+`ministral-3-3b` (all non-coder roles) + `qwen3.5-9b-mtp` (coder).
+`SmolLM3-3B` is retired from this seat (**dead end** — see trial 9).
+
 
 ✅ **Runtime (2026-10-15).** The stack now serves `qwen3.5-4b` end to end. `bash scripts/auto-startup.sh`
 brought up `qwen3.5-4b` on `:8089` (ctx 32768), the coder `qwen3.5-9b-mtp` on `:8090` (ctx 65536) and
@@ -51,7 +53,7 @@ trial-7 LFM2.5 test below was loaded ad-hoc on `:8089` beside the coder on `:809
 | 6 | `granite-4.2-8b` (Q3_K_M) | **"granite 8b"** | live `stack.json`, `opencode.json` | ❌ **bad** | user report 2026-10-15; also observed this session — architect returned no text response, and an earlier call failed at `35015 tokens` vs `32768` context |
 | 7 | `LiquidAI/LFM2.5-2.6B-GGUF` (Q8_0) | **"lfm2.5 2.6b"** | ad-hoc load on `:8089`, `--ctx-size 131072` | ❌ **bad (architect)** | 2026-10-15, this session: loads at full **128K** ctx, **~155 tok/s** decode, and tool-calling is correct *when tools are supplied* — but on codebase-planning prompts it replays memorized tool calls (`<|tool_call_start|>[read(path='/home/gibbon/synthtraces/…')]<|tool_call_end|>`) instead of writing a plan, and over-runs the reasoning budget to `finish=length` with empty content. See evidence log. |
 | 8 | `unsloth/Qwen3.5-4B-GGUF` (Q4_K_M) | **"qwen 4b"** | live `stack.json` + `opencode.json`, served on `:8089`, routed via bifrost `:8082` | ✅ **works** | 2026-10-15, this session: smoke-tested through the real path (opencode → bifrost → `:8089`). Returned the requested 3 atomic subtasks with file paths and success criteria, no tool calls, well under budget. The earlier "failures" in this seat were **not** the model — trial 6 (granite) was a real model failure, but the first qwen3.5-4b attempt failed on bifrost's stale-provider misrouting, not on plan quality. |
-| 9 | `unsloth/SmolLM3-3B-GGUF` (Q4_K_M) | **"smollm3 3b"** | ad-hoc load on `:8089`, bifrost `:8082` (sanity checked) | ✅ **works (smoke)** | 2026-10-15, this session: loaded ad-hoc on :8089 (1.83 GiB), health OK, responded with 3 atomic subtasks, file scopes, and a check line. Reasonable plan shape; no tool calls, well under budget. Returned to incumbent qwen3.5-4b. |
+| 9 | `unsloth/SmolLM3-3B-GGUF` (Q4_K_M) | **"smollm3 3b"** | live `stack.json` + `opencode.json`, served on `:8089`, routed via bifrost `:8082` | ❌ **bad (architect) — DEAD END** | 2026-10-15, this session: first smoke test (ad-hoc) looked fine (3 subtasks, file scopes, checks) — so it was moved into the live architect seat. **Real-pipeline use then failed badly**: called itself a "researcher", dropped the frontend half of a plan, invented a non-existent `test_script.sh`, and suggested `npx tsc` to check a POSIX-shell task. A 3B model cannot hold the architect plan envelope on a multi-step task. Precision is not the cause (BF16 won't fit and wouldn't fix reasoning); the **size** is. Retired from this seat. |
 | 10 | `LiquidAI/LFM2.5-1.2B-Instruct-GGUF` (Q8_0) | **"lfm2.5 1.2b"** | ad-hoc load on `:8089` | ❌ **bad (architect)** | 2026-10-15: loaded 1.19 GiB Q8_0; returned 3 steps but failed to follow the required structure (missing explicit file paths and verifiable success criteria per subtask). Structurally weak for the plan envelope. |
 | 11 | `mistralai/Ministral-3-3B-Instruct-2512-GGUF` (Q4_K_M) | **"ministral 3b"** | ad-hoc load on `:8089` | ✅ **works (smoke)** | 2026-10-15: loaded 2.05 GiB Q4_K_M; returned a structured plan with 3 atomic subtasks, file paths, and verifiable success criteria per subtask; respected the "do not delegate/call tools" constraint. Matches well to the architect plan envelope. |
 | 12 | `unsloth/Qwen3.5-2B-GGUF` (Q6_K) | **"qwen3.5 2b"** | ad-hoc load on `:8089` | ⚠️ **partial (works with caveats)** | 2026-10-15: loaded 1.50 GiB Q6_K; mostly followed the required structure (3 atomic subtasks, file scopes). Example checks included a minor non-conforming flag (`bats --dry-run`) — acceptable for smoke test but not clean for the strict envelope. |
@@ -129,6 +131,28 @@ Also on disk with no recorded architect trial: `LFM2.5-2.6B` F16 (not downloaded
   reasonable 3-subtask plan; a later re-run through the same prompt produced weaker output (invented
   `test_script.sh`, `npx tsc` check for a POSIX-shell task). Treat `smollm3-3b` as usable-but-noisy in
   the architect seat; the real arbiter is a full pipeline run.
+- **2026-10-15** — **`SmolLM3-3B` retired: DEAD END (user verdict).** The full-pipeline run confirmed
+  it: the architect seat (smol) misidentified its own role ("I am a researcher"), returned a thin
+  backend-only plan and dropped the frontend half entirely, and on re-ping invented a
+  `test_script.sh` + `npx tsc` check for a POSIX-shell task. A 3B model cannot hold the architect
+  plan envelope on a multi-step task. Asked whether fp16 would rescue it: **no** — the failure is
+  reasoning/size, not quantization, and `SmolLM3-3B-BF16` (6.16 GB) also exceeds the ~6.8 GiB free
+  VRAM budget beside the coder. Seat moved to `mistral-3-3b` (trial 11 ✅) per user.
+- **2026-10-15** — **Seat moved to `ministral-3-3b`** (user directive). `stack.json`, `opencode.json`,
+  `llm-lab-roles.json` and `llm-lab-models.json` repointed to `mistralai/Ministral-3-3B-Instruct-2512-GGUF`
+  (Q4_K_M, provider `local-ministral-3-3b`, `:8089`); coder stays `qwen3.5-9b-mtp` on `:8090`. The same
+  bifrost stale-provider reconcile must be re-run after this swap (see bug above — it recurs every time).
+- **2026-10-15** — **Ministral-3B re-verified through the real path (3rd occurrence of the bifrost bug,
+  fixed).** After the swap, `config.db` carried a stale `smollm3-3b` provider still pointing at `:8089`;
+  this time it owned no key (the enabled keys correctly belonged to `ministral-3-3b` and
+  `qwen3.5-9b-mtp`), so no hijack — deleted it anyway via `DELETE /api/providers/smollm3-3b`.
+  Re-verified `routing_info.provider` = `ministral-3-3b` / `qwen3.5-9b-mtp`. Architect smoke test then
+  returned **3 atomic subtasks with real file paths** (`scripts/fetch.sh`, `test/fetch.bats`) and concrete
+  check commands — structured, no role confusion, no invented files (all of which sank smol). One
+  envelope miss: the "files NOT in scope" line returned a *constraint* instead of naming files. Verdict
+  holds: **✅ works (smoke)**, and materially more stable than `smollm3-3b` in this seat.
+
+
 
 ## Where the architect model is configured
 

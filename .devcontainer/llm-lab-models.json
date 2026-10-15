@@ -15,11 +15,11 @@
     "spec_draft_n_max": 4
   },
   {
-    "name": "smollm3-3b",
-    "provider": "local-smollm3-3b",
-    "hf": "unsloth/SmolLM3-3B-GGUF",
+    "name": "ministral-3-3b",
+    "provider": "local-ministral-3-3b",
+    "hf": "mistralai/Ministral-3-3B-Instruct-2512-GGUF",
     "quant": "Q4_K_M",
-    "url": "unsloth/SmolLM3-3B-GGUF/resolve/main/SmolLM3-3B-Q4_K_M.gguf",
+    "url": "mistralai/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/Ministral-3-3B-Instruct-2512-Q4_K_M.gguf",
     "port": 8089,
     "context": 32768,
     "output": 8192,

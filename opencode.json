@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "local-smollm3-3b/smollm3-3b-s0",
+  "model": "local-ministral-3-3b/ministral-3-3b-s0",
   "providers": {
     "local-qwen3.5-9b-mtp": {
       "name": "Bifrost (local qwen3.5-9b-mtp)",
@@ -28,8 +28,8 @@
         }
       }
     },
-    "local-smollm3-3b": {
-      "name": "Bifrost (local smollm3-3b)",
+    "local-ministral-3-3b": {
+      "name": "Bifrost (local ministral-3-3b)",
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
         "baseURL": "http://127.0.0.1:8082/v1"
@@ -38,15 +38,15 @@
         "x-bf-passthrough-extra-params": "true"
       },
       "models": {
-        "smollm3-3b": {
-          "name": "smollm3-3b (unpinned fallback)",
+        "ministral-3-3b": {
+          "name": "ministral-3-3b (unpinned fallback)",
           "limit": {
             "context": 32768,
             "output": 8192
           }
         },
-        "smollm3-3b-s0": {
-          "name": "smollm3-3b - Slot 0",
+        "ministral-3-3b-s0": {
+          "name": "ministral-3-3b - Slot 0",
           "limit": {
             "context": 32768,
             "output": 8192
@@ -62,7 +62,7 @@
   },
   "agents": {
     "architect": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 150,
       "temperature": 0.1,
       "reasoning": {
@@ -71,7 +71,7 @@
       }
     },
     "researcher": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -80,7 +80,7 @@
       }
     },
     "reviewer": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 30,
       "temperature": 0.1,
       "reasoning": {
@@ -89,7 +89,7 @@
       }
     },
     "fact-checker": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 60,
       "temperature": 0.1,
       "reasoning": {
@@ -98,7 +98,7 @@
       }
     },
     "build": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 80,
       "temperature": 0.2,
       "reasoning": {
@@ -107,7 +107,7 @@
       }
     },
     "ui": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 60,
       "temperature": 0.2,
       "reasoning": {
@@ -116,7 +116,7 @@
       }
     },
     "artist": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "steps": 40,
       "temperature": 0.3,
       "reasoning": {
@@ -134,7 +134,7 @@
       }
     },
     "title": {
-      "model": "local-smollm3-3b/smollm3-3b-s0",
+      "model": "local-ministral-3-3b/ministral-3-3b-s0",
       "reasoning": {
         "effort": "minimal",
         "max_tokens": 128
@@ -164,7 +164,7 @@
       },
       {
         "action": "provider.use",
-        "resource": "local-smollm3-3b",
+        "resource": "local-ministral-3-3b",
         "effect": "allow"
       },
       {

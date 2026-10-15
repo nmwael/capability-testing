@@ -1,9 +1,9 @@
 {
-  "architect":     { "model": "smollm3-3b",  "slot": 0 },
-  "researcher":    { "model": "smollm3-3b",  "slot": 0 },
-  "reviewer":      { "model": "smollm3-3b",  "slot": 0 },
-  "build":         { "model": "smollm3-3b",  "slot": 0 },
-  "ui":            { "model": "smollm3-3b",  "slot": 0 },
-  "artist":        { "model": "smollm3-3b",  "slot": 0 },
+  "architect":     { "model": "ministral-3-3b",  "slot": 0 },
+  "researcher":    { "model": "ministral-3-3b",  "slot": 0 },
+  "reviewer":      { "model": "ministral-3-3b",  "slot": 0 },
+  "build":         { "model": "ministral-3-3b",  "slot": 0 },
+  "ui":            { "model": "ministral-3-3b",  "slot": 0 },
+  "artist":        { "model": "ministral-3-3b",  "slot": 0 },
   "coder":         { "model": "qwen3.5-9b-mtp", "slot": 0 }
 }
