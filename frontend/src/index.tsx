@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { AlertRuleDesigner } from './features/alerting/AlertRuleDesigner'
-import { AlertFlow } from './features/publication/AlertFlow'
+import { AlertRuleDesigner } from './features/alert-rule-designer/AlertRuleDesigner'
+import { AlertFlow } from './features/alert-flow/AlertFlow'
 
 // Walking skeleton: mounts the two capability components the retrofit fills
 // in (alert.flow -> AlertFlow, alert.rule-design -> AlertRuleDesigner).

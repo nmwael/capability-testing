@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { AlertRuleDesigner } from './features/alerting/AlertRuleDesigner'
-import { AlertFlow } from './features/publication/AlertFlow'
+import { AlertRuleDesigner } from './features/alert-rule-designer/AlertRuleDesigner'
+import { AlertFlow } from './features/alert-flow/AlertFlow'
 
 // Toolchain smoke test, not a capability spec. It proves vitest + jsdom +
 // @testing-library/react can render the components the feature specs under
