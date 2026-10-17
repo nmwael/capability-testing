@@ -161,9 +161,53 @@ function checkCasesAreComplete() {
   if (!uncovered.length && !missing.length) ok(`${onDisk.length} fixtures, all covered`)
 }
 
+// ---------------------------------------------------------------------------
+// argument contract for the issue input path
+//
+// These cases never reach the network: each one is rejected by argv validation
+// before any `gh` call, so the suite stays offline. The issue path's happy path
+// is exercised against a live tracker rather than here — a test that needs a
+// credential to pass does not belong in a suite that must run disconnected.
+// ---------------------------------------------------------------------------
+function checkArgContract() {
+  console.log("\nargument contract (--issue)")
+  const cases = [
+    {
+      argv: ["--plan", "x", "--issue", "5"],
+      expectExit: 2,
+      why: "--plan and --issue are mutually exclusive",
+    },
+    {
+      argv: ["--issue", "abc"],
+      expectExit: 2,
+      why: "a non-numeric --issue is rejected rather than parsed as NaN",
+    },
+    {
+      argv: ["--issue"],
+      expectExit: 2,
+      why: "a bare --issue is rejected rather than silently reading stdin",
+    },
+  ]
+  for (const c of cases) {
+    const res = spawnSync(process.execPath, [CHECKER, ...c.argv], { cwd: ROOT, encoding: "utf8" })
+    if (res.status !== c.expectExit) {
+      fail(`${c.why}: exit ${res.status}, expected ${c.expectExit} (stderr: ${res.stderr.trim().split("\n")[0] || ""})`)
+    } else {
+      ok(`${c.why} (exit ${res.status})`)
+    }
+  }
+  // The help text must advertise the new input path, or the feature is
+  // undiscoverable from the CLI.
+  const help = spawnSync(process.execPath, [CHECKER, "--help"], { cwd: ROOT, encoding: "utf8" })
+  const text = `${help.stdout || ""}${help.stderr || ""}`
+  if (text.includes("--issue <n>")) ok("--help documents --issue")
+  else fail("--help does not mention --issue")
+}
+
 console.log(`plan-claim checker regression suite — ${CASES.length} cases (offline)`)
 checkCasesAreComplete()
 for (const c of CASES) runCase(c)
+checkArgContract()
 
 console.log(
   failures

@@ -95,6 +95,7 @@ import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { resolve, dirname, isAbsolute } from "node:path"
 import { fileURLToPath } from "node:url"
+import { requireAuth, repoSlug, createIssueComment, listIssueComments, getIssueComment } from "./gh-run.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, "..")
@@ -544,22 +545,6 @@ const ENVELOPE_BEGIN = "<!-- gh-sync:envelope-begin -->"
 const ENVELOPE_END = "<!-- gh-sync:envelope-end -->"
 const GITHUB_SCHEME = "github:"
 
-function ghRun(args, input) {
-  const res = spawnSync("gh", args, { input, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })
-  if (res.error) throw new Error(`gh could not start (${res.error.code || res.error.message})`)
-  if (res.status !== 0) {
-    const detail = (res.stderr || res.stdout || "").trim().split("\n").slice(0, 3).join("; ")
-    throw new Error(`gh ${args[0]} exited ${res.status}${detail ? `: ${detail}` : ""}`)
-  }
-  return res.stdout || ""
-}
-
-function repoSlug() {
-  const slug = ghRun(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).trim()
-  if (!slug.includes("/")) throw new Error(`could not determine the repo slug (got ${JSON.stringify(slug)})`)
-  return slug
-}
-
 // `artifactText` is the exact bytes that get hashed — identical to the file
 // mode's `${JSON.stringify(envelope, null, 2)}\n`.
 function issueCommentBody(envelope, artifactText, taskId) {
@@ -585,19 +570,21 @@ function extractEnvelopeText(body) {
   return inner
 }
 
-// Reading the comment as JSON (not via --jq, which appends a newline) is what
-// keeps the extracted bytes identical to what was hashed.
+// The comment is read as JSON (never via --jq, which appends a newline) because
+// that is what keeps the extracted bytes identical to what was hashed. The
+// transport itself lives in gh-run.mjs, which is the only module that shells
+// out to `gh`.
 function readGithubArtifact(pathStr) {
   const m = String(pathStr).match(/^github:([^#]+)#issuecomment-(\d+)$/)
   if (!m) throw new Error(`malformed github artifact path ${pathStr}`)
-  const comment = JSON.parse(ghRun(["api", `repos/${m[1]}/issues/comments/${m[2]}`]))
+  const comment = getIssueComment(m[1], m[2])
   const text = extractEnvelopeText(comment.body)
   if (text === null) throw new Error(`comment ${m[2]} carries no gh-sync envelope block`)
   return { body: Buffer.from(text, "utf8"), path: pathStr }
 }
 
 function latestEnvelopeComment(slug, issue) {
-  const comments = JSON.parse(ghRun(["api", `repos/${slug}/issues/${issue}/comments?per_page=100`]))
+  const comments = listIssueComments(slug, issue)
   for (let i = comments.length - 1; i >= 0; i -= 1) {
     if (String(comments[i].body || "").includes(ENVELOPE_BEGIN)) return comments[i]
   }
@@ -633,6 +620,7 @@ function verifyAttestation(rawInput, opts = {}) {
       // --issue the envelope is resolved from the newest envelope comment on
       // that issue instead of from a file that no longer exists.
       try {
+        requireAuth()
         const slug = repoSlug()
         const comment = latestEnvelopeComment(slug, opts.issue)
         if (!comment) {
@@ -950,13 +938,9 @@ function main() {
       // guard is needed: a comment is immutable, so a re-run appends a new
       // attestation rather than invalidating the hash of an existing one.
       try {
+        requireAuth()
         const slug = repoSlug()
-        const created = JSON.parse(
-          ghRun(
-            ["api", "-X", "POST", `repos/${slug}/issues/${opts.issue}/comments`, "--input", "-"],
-            JSON.stringify({ body: issueCommentBody(envelope, body, taskId) }),
-          ),
-        )
+        const created = createIssueComment(slug, opts.issue, issueCommentBody(envelope, body, taskId))
         const artifactPath = `${GITHUB_SCHEME}${slug}#issuecomment-${created.id}`
         emit(attestEnvelope(envelope, artifactPath, body))
       } catch (err) {

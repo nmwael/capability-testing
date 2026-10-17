@@ -98,6 +98,7 @@ export const LABELS = [
   { name: "kind:defect", color: "d73a4a", description: "A defect or failure that was surfaced" },
   { name: "kind:task", color: "0e8a16", description: "A unit of work to be done" },
   { name: "kind:tracking", color: "5319e7", description: "Tracking or meta issue" },
+  { name: "kind:plan", color: "0075ca", description: "A plan awaiting fact-check or approval" },
   { name: "role:architect", color: "1d76db", description: "Concerning the architect role" },
   { name: "role:coder", color: "1d76db", description: "Concerning the coder role" },
   { name: "role:reviewer", color: "1d76db", description: "Concerning the reviewer role" },

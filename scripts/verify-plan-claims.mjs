@@ -29,6 +29,7 @@
 //   node scripts/verify-plan-claims.mjs --plan wip/plan.md --quiet   # JSON only
 
 import { readFileSync, existsSync } from "node:fs"
+import { requireAuth, repoSlug, getIssue } from "./gh-run.mjs"
 import { resolve } from "node:path"
 import { builtinModules } from "node:module"
 import { spawnSync } from "node:child_process"
@@ -129,26 +130,64 @@ function onPath(program) {
 
 function usage() {
   process.stderr.write(
-    "usage: node scripts/verify-plan-claims.mjs [--plan <file>] [--quiet] [--no-network]\n" +
-      "       cat plan.md | node scripts/verify-plan-claims.mjs\n",
+    "usage: node scripts/verify-plan-claims.mjs [--plan <file> | --issue <n>] [--quiet] [--no-network]\n" +
+      "       cat plan.md | node scripts/verify-plan-claims.mjs\n" +
+      "\n" +
+      "  --plan <file>   fact-check a plan file (the offline path)\n" +
+      "  --issue <n>     fact-check the plan posted as issue <n>'s body — the\n" +
+      "                  canonical home for a plan. Needs `gh` + GH_TOKEN.\n",
   )
 }
 
 function parseArgs(argv) {
-  const opts = { planPath: null, quiet: false, network: true }
+  const opts = { planPath: null, issue: null, quiet: false, network: true }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === "--plan" || a === "-p") opts.planPath = argv[++i]
-    else if (a === "--quiet" || a === "-q") opts.quiet = true
+    else if (a === "--issue") {
+      const v = argv[++i]
+      if (v === undefined || !/^\d+$/.test(String(v))) {
+        process.stderr.write(`error: --issue needs a positive integer (got ${JSON.stringify(v)})\n`)
+        process.exit(2)
+      }
+      opts.issue = Number(v)
+    } else if (a === "--quiet" || a === "-q") opts.quiet = true
     else if (a === "--no-network") opts.network = false
     else if (a === "--help" || a === "-h") { usage(); process.exit(0) }
     else if (a.startsWith("-")) { usage(); process.exit(2) }
     else opts.planPath = a
   }
+  if (opts.issue !== null && opts.planPath) {
+    process.stderr.write("error: --plan and --issue are mutually exclusive\n")
+    process.exit(2)
+  }
   return opts
 }
 
 function readPlan(opts) {
+  if (opts.issue !== null) {
+    // The plan's canonical home is an issue body, so the checker reads it from
+    // the tracker. Fetched through gh-run.mjs — the only module that shells out
+    // to `gh` — and read as parsed JSON rather than via `--jq`, which would
+    // append a trailing newline that is not part of the plan.
+    let issue
+    try {
+      requireAuth()
+      issue = getIssue(repoSlug(), opts.issue)
+    } catch (err) {
+      process.stderr.write(`error: could not read plan from issue #${opts.issue}: ${err.message}\n`)
+      process.exit(2)
+    }
+    if (!issue || typeof issue.body !== "string" || issue.body.trim() === "") {
+      process.stderr.write(`error: issue #${opts.issue} has no body to fact-check\n`)
+      process.exit(2)
+    }
+    if (issue.pull_request !== undefined) {
+      process.stderr.write(`error: #${opts.issue} is a pull request, not a plan issue\n`)
+      process.exit(2)
+    }
+    return issue.body
+  }
   if (opts.planPath) {
     const p = resolve(ROOT, opts.planPath)
     if (!existsSync(p)) {
@@ -789,7 +828,7 @@ async function main() {
 
   const blockers = results.filter((r) => BLOCKING.has(r.status))
   const payload = {
-    plan: opts.planPath || "<stdin>",
+    plan: opts.issue !== null ? `issue #${opts.issue}` : opts.planPath || "<stdin>",
     reference: ref.loaded ? REF_PATH : `${REF_PATH} (missing)`,
     summary: {
       total: results.length,

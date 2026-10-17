@@ -104,6 +104,35 @@ export function listIssues(slug, limit = 2000) {
   return Array.isArray(out) ? out : []
 }
 
+/** One issue by number, as {number,title,body,state,labels}. */
+export function getIssue(slug, number) {
+  return ghJson(["api", `repos/${slug}/issues/${number}`])
+}
+
+/** Post a comment on an issue; returns the created comment {id, html_url, body}. */
+export function createIssueComment(slug, number, body) {
+  return ghJson(["api", "-X", "POST", `repos/${slug}/issues/${number}/comments`, "--input", "-"], {
+    input: JSON.stringify({ body }),
+  })
+}
+
+/** Every comment on an issue, oldest first. */
+export function listIssueComments(slug, number) {
+  const out = ghJson(["api", `repos/${slug}/issues/${number}/comments?per_page=100`])
+  return Array.isArray(out) ? out : []
+}
+
+/**
+ * One issue comment by id, as {id, body, html_url}.
+ *
+ * Read as JSON and never through `--jq`: jq appends a trailing newline, which
+ * would change the bytes an attestation's sha256 was taken over and make a
+ * sound envelope fail verification.
+ */
+export function getIssueComment(slug, commentId) {
+  return ghJson(["api", `repos/${slug}/issues/comments/${commentId}`])
+}
+
 /** Create an issue from a JSON payload; returns the new issue number. */
 export function createIssue(slug, payload) {
   const res = gh(["api", "-X", "POST", `repos/${slug}/issues`, "--input", "-"], {

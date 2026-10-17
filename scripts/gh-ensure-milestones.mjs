@@ -65,33 +65,30 @@ function main() {
     labels: { created: [], unchanged: [], updated: [] },
   }
 
-  if (opts.dryRun) {
-    // A dry run still proves the credential is present: a plan that cannot run
-    // is not a plan.
-    const auth = runner.requireAuth()
-    report.repo = opts.repo || runner.repoSlug()
-    report.authenticated_as = auth.login
-    for (const m of milestones) report.milestones.created.push(m.title)
-    for (const l of labels) report.labels.created.push(l.name)
-    emit(report, opts, true)
-    return
-  }
-
   const auth = runner.requireAuth()
   const slug = opts.repo || runner.repoSlug()
   report.repo = slug
   report.authenticated_as = auth.login
 
+  // A dry run takes the SAME path as the real run and simply declines to write,
+  // so what it reports is what would actually happen. An earlier version
+  // short-circuited here and listed every desired milestone and label as "would
+  // create" without ever reading remote state — so on a fully-populated tracker
+  // it reported an empty one, which is the opposite of what a dry run is for.
+  const write = (fn) => {
+    if (!opts.dryRun) fn()
+  }
+
   const existingMilestones = new Map(runner.listMilestones(slug).map((m) => [m.title, m]))
   for (const want of milestones) {
     const have = existingMilestones.get(want.title)
     if (!have) {
-      const made = runner.createMilestone(slug, want)
-      report.milestones.created.push(made.title)
+      write(() => runner.createMilestone(slug, want))
+      report.milestones.created.push(want.title)
     } else if ((have.description || "") === want.description) {
       report.milestones.unchanged.push(have.title)
     } else if (opts.update) {
-      runner.updateMilestone(slug, have.number, want)
+      write(() => runner.updateMilestone(slug, have.number, want))
       report.milestones.updated.push(have.title)
     } else {
       report.milestones.unchanged.push(have.title)
@@ -102,19 +99,19 @@ function main() {
   for (const want of labels) {
     const have = existingLabels.get(want.name)
     if (!have) {
-      runner.createLabel(slug, want)
+      write(() => runner.createLabel(slug, want))
       report.labels.created.push(want.name)
     } else if ((have.color || "") === want.color && (have.description || "") === want.description) {
       report.labels.unchanged.push(want.name)
     } else if (opts.update) {
-      runner.updateLabel(slug, want.name, want)
+      write(() => runner.updateLabel(slug, want.name, want))
       report.labels.updated.push(want.name)
     } else {
       report.labels.unchanged.push(want.name)
     }
   }
 
-  emit(report, opts, false)
+  emit(report, opts, opts.dryRun)
 }
 
 function emit(report, opts, dryRun) {

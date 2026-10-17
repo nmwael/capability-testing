@@ -657,3 +657,39 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     `review-gate.mjs:5` still names `granite-4.2-3b`, but only as the model those failure measurements were
     actually taken on — the wording is clarified rather than updated, since rewriting it would misstate measured
     evidence.
+54. **Plans moved off local disk into issues, the `gh` transport was consolidated, and a dry run that could not
+    tell the truth was fixed.** `wip/fact-check/plan.md` is no longer the plan hand-off: the plan's canonical
+    home is now a GitHub issue. The architect cannot reach the tracker (its only write permission is `wip/**`,
+    and its contract forbids shell operations), so it now inlines the FULL plan **verbatim** in the
+    `fact-checker` Directive and the fact-checker publishes it as a `kind:plan` + `hitl:awaiting-approval` issue
+    whose **body is the plan byte-for-byte** — no preamble, no reformatting — then audits it with
+    `node scripts/verify-plan-claims.mjs --issue <n>`. That inverts the old "NEVER paste the plan text" rule at
+    `.opencode/agents/architect.md:30`: the rule existed because the plan lived in a file the checker could
+    read, and it no longer does. It also removes a pre-existing contradiction, since the fact-check gate further
+    down that same file had always demanded the plan be "inlined verbatim". Updated: `.opencode/agents/architect.md`
+    (steps 1–3, the `subagent(...)` call example, the amendment rule, the HITL approval note, the fact-check
+    gate), `.opencode/agents/fact-checker.md` (what you are given, the publish procedure, the citation rule, the
+    boundaries note that creating the plan issue is its one owned write), and the playbook
+    `library/architect/fact-check.mini.md` §3.
+    `scripts/verify-plan-claims.mjs` gained `--issue <n>`, which fetches the issue body through `gh` and
+    fact-checks exactly those bytes — the only networked input path, with `--plan <file>` kept as the offline
+    form — and its argument contract (mutual exclusion with `--plan`, a non-numeric `--issue`, a bare `--issue`,
+    and `--help` advertising the flag) is pinned offline in `scripts/verify-plan-claims.test.mjs`.
+    `scripts/gh-run.mjs` gained `getIssue`, `createIssueComment`, `listIssueComments` and `getIssueComment`, and
+    `scripts/review-gate.mjs` was **refactored onto them**: the previous commit had grown its own `ghRun` and
+    `repoSlug` inside the gate, which would have made `gh-run.mjs`'s header claim — "the ONLY place this tooling
+    shells out to `gh`" — false. The label vocabulary gained `kind:plan` (19 → 20 labels, installed
+    idempotently).
+    **A defect in my own installer, found by using it.** `scripts/gh-ensure-milestones.mjs --dry-run`
+    short-circuited before reading remote state and printed the entire desired vocabulary as "would create", so
+    on a fully-populated tracker it reported an empty one — the opposite of what a dry run is for, and directly
+    contradicting the script's own header comment. It now takes the same path as the real run and simply
+    declines to write (`write(fn)` no-ops under `--dry-run`). Negative control: renaming `kind:plan` away made
+    the dry run report exactly `would create: kind:plan` and nothing else, and the next real run recreated it.
+    **Live evidence, because the issue path cannot be exercised offline.** Attested to issue #53: the full
+    envelope posted as comment `6234425536` (21,703 bytes, sha256 `4a3148f8ec4f…`), and `--verify` fetched it
+    back and agreed (`valid: true`, same hash, no problems). Three probes show the check has teeth rather than
+    being vacuously true: dropping the `artifact` pointer resolved from the issue and stayed valid; tampering
+    `findings[]` was rejected ("do not match the artifact's"); a wrong `sha256` was rejected. And the plan path
+    end to end: plan issue #54 was fact-checked straight from the tracker (`plan: issue #54`, verdict `PASS`).
+    Unauthenticated runs of both paths fail loudly with the auth precondition, as designed.

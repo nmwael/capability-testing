@@ -43,14 +43,23 @@ Ground a claim with the **first** rung that applies; never skip a rung to reach 
 
 ## 3. Running the checker
 
+The plan's canonical home is a GitHub **issue**, so publish it there and check it there:
+
 ```sh
-mkdir -p wip/fact-check
-cat > wip/fact-check/plan.md <<'PLAN'
+gh issue create --repo <owner>/<name> \
+  --title "Plan: <short label>" \
+  --body "$(cat <<'PLAN'
 <the plan, inlined verbatim>
 PLAN
-node scripts/verify-plan-claims.mjs --plan wip/fact-check/plan.md
+)" --label kind:plan --label hitl:awaiting-approval
+
+node scripts/verify-plan-claims.mjs --issue <the number gh printed>
 ```
 
+- Publish the plan **byte-for-byte**: the issue body is the artifact, and `--issue` fact-checks exactly the
+  bytes GitHub returns. A reformatted body is a plan the architect did not write.
+- `--issue <n>` needs `gh` and `GH_TOKEN`. It is the only networked input path; `--plan <file>` remains the
+  offline form for a plan already on disk (`cat plan.md | node scripts/verify-plan-claims.mjs` reads stdin).
 - Exit `0` = no blocking claim. Exit `1` = at least one `MISSING`, `REJECTED`, `CONFLICT`, or `INSUFFICIENT`.
 - `--quiet` prints only the JSON payload; `--no-network` skips the registry lookups (use when offline —
   unverifiable claims then report `UNKNOWN`).
