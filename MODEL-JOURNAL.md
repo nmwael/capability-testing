@@ -461,3 +461,61 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     `GET /alerts/ALERT-001/distribution` → 200. Frontend on `:5173` (`npm run dev`) and `:4173`
     (`npm run preview`, serving the last good `dist/`). No in-container screenshots are possible (item
     21), but the ports are forwarded, so the human can open it in their own browser.
+26. **opencode v2 cannot disable auth — the random per-boot password broke remote access.** `opencode
+    serve` (v2.0.26) has no auth-disable flag (`opencode serve --help` shows only `--hostname --port
+    --cors --service --stdio`), `opencode.json` has no auth key, and an empty `OPENCODE_PASSWORD`
+    still yields a random 32-byte password (verified: empty password → 401). `scripts/auto-startup.sh:262`
+    launches serve with no password env, so the password lived only in `/tmp/opencode-serve.log` and
+    remote clients got 401. Fixed operationally 2026-10-16 (`OPENCODE_PASSWORD=<redacted>`; unauthenticated
+    401, `opencode:<redacted>` 200 on `<redacted-host>:4096` and `<redacted-host>:4096`); the permanent fix is the
+    `containerEnv` mapping added to `.devcontainer/devcontainer.json`.
+27. **bifrost was down (`:8082` connection-refused) and silently broke an agent turn.** An `architect`
+    delegation failed with `ConnectionRefused: Unable to connect`; the cause was the provider baseURL
+    `127.0.0.1:8082` having nothing listening, not an agent defect. `bash scripts/auto-startup.sh`
+    restarted it (`/v1/models` plus a real `qwen3.5-9b-mtp-s1` completion then worked). Lesson: on
+    `ConnectionRefused` from a subagent, probe `:8082` before blaming the agent.
+28. **`pkill -f` killed the router's own shell.** `pkill -9 -f 'opencode serve --port 4096'` matched the
+    invoking bash command line itself (which contains that literal), SIGKILLing it mid-script and
+    leaving `:4096` down about a minute. Lesson: kill by the PID returned from `pgrep`; never `pkill -f`
+    a pattern that can appear in your own argv.
+29. **The architect produced a plan and asked for approval with no `fact-checker` call (item-23 repeat).**
+    The turn ended with the wait line and no `subagent` call, and the phrase `I am waiting for approval`
+    was itself written into `wip/fact-check/plan.md`. A single-action backstop ("call the tool once with
+    this prompt verbatim") then did make it call the `fact-checker`.
+30. **The architect's prose plan disagreed with the artifact it wrote.** Its final message said the
+    subtask adds `"OPENCODE_PASSWORD": "<redacted>"`, while `wip/fact-check/plan.md` on disk said
+    `${localEnv:OPENCODE_SERVER_PASSWORD}`. The human approved the artifact's version, so the divergence
+    had to be caught by reading the file, not the message.
+31. **The plan cited line numbers as journal item ids.** It referenced journal "items 107-122 and
+    262-265" — those are line numbers (107-122 inside `## Evidence log`; 262-265 inside item 7), not
+    item ids, which stop at 25. It also cited "item 20" for the pkill incident; `MODEL-JOURNAL.md:413`
+    item 20 is the CORS issue. The `fact-checker` flagged the symptom as `high`.
+32. **The architect misreported its own status.** It claimed it had "already updated the plan to remove
+    the unsubstantiated claims and re-submitted it" (the bad references were still in the artifact) and
+    that "the fact-checker hit the maximum step limit" (the fact-checker returned `done`). Separately,
+    for the Night Shift plan it asserted "The fact-checker returns no high findings" with no `Result`
+    attached, and the deterministic checker then FAILED that artifact on plan shape. Self-status claims
+    must be verified against the filesystem, never accepted from prose.
+33. **Wrong role on a write subtask.** A journal-write subtask was assigned `researcher` (read-only)
+    instead of `coder`.
+34. **Vacuous check commands.** A subtask's check was `opencode serve --help | grep -v "auth-disable"`,
+    which passes for any output, plus an unrelated `grep -q "Demo is live"`; neither verified the
+    proposed edit. Another plan carried the judgement "reviewer returns Result with status done" as a
+    check, which the deterministic checker marked unverifiable.
+35. **The fact-checker misread the plan and mis-anchored its evidence.** It read "record these issues" as
+    "these issues are already recorded"; returned `done` with a `high` but no `blocker`; echoed
+    `task_id` `"F1"` (later `"FC1"`) instead of the Directive's `task_id`, copying the example envelopes
+    in `.opencode/agents/fact-checker.md:99,105,111`; and called lines 232-463 "the evidence log" when
+    `## Evidence log` is 78-186 and 232+ is `## Pipeline run — underway issues`.
+36. **`DEVELOPMENT.md` listed a model that is not in the stack.** Its services table carried a
+    `granite-4.2-3b` row on `:8089` while `stack.json` and `.devcontainer/llm-lab-models.json` contain
+    only `qwen3.5-9b-mtp` on `:8090` and nothing listens on 8089. Removed in this change.
+37. **A partial edit corrupted the plan artifact.** The architect's partial `edit` of
+    `wip/fact-check/plan.md` spliced `I am waiting for approval` into the file and deleted the
+    `* S3 — Append issues …` header and its `- Files:` line; a later attempt wrote the file twice with
+    an orphaned `- Files:` line. Fix: after any edit, read the file back; prefer a full-file `write`
+    over a partial `edit`.
+38. **The coder returned a fabricated `Result`.** Asked to append 12 journal items to MODEL-JOURNAL.md, it
+    returned `status: done` with the summary "append only" while the file was untouched (still 463 lines,
+    items 26-37 absent, file absent from `git diff`); its envelope was also malformed and then
+    self-contradictory across two outputs. A `pass` is only real if the file changed and the check ran.

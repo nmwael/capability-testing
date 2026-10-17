@@ -255,6 +255,9 @@ fi
 
 # --- opencode serve (mobile / remote control) ---------------------------------
 if command -v opencode >/dev/null 2>&1; then
+    if [ -z "${OPENCODE_PASSWORD:-}" ]; then
+        echo "[auto-startup] WARNING: OPENCODE_PASSWORD is empty — opencode serve will fall back to a random per-boot password (printed only in /tmp/opencode-serve.log) and remote clients will get 401. Set the host variable OPENCODE_SERVER_PASSWORD, which .devcontainer/devcontainer.json maps into the container as OPENCODE_PASSWORD." >&2
+    fi
     if curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$OPENCODE_PORT/"; then
         echo "[auto-startup] opencode serve already up on :$OPENCODE_PORT"
     else

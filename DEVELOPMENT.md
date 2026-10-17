@@ -41,10 +41,21 @@ Services (once up):
 
 | Service | Port |
 |---|---|
-| granite-4.2-3b (`llama-server`) | 8089 |
 | qwen3.5-9b-mtp (`llama-server`) | 8090 |
 | bifrost | 8082 |
 | opencode server | 4096 |
+
+### Remote access
+
+The opencode server on `:4096` always requires a password - authentication cannot be turned off. The password comes from the container environment variable `OPENCODE_PASSWORD`.
+
+- **Web UI.** Open `http://<host>:4096/`. The app loads unauthenticated and then shows "Sign in required"; sign in as user `opencode` with the password.
+- **Remote CLI.** `OPENCODE_PASSWORD=<pw> opencode --server http://<host>:4096`
+- **Raw API.** `curl -u opencode:<pw> http://<host>:4096/api/info`
+
+**Where the password comes from.** `.devcontainer/devcontainer.json` maps the host variable `OPENCODE_SERVER_PASSWORD` into the container as `OPENCODE_PASSWORD`. If the host variable is unset the value is empty and `opencode serve` falls back to a random per-boot password, printed only in `/tmp/opencode-serve.log`, so remote clients get `401`. `scripts/auto-startup.sh` warns at startup when the password is empty.
+
+**Security.** `:4096` is forwarded by the devcontainer and the opencode API can run shell as root, so the password is a root-equivalent credential: keep it long and treat it as a secret.
 
 ### Capability traceability gate
 
