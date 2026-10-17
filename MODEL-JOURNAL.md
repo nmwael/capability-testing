@@ -636,3 +636,24 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     matched. `GH_TOKEN` was added to `containerEnv` (`.devcontainer/devcontainer.json:94`) so a rebuilt
     container takes it from the host, which is the durable fix for the `/root/.git-credentials` dependency.
     `wip/review-gate/*.claims.json` still assert on this file's line numbers and are now stale by construction.
+53. **The gate's attestations moved off local disk, and running its own suite found two pre-existing reds — one
+    stale, one a real regression.** `scripts/review-gate.mjs` gained `--attest --issue <n>`, which posts the full
+    envelope as a comment on issue `<n>` and points the attestation at
+    `github:<owner>/<repo>#issuecomment-<id>`, plus `--verify <file|-> [--issue <n>]`, which dispatches on the
+    `github:` scheme and fetches the comment through `gh`. The comment is framed by two fixed HTML-comment
+    markers and read back as parsed JSON — never `--jq`, which appends a newline — so the extracted bytes are
+    identical to file mode and the same envelope hashes the same either way: an attestation written by file mode
+    stays verifiable from a comment. The issue path is the only network code in the file; every existing
+    file-based run stays offline and unchanged. Running the suite then exposed two failures that both predate
+    this change (each reproduced at HEAD with the edit stashed, so neither is mine). (a) **Stale:** the shipped
+    F1-F5 checklist pinned the reviewer block to `local-granite-4.2-3b/granite-4.2-3b-bounded` with `steps: 14`,
+    while the live `opencode.json` runs `local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1` with `steps: 30` — retargeted to
+    the live stack. (b) **A real regression:** `.opencode/agents/coder.md` carried `action: execute` in its
+    permissions, an inert action V2.0.26 does not define. `git log -S 'action: execute'` shows `987162f` added
+    it, `3227828` — the F4/F4b fix that authored checklist claim K21 — removed exactly those three lines, and
+    `fc7d8f5` put them back. The shipped gate had correctly caught it; the three lines are now removed again,
+    restoring the fixed state, and no behaviour changes because the action does not exist to be denied. With
+    both closed the shipped checklist reports **69 checks, 0 failing** and `review-gate.test.mjs` PASSes.
+    `review-gate.mjs:5` still names `granite-4.2-3b`, but only as the model those failure measurements were
+    actually taken on — the wording is clarified rather than updated, since rewriting it would misstate measured
+    evidence.

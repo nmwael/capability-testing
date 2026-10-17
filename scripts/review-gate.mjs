@@ -2,8 +2,9 @@
 // review-gate.mjs — run a declared checklist and emit ONE raw JSON Result
 // envelope, so the envelope is machine-produced and valid by construction.
 //
-// WHY THIS EXISTS: a small local auditor (granite-4.2-3b) reads files and runs
-// commands well enough, but it cannot reliably AUTHOR the `Result` envelope.
+// WHY THIS EXISTS: a small local auditor — granite-4.2-3b when these failures
+// were measured, whatever bounded model the stack now sets — reads files and
+// runs commands well enough, but it cannot reliably AUTHOR the `Result` envelope.
 // Over five reviewer-gate attempts on one change set it produced: prose before
 // the JSON, an unterminated object (a nested `]` and no closing `}`), an
 // invalid `action: "read"` artifact, no `findings` array at all, and one empty
@@ -34,6 +35,18 @@
 // The checklist is data, not code: a JSON file naming claims and the checks
 // that substantiate them. Nothing here is reviewer-specific — the checklist
 // declares its own `role`, so any role's envelope can be produced the same way.
+//
+// --issue, WHY IT EXISTS: an attestation that lives in gitignored scratch
+// (`wip/review-gate/`) is invisible to the human and dies with the container.
+// The tracker is now GitHub, so `--attest --issue <n>` posts the SAME envelope
+// as a comment on issue <n> and prints an attestation whose `artifact.path` is
+// `github:<owner>/<repo>#issuecomment-<id>`. Because the comment body is
+// delimited by two fixed markers, a verifier extracts the envelope
+// byte-exactly and the sha256 is unchanged from the file mode — the same
+// envelope hashed either way. `--verify` dispatches on the `github:` scheme and
+// fetches the comment through `gh`, so the paraphrase check survives the move
+// off local disk. This is the ONLY network path in this file; every existing
+// file-based run stays offline and unaffected.
 //
 // stdout  exactly one JSON object: the Result envelope. The only exceptions are
 //         the explicitly requested --help and --list modes.
@@ -98,10 +111,10 @@ const ENVELOPE_ROLES_NEEDING_FINDINGS = ["reviewer", "fact-checker"]
 const ATTEST_DIR = process.env.REVIEW_GATE_ATTEST_DIR || "wip/review-gate"
 
 const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <path>] [--quiet]
-       node scripts/review-gate.mjs --attest [--out <path>] [--task <id>]
+       node scripts/review-gate.mjs --attest [--out <path> | --issue <n>] [--task <id>]
        node scripts/review-gate.mjs --list [--checklist <path>]
        node scripts/review-gate.mjs --validate <file|->
-       node scripts/review-gate.mjs --verify <file|->
+       node scripts/review-gate.mjs --verify <file|-> [--issue <n>]
 
   --task <id>         envelope task_id (default: the checklist's task_id)
   --checklist <path>  checklist JSON (default: ${DEFAULT_CHECKLIST})
@@ -110,6 +123,12 @@ const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <p
   --attest            run the gate, WRITE the full envelope to a file and print a
                       short attestation (its path, bytes and sha256) instead, so
                       the caller echoes ~1 KB rather than the whole envelope
+  --issue <n>         with --attest: post the full envelope as a comment on
+                      issue <n> instead of writing a file, and point the
+                      attestation at that comment (artifact.path =
+                      github:<repo>#issuecomment-<id>)
+                      with --verify: resolve a message's missing 'artifact'
+                      pointer from the newest envelope comment on issue <n>
   --out <path>        where --attest writes the full envelope
                       (default: ${ATTEST_DIR}/<task_id>.envelope.json)
   --force             with --attest, overwrite an existing artifact whose
@@ -118,19 +137,23 @@ const USAGE = `usage: node scripts/review-gate.mjs [--task <id>] [--checklist <p
                       already pointing at its hash
   --validate <file>   read a Result envelope from <path> ('-' = stdin) and
                       report {"valid":bool,"problems":[...]}
-  --verify <file>     read a reviewer's message, re-hash the file it points at,
-                      and report whether status/role/findings match the
-                      envelope on disk. One wrapping markdown fence is
-                      tolerated ({fenced:true}); a message with no 'artifact'
-                      pointer resolves the default artifact from its task_id,
-                      and a re-worded 'summary' is reported in notes rather
-                      than treated as load-bearing
+  --verify <file>     read a reviewer's message, re-hash the artifact it points
+                      at, and report whether status/role/findings match that
+                      envelope. The pointer may be a local file OR a
+                      github:<repo>#issuecomment-<id> comment. One wrapping
+                      markdown fence is tolerated ({fenced:true}); a message
+                      with no 'artifact' pointer resolves the default artifact
+                      from its task_id (or, with --issue, from that issue), and
+                      a re-worded 'summary' is reported in notes rather than
+                      treated as load-bearing
   --help              this text (stdout)
 
 Environment
   REVIEW_GATE_ATTEST_DIR  default attestation directory (default:
                           ${ATTEST_DIR}). Point it at scratch space to exercise
                           the default path without disturbing a real artifact.
+                          Superseded by --issue, which keeps the artifact in the
+                          tracker instead.
 
 stdout is exactly one JSON Result object on every normal run.`
 
@@ -149,6 +172,7 @@ function parseArgs(argv) {
     attest: false,
     out: null,
     force: false,
+    issue: null,
     help: false,
     problem: null,
   }
@@ -183,6 +207,13 @@ function parseArgs(argv) {
       const v = takeValue()
       if (v === null) opts.problem = opts.problem || "--out needs a path"
       else opts.out = v
+    } else if (arg === "--issue") {
+      const v = takeValue()
+      if (v === null || !/^\d+$/.test(String(v))) {
+        opts.problem = opts.problem || "--issue needs a positive integer"
+      } else {
+        opts.issue = Number(v)
+      }
     } else if (arg === "--quiet") {
       opts.quiet = true
     } else if (arg === "--list") {
@@ -194,6 +225,10 @@ function parseArgs(argv) {
     }
   }
   if (opts.out && !opts.attest) opts.problem = opts.problem || "--out only applies with --attest"
+  if (opts.out && opts.issue) opts.problem = opts.problem || "--out and --issue are mutually exclusive (the envelope goes either to a file or to an issue, not both)"
+  if (opts.issue && !opts.attest && opts.verify === undefined) {
+    opts.problem = opts.problem || "--issue applies to --attest or --verify"
+  }
   return opts
 }
 
@@ -496,7 +531,80 @@ function stripFence(raw) {
   return { text: raw, fenced: false }
 }
 
-function verifyAttestation(rawInput) {
+// ---------------------------------------------------------------------------
+// the issue transport (the only network path in this file)
+// ---------------------------------------------------------------------------
+
+// An artifact may live in an issue comment rather than on disk. The comment
+// body is delimited by two fixed markers so the envelope can be extracted
+// byte-exactly: `sha256` then hashes the same string in both modes, which is
+// what lets an attestation written by file mode be verified from a comment and
+// vice versa. The markers are HTML comments, so they render as nothing.
+const ENVELOPE_BEGIN = "<!-- gh-sync:envelope-begin -->"
+const ENVELOPE_END = "<!-- gh-sync:envelope-end -->"
+const GITHUB_SCHEME = "github:"
+
+function ghRun(args, input) {
+  const res = spawnSync("gh", args, { input, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })
+  if (res.error) throw new Error(`gh could not start (${res.error.code || res.error.message})`)
+  if (res.status !== 0) {
+    const detail = (res.stderr || res.stdout || "").trim().split("\n").slice(0, 3).join("; ")
+    throw new Error(`gh ${args[0]} exited ${res.status}${detail ? `: ${detail}` : ""}`)
+  }
+  return res.stdout || ""
+}
+
+function repoSlug() {
+  const slug = ghRun(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).trim()
+  if (!slug.includes("/")) throw new Error(`could not determine the repo slug (got ${JSON.stringify(slug)})`)
+  return slug
+}
+
+// `artifactText` is the exact bytes that get hashed — identical to the file
+// mode's `${JSON.stringify(envelope, null, 2)}\n`.
+function issueCommentBody(envelope, artifactText, taskId) {
+  return [
+    `<!-- gh-sync:envelope ${taskId} -->`,
+    "",
+    `Full review-gate envelope for \`${taskId}\` (role \`${envelope.role}\`, status \`${envelope.status}\`).`,
+    "Body is delimited by the markers below so a verifier can extract it byte-exactly.",
+    "",
+    ENVELOPE_BEGIN,
+    artifactText + ENVELOPE_END,
+    "",
+  ].join("\n")
+}
+
+function extractEnvelopeText(body) {
+  const text = String(body || "")
+  const i = text.indexOf(ENVELOPE_BEGIN)
+  const j = text.indexOf(ENVELOPE_END)
+  if (i < 0 || j < 0 || j < i) return null
+  let inner = text.slice(i + ENVELOPE_BEGIN.length, j)
+  if (inner.startsWith("\n")) inner = inner.slice(1)
+  return inner
+}
+
+// Reading the comment as JSON (not via --jq, which appends a newline) is what
+// keeps the extracted bytes identical to what was hashed.
+function readGithubArtifact(pathStr) {
+  const m = String(pathStr).match(/^github:([^#]+)#issuecomment-(\d+)$/)
+  if (!m) throw new Error(`malformed github artifact path ${pathStr}`)
+  const comment = JSON.parse(ghRun(["api", `repos/${m[1]}/issues/comments/${m[2]}`]))
+  const text = extractEnvelopeText(comment.body)
+  if (text === null) throw new Error(`comment ${m[2]} carries no gh-sync envelope block`)
+  return { body: Buffer.from(text, "utf8"), path: pathStr }
+}
+
+function latestEnvelopeComment(slug, issue) {
+  const comments = JSON.parse(ghRun(["api", `repos/${slug}/issues/${issue}/comments?per_page=100`]))
+  for (let i = comments.length - 1; i >= 0; i -= 1) {
+    if (String(comments[i].body || "").includes(ENVELOPE_BEGIN)) return comments[i]
+  }
+  return null
+}
+
+function verifyAttestation(rawInput, opts = {}) {
   const { text: raw, fenced } = stripFence(rawInput)
   let attestation
   try {
@@ -520,7 +628,23 @@ function verifyAttestation(rawInput) {
   // the status and the findings. (With a pointer present, everything it claims
   // is checked too, hash included.)
   if (a === undefined) {
-    if (!isNonEmptyString(attestation.task_id)) {
+    if (opts.issue) {
+      // The measured reviewer drops the non-canonical `artifact` key, so with
+      // --issue the envelope is resolved from the newest envelope comment on
+      // that issue instead of from a file that no longer exists.
+      try {
+        const slug = repoSlug()
+        const comment = latestEnvelopeComment(slug, opts.issue)
+        if (!comment) {
+          problems.push(`artifact: missing, and issue #${opts.issue} carries no envelope comment`)
+        } else {
+          a = { path: `${GITHUB_SCHEME}${slug}#issuecomment-${comment.id}` }
+          notes.push(`no artifact pointer; resolved ${a.path} from issue #${opts.issue}`)
+        }
+      } catch (err) {
+        problems.push(`artifact: missing and it could not be resolved from issue #${opts.issue}: ${err.message}`)
+      }
+    } else if (!isNonEmptyString(attestation.task_id)) {
       problems.push("artifact: missing and there is no task_id to resolve the default artifact from")
     } else {
       a = { path: `${ATTEST_DIR}/${safeName(attestation.task_id)}.envelope.json` }
@@ -537,9 +661,18 @@ function verifyAttestation(rawInput) {
   }
   if (problems.length) return { valid: false, fenced, notes, problems }
 
-  const full = resolveUnderRoot(a.path)
-  if (!existsSync(full)) return { valid: false, fenced, notes, problems: [`artifact ${a.path} not found`] }
-  const body = readFileSync(full)
+  let body
+  if (String(a.path).startsWith(GITHUB_SCHEME)) {
+    try {
+      body = readGithubArtifact(a.path).body
+    } catch (err) {
+      return { valid: false, fenced, notes, problems: [`artifact ${a.path} could not be fetched: ${err.message}`] }
+    }
+  } else {
+    const full = resolveUnderRoot(a.path)
+    if (!existsSync(full)) return { valid: false, fenced, notes, problems: [`artifact ${a.path} not found`] }
+    body = readFileSync(full)
+  }
   const digest = sha256Hex(body)
   if (typeof a.sha256 === "string" && digest !== a.sha256) {
     problems.push(`artifact.sha256 mismatch: message says ${a.sha256}, file hashes to ${digest}`)
@@ -751,7 +884,7 @@ function main() {
     const verdict =
       text === null
         ? { valid: false, problems: [`${opts.verify} not found`] }
-        : verifyAttestation(text.trim())
+        : verifyAttestation(text.trim(), opts)
     process.stdout.write(`${JSON.stringify(verdict, null, 2)}\n`)
     return verdict.valid ? 0 : 1
   }
@@ -810,9 +943,32 @@ function main() {
   const envelope = buildEnvelope(checklist, taskId, claimResults)
 
   if (opts.attest) {
+    const body = `${JSON.stringify(envelope, null, 2)}\n`
+
+    if (opts.issue) {
+      // The envelope goes into the tracker instead of scratch. No overwrite
+      // guard is needed: a comment is immutable, so a re-run appends a new
+      // attestation rather than invalidating the hash of an existing one.
+      try {
+        const slug = repoSlug()
+        const created = JSON.parse(
+          ghRun(
+            ["api", "-X", "POST", `repos/${slug}/issues/${opts.issue}/comments`, "--input", "-"],
+            JSON.stringify({ body: issueCommentBody(envelope, body, taskId) }),
+          ),
+        )
+        const artifactPath = `${GITHUB_SCHEME}${slug}#issuecomment-${created.id}`
+        emit(attestEnvelope(envelope, artifactPath, body))
+      } catch (err) {
+        process.stderr.write(`review-gate: --attest --issue could not post to #${opts.issue}: ${err.message}\n`)
+        emit(usageEnvelope(role, `--attest --issue could not post to #${opts.issue}: ${err.message}`, taskId))
+        return 1
+      }
+      return envelope.status === "done" ? 0 : 1
+    }
+
     const rel = opts.out || `${ATTEST_DIR}/${safeName(taskId)}.envelope.json`
     const full = resolveUnderRoot(rel)
-    const body = `${JSON.stringify(envelope, null, 2)}\n`
     try {
       mkdirSync(dirname(full), { recursive: true })
       // An artifact is evidence: some attestation may already point at this

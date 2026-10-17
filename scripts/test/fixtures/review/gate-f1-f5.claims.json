@@ -391,7 +391,7 @@
           "kind": "file_contains",
           "path": "opencode.json",
           "whole_file": true,
-          "pattern": "\"reviewer\": \\{\\s*\"model\": \"local-granite-4.2-3b/granite-4.2-3b-bounded\",\\s*\"steps\": 14,\\s*\"temperature\": 0.1"
+          "pattern": "\"reviewer\": \\{\\s*\"model\": \"local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1\",\\s*\"steps\": 30,\\s*\"temperature\": 0.1"
         }
       ]
     },
