@@ -169,3 +169,69 @@ Feature: Alert routing rule designer canvas
     Given I have cleared the canvas
     Then the canvas suggests starting from the palette
     And the canvas offers a way to open a saved graph
+
+  # --- A smooth canvas: wiring, travel, clarity and cost ---
+  #
+  # The acceptance criteria for the approved "designer cleanup" pass
+  # (ergonomics + visual polish + performance). All @todo: none of this exists
+  # yet. Tracked in the GitHub tracker under capability alert.rule-design.
+
+  @todo
+  Scenario: A node can be wired to another through its handles
+    Given the canvas holds a condition node and an action node
+    When I drag from the condition node's right handle to the action node's left handle
+    Then a rule path connects them
+    And the action node offers no outgoing handle
+
+  @todo
+  Scenario: The canvas offers a minimap
+    Given the canvas holds more nodes than fit on screen
+    Then a minimap shows the whole graph
+    And choosing a point on the minimap moves the view there
+
+  @todo
+  Scenario: A dragged node lands on the grid
+    Given the rule designer is open
+    When I drag a node and release it
+    Then its position is aligned to the grid
+    And two nodes dropped one grid cell apart line up
+
+  @todo
+  Scenario: Backspace deletes the selected node exactly once
+    Given the canvas holds one selected condition node
+    When I press Backspace
+    Then the node is removed
+    And no second deletion is attempted
+
+  @todo
+  Scenario: Typing in a text field does not trigger a canvas shortcut
+    Given the graph name field has focus
+    When I type the letter "c"
+    Then the graph name receives the character
+    And no condition node is added
+
+  @todo
+  Scenario: A disabled generate control says what is missing
+    Given the canvas holds an action node with no incoming edge
+    When I look at the generate control
+    Then it is not available
+    And the canvas says which rule the graph is missing
+
+  @todo
+  Scenario: The two node kinds are visually distinguishable
+    Given the canvas holds a condition node and an action node
+    When I look at the canvas without selecting either
+    Then the condition node and the action node carry different chrome
+    And each node says which kind it is
+
+  @todo
+  Scenario: Selecting a node is not an edit
+    Given a graph with a condition node and an action node and no unsaved changes
+    When I select the action node without changing it
+    Then the graph is still not marked as having unsaved changes
+
+  @todo
+  Scenario: The canvas draws only the nodes in view
+    Given the canvas holds a graph larger than the viewport
+    When I pan to one corner of the graph
+    Then only the nodes inside the viewport are drawn

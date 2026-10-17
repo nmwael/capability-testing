@@ -44,3 +44,11 @@ capabilities:
     verified_by:
       - "features/publication/alert-flow.feature"          # the distribution endpoint (JSON)
       - "features/frontend/alert-flow.feature"             # React Flow canvas (vitest)
+
+  - id: alert.cap-fields
+    intent: "List every CAP v1.2 attribute with its type and valid values, and drive the rule designer's condition fields from the schema"
+    owner: publication
+    status: active
+    since: 1.0.0
+    verified_by:
+      - "features/frontend/cap-field-catalogue.feature"    # field catalogue + XSD drift guard (vitest)
