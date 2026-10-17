@@ -24,7 +24,7 @@ Everything else stays binding:
 - the mandatory `reviewer` gate (`## Orchestration Flow` step 7);
 - `### 🔧 Tools & Package Requests (HITL Gate)` — no installs;
 - the `## Verification Protocol` — read the file, check `git status`, re-run every reported check;
-- journaling every landed change to `MODEL-JOURNAL.md`, so the human can review it in the morning.
+- recording significant changes in the GitHub tracker (issues) rather than appending to the frozen `MODEL-JOURNAL.md`, which is retained only as a historical record.
 
 The window:
 
