@@ -91,6 +91,7 @@
     "NVIDIA_API_KEY": "${localEnv:NVIDIA_API_KEY}",
     "SKIP_LLAMA_START": "${localEnv:SKIP_LLAMA_START}",
     "BIFROST_SETUP_TOKEN": "${localEnv:BIFROST_SETUP_TOKEN}",
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
     "OPENCODE_PASSWORD": "${localEnv:OPENCODE_SERVER_PASSWORD}"
   },
   "postCreateCommand": "bash scripts/post-create.sh",

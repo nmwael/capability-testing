@@ -618,3 +618,21 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     issues; the bespoke root `.md` work documents (`MODEL-JOURNAL.md`, `PLAN.md`, `BIFROST-CONFIG-SYNC-ISSUE.md`,
     `MODEL-CANDIDATES.md`, `TRIAL-RANKING.md`) deprecated. `llama.cpp` and its watchdog were stopped on the same
     instruction and were not restarted.
+52. **Work tracking moved to GitHub, and the blocker in item 51 was a false alarm.** The token was never the
+    obstacle: the box already held a `gho_` credential in `/root/.git-credentials` (scopes `gist`, `read:org`,
+    `repo`, `workflow`) which `git credential fill` returns, so every write here ran authenticated as `nmwael`
+    without the pasted PAT — which really was invalid (`Bad credentials`, and 401 from raw `curl` under both the
+    `token` and `Bearer` schemes). Landed: `scripts/gh-lib.mjs` (pure: manifest→milestone mapping, label
+    vocabulary, idempotency keys, journal parser, item classifier), `scripts/gh-run.mjs` (the only module that
+    shells out to `gh`), `scripts/gh-ensure-milestones.mjs` and `scripts/gh-backfill-journal.mjs` (both
+    idempotent, both with `--dry-run`), and `scripts/gh-lib.test.mjs` (55 assertions, offline). On the remote:
+    5 milestones — one per capability id from `capabilities/capabilities.yml` — 19 labels (`kind:*`, `role:*`,
+    `capability:*`, `hitl:*`, `source:journal`), and issues #1–#49 carrying `<!-- gh-sync:journal-item-N -->`,
+    closed on arrival with reason `not planned` because they are a record, not a queue. Re-running the backfill
+    creates nothing (49 skip). Two defects were caught by testing rather than reasoning: the parser silently
+    dropped journal items 12, 14 and 51 because their titles wrap across lines (a 49-item import that quietly
+    imported 46), and `state_reason` is `not_planned` for the API but "not planned" for the CLI — a 422 that
+    stopped the first run after issue #1 and left it OPEN, which the next run converged because the sync key
+    matched. `GH_TOKEN` was added to `containerEnv` (`.devcontainer/devcontainer.json:94`) so a rebuilt
+    container takes it from the host, which is the durable fix for the `/root/.git-credentials` dependency.
+    `wip/review-gate/*.claims.json` still assert on this file's line numbers and are now stale by construction.
