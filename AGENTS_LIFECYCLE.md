@@ -14,6 +14,10 @@ See `stack.json` (`/usr/local/share/llm-lab/stack.json`, written by the `models`
 
 Design-flow reference: [`SELF_DISCOVERING_FLOWS.md`](SELF_DISCOVERING_FLOWS.md) records the audit and agreed plan for making the boxforsine CrewAI/OpenMirai flows genuinely self-discovering (LLM proposes per-variant geometry, generator materializes, `verify_pair.py` scores, loop iterates) instead of replaying hard-coded `VARIANT_PROFILES`.
 
+## 🌙 Night Shift (human-declared unattended window)
+
+When the human declares "night shift", the plan-approval gate is waived until a hard stop at 10:00 the next day (container clock); the `fact-checker` step, the `reviewer` gate, the package-install gate, the Verification Protocol and journaling all still bind. At 10:00, stop immediately even mid-subtask, report what landed with `path:line` references, and wait for instructions. See `## 🌙 Night Shift` in `AGENTS.md`.
+
 ## ⚙️ ANTI-STALL & AGENTIC EFFICIENCY PROTOCOLS (Continuous Completion)
 
 The Architect must never stall or abandon work mid-task. These rules override convenience and are mandatory:

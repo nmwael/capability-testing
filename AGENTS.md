@@ -8,6 +8,29 @@ This repo uses a Human-in-the-Loop (HITL) approval workflow. Specialist subagent
 
 See `stack.json` (`/usr/local/share/llm-lab/stack.json`, written by the `models` feature) and `.devcontainer/llm-lab-models.json` for full project stack and model specifications.
 
+Exception: during a human-declared Night Shift the plan-approval step is waived — see `## 🌙 Night Shift`.
+
+## 🌙 Night Shift (human-declared unattended window)
+
+The human may declare **Night Shift** by saying "night shift" in a message. Nothing else starts it — not a clock, not a marker file, not an environment variable.
+
+During the window exactly one rule changes:
+
+- **Waived:** the HITL plan-approval step (`## Orchestration Flow` step 2). Agents may implement an architect's plan without the human approving it first.
+
+Everything else stays binding:
+
+- the pre-approval `fact-checker` step — a plan with an unresolved `high` finding is still not implemented;
+- the mandatory `reviewer` gate (`## Orchestration Flow` step 7);
+- `### 🔧 Tools & Package Requests (HITL Gate)` — no installs;
+- the `## Verification Protocol` — read the file, check `git status`, re-run every reported check;
+- journaling every landed change to `MODEL-JOURNAL.md`, so the human can review it in the morning.
+
+The window:
+
+- It runs from the declaration until **10:00 the next day**, on the container clock. A declaration made before 10:00 expires at the next occurring 10:00, so the window is under 24 hours.
+- **Hard stop.** At 10:00 the agents stop immediately, even mid-subtask, report what landed with `path:line` references, and wait for instructions.
+
 ## Conventions when modifying
 
 - The model id under `provider.models` in `opencode.json` and the `--alias` value in `scripts/auto-startup.sh` MUST stay in sync, or completion requests will 404. Both derive from the `name` field in the shared `stack.json` manifest (owned by the `models` feature).

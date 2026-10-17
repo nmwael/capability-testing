@@ -519,3 +519,16 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     returned `status: done` with the summary "append only" while the file was untouched (still 463 lines,
     items 26-37 absent, file absent from `git diff`); its envelope was also malformed and then
     self-contradictory across two outputs. A `pass` is only real if the file changed and the check ran.
+39. **Night Shift policy landed (human-declared unattended window).** `AGENTS.md` gained a
+    `## 🌙 Night Shift` section (plus a cross-reference line inside the HARD GATE section) and
+    `AGENTS_LIFECYCLE.md` gained the matching subsection. The human declares it by saying "night
+    shift"; it waives ONLY the HITL plan-approval step, while the `fact-checker` step, the `reviewer`
+    gate, the package-install gate, the Verification Protocol and journaling all still bind; it ends
+    at a hard stop of 10:00 the next day on the container clock. Note the recursion: the change that
+    removes the approval requirement still had to be approved.
+40. **The reviewer dropped its `artifact` pointer and echoed the Directive's `task_id`.** For T1 it
+    correctly ran `scripts/review-gate.mjs --task T1 --attest` and quoted the envelope's real sha256,
+    but its message carried no `artifact` object and its `task_id` was the subtask id (`T1-REV`), not
+    the gate's task id (`T1`), so `--verify` could not resolve the artifact by default and had to be
+    told the path explicitly. Either the reviewer must include the `artifact` pointer, or the
+    Directive's `task_id` must equal the `--task` id given to the gate.
