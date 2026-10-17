@@ -571,7 +571,7 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     `artifacts: []`, and a `checks` array that labelled failing commands (`exit code 1`, `0 matches`) as
     `outcome: pass`. `.opencode/agents/fact-checker.md` was back at HEAD — uncommitted work destroyed. Only the
     filesystem check caught it. Mitigation used: the two verified files were committed immediately as a
-    checkpoint (`fd70ad6`) before retrying.
+    checkpoint (`6ba9d1c`) before retrying.
 47. **Directive instructions leaked into the artifact twice.** Attempt 1 copied the directive's sentence "The
     exact phrase `never debug the tooling` must appear on that new line." into `fact-checker.md`; attempt 3
     copied "Leave the blank line that follows it in place." Both are instruction-to-the-writer text that must
@@ -592,7 +592,29 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     `<task_id from Directive>` instead of `F1`, plus the echo requirement at `:94` and the tooling rule at `:96`).
     Reviewer gate `NS`: 5 claims / 24 checks, all pass, `findings: []`; attestation
     `wip/review-gate/NS.envelope.json`, sha256 `57887b04f448f855b2ee2640199eb20bb10beabb90d6cae81b43747727c31845`,
-    5070 bytes, independently re-verified with `--verify` (`valid: true`, `problems: []`). Committed as `fd70ad6`
-    (tooling + architect) and the follow-up commit for the remaining two files. Explicitly NOT fixed in this
+    5070 bytes, independently re-verified with `--verify` (`valid: true`, `problems: []`). Committed as `6ba9d1c`
+    (tooling + architect) and `94d6a14` (fact-checker + journaling). Explicitly NOT fixed in this
     window: item 41's policy gap, item 43's tense inversion, item 45's vacuous-check acceptance, item 47's
     directive-leak lesson.
+50. **A live credential sat in four unpushed commits and was purged by rewriting them.** `MODEL-JOURNAL.md`
+    carried the opencode serve password in three places (lines 469, 470, 486) and two internal host addresses on
+    one of them, and every commit ahead of `origin/main` contained the value — introduced by the devcontainer
+    remote-access fix. The repo is public and that password guards the `:4096` serve API (root-equivalent reach),
+    so a push would have published a usable credential. Caught with `git grep` before any push. Remediation: the
+    three lines were redacted to `<redacted>` / `<redacted-host>`, and `origin/main..HEAD` was rewritten with
+    `git filter-branch --tree-filter`. Verified: per-commit `grep -c` is 0 for the password and both addresses, and
+    `git log -S` finds no commit in the range introducing it. Commit messages were preserved; the SHAs changed
+    `cf3674c`→`4288e73`, `299d41e`→`8bacb6a`, `fd70ad6`→`6ba9d1c`, `0e67476`→`94d6a14`, and the two earlier
+    `fd70ad6` citations in this journal were updated. `refs/original/refs/heads/main` still points at `0e67476`
+    and was **not** expired. The password was **not** rotated, so the value is still live if it ever escaped.
+51. **The human waived the code-writing and reviewer gates for the GitHub integration, and the token supplied
+    was invalid.** Instructed to "do it all" while also forbidding delegation, the human explicitly accepted the
+    waiver of "no direct code writing" and of the mandatory reviewer gate; nothing has landed under that waiver
+    yet except the credential purge above. The work is designed but blocked: `gh` is unauthenticated and the
+    pasted PAT returned `Bad credentials` (`gh auth status`), so no issue, milestone or gate write can run.
+    Decisions taken by the human: Issues as the work tracker; one Milestone per capability (5, from
+    `capabilities/capabilities.yml`); backfill the journal then link it; `gh` required (no offline fallback);
+    attestations moved from `wip/review-gate/` to issue comments; plans moved from `wip/fact-check/plan.md` to
+    issues; the bespoke root `.md` work documents (`MODEL-JOURNAL.md`, `PLAN.md`, `BIFROST-CONFIG-SYNC-ISSUE.md`,
+    `MODEL-CANDIDATES.md`, `TRIAL-RANKING.md`) deprecated. `llama.cpp` and its watchdog were stopped on the same
+    instruction and were not restarted.
