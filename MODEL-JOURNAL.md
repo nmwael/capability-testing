@@ -722,3 +722,28 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     `findings[]` was rejected ("do not match the artifact's"); a wrong `sha256` was rejected. And the plan path
     end to end: plan issue #54 was fact-checked straight from the tracker (`plan: issue #54`, verdict `PASS`).
     Unauthenticated runs of both paths fail loudly with the auth precondition, as designed.
+
+55. **Hardening the reviewer gate: robust extraction, valid-by-construction advisories, regression tests.** A mechanical
+    review of the P3/P4/P5 change set uncovered two subtle defects: (a) `extractEnvelopeText` paired the **first**
+    end marker with the first begin marker, so any envelope that quoted the framing markers (e.g. a checklist
+    asserting on `gh-sync:envelope-end`) truncated the payload and `--verify` reported a hash/bytes mismatch even
+    though the comment was stored intact; (b) the advisory adapter wrote `issue` and `suggestion` straight through
+    as `undefined` when the checklist omitted them, so the gate emitted an envelope that failed its own
+    `--validate` even though the header claimed "valid by construction".
+    
+    Fixes: `extractEnvelopeText` now uses `text.lastIndexOf(ENVELOPE_END)` and leaves `indexOf(ENVELOPE_BEGIN)`
+    first (real begin first, real end last), with a comment explaining the invariant. The advisory adapter now
+    defaults `issue` and `suggestion`, and a self-validation guard rejects any envelope the runner's own
+    validator would reject. The script gained an import-safety main guard (`resolve(argv[1]) === fileURLToPath`),
+    so regression tests may `import { extractEnvelopeText } from "./review-gate.mjs"` without executing the CLI;
+    `extractEnvelopeText` was exported for direct unit testing.
+    
+    Regression tests: added `checkMarkerCollision()` and `checkAdvisoryEnvelopeValidity()` to
+    `scripts/review-gate.test.mjs`. Negative controls proved both fail on pre-fix code (payload truncated at
+    600/663 bytes with marker-in-payload; findings missing `issue`/`suggestion` leading to validation failure)
+    and both pass with fixes in place. All four suites remain green (`gh-lib`, `verify-plan-claims`,
+    `review-gate` including the shipped F1-F5 checklist 69/0). The P6 checklist was extended (K10/K11) and
+    a new attestation was posted to issue **#57** (comment `6234881436`, `valid: true`, 70 checks, 19223 bytes,
+    sha256 `a187e39c…`) — the earlier 4KB-truncation symptom disappeared once extraction used the last end marker.
+    
+    Commit: `30de54a` — "fix(gate): make envelope extraction robust (lastIndexOf) and advisories valid by construction".
