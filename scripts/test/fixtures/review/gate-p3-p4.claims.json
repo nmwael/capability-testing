@@ -1,0 +1,462 @@
+{
+  "task_id": "RV-P3P4P5",
+  "role": "reviewer",
+  "title": "GitHub tracker integration — attestations in issues, plans in issues, bespoke docs frozen",
+  "claims": [
+    {
+      "id": "K1",
+      "statement": "The `gh` transport is consolidated in one module: no script other than scripts/gh-run.mjs spawns `gh`, and both consumers import from it.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-run.mjs",
+          "pattern": "export function gh\\("
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-run.mjs",
+          "pattern": "export function getIssue\\("
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-run.mjs",
+          "pattern": "export function createIssueComment\\("
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-run.mjs",
+          "pattern": "export function listIssueComments\\("
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-run.mjs",
+          "pattern": "export function getIssueComment\\("
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "spawnSync\\(\"gh\""
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "scripts/verify-plan-claims.mjs",
+          "pattern": "spawnSync\\(\"gh\""
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "scripts/gh-ensure-milestones.mjs",
+          "pattern": "spawnSync\\(\"gh\""
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "from \"\\./gh-run\\.mjs\""
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/verify-plan-claims.mjs",
+          "pattern": "from \"\\./gh-run\\.mjs\""
+        },
+        {
+          "kind": "command",
+          "run": "grep -rl 'spawnSync(\"gh\"' scripts --include='*.mjs'",
+          "expect_exit": 0,
+          "expect_stdout": "scripts/gh-run\\.mjs",
+          "cite": "scripts/gh-run.mjs:2"
+        },
+        {
+          "kind": "command",
+          "run": "test \"$(grep -rl 'spawnSync(\"gh\"' scripts --include='*.mjs' | wc -l)\" -eq 1",
+          "expect_exit": 0,
+          "cite": "scripts/gh-run.mjs:2"
+        }
+      ]
+    },
+    {
+      "id": "K2",
+      "statement": "The gate can post an attestation as an issue comment and read it back byte-exactly between fixed markers.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "GITHUB_SCHEME = \"github:\""
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "--attest --issue"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "gh-sync:envelope-begin"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "gh-sync:envelope-end"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "--jq"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "requireAuth\\(\\)"
+        }
+      ]
+    },
+    {
+      "id": "K3",
+      "statement": "verify-plan-claims.mjs takes --issue <n> (the plan's canonical home), keeps --plan as the offline form, and rejects an ambiguous invocation.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/verify-plan-claims.mjs",
+          "pattern": "--issue <n>"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/verify-plan-claims.mjs",
+          "pattern": "getIssue"
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/verify-plan-claims.mjs --plan x --issue 5",
+          "expect_exit": 2
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/verify-plan-claims.mjs --issue abc",
+          "expect_exit": 2
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/verify-plan-claims.mjs --issue",
+          "expect_exit": 2
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/verify-plan-claims.mjs --help 2>&1",
+          "expect_exit": 0,
+          "expect_stdout": "--issue <n>"
+        }
+      ]
+    },
+    {
+      "id": "K4",
+      "statement": "The label vocabulary carries kind:plan, and the offline parser test agrees the set is well-formed.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-lib.mjs",
+          "pattern": "name: \"kind:plan\""
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-lib.mjs",
+          "pattern": "name: \"hitl:awaiting-approval\""
+        },
+        {
+          "kind": "command",
+          "run": "node -e 'import(\"./scripts/gh-lib.mjs\").then(async m=>{const fs=await import(\"node:fs\");const caps=m.readCapabilities(fs.readFileSync(\"capabilities/capabilities.yml\",\"utf8\"));const n=m.allLabels(caps).map(l=>l.name);if(!n.includes(\"kind:plan\")){console.error(\"kind:plan missing\");process.exit(1)}console.log(\"vocabulary \"+n.length+\" labels, includes kind:plan\")})'",
+          "expect_exit": 0,
+          "expect_stdout": "vocabulary 20 labels"
+        }
+      ]
+    },
+    {
+      "id": "K5",
+      "statement": "The --dry-run defect is gone: the installer no longer short-circuits before reading remote state, and writes are gated by a single no-op guard.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-ensure-milestones.mjs",
+          "pattern": "if \\(!opts\\.dryRun\\) fn\\(\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-ensure-milestones.mjs",
+          "pattern": "const existingMilestones = new Map"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/gh-ensure-milestones.mjs",
+          "pattern": "const existingLabels = new Map"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "scripts/gh-ensure-milestones.mjs",
+          "pattern": "if \\(opts\\.dryRun\\) \\{\\s*// A dry run still proves"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "scripts/gh-ensure-milestones.mjs",
+          "pattern": "for \\(const m of milestones\\) report\\.milestones\\.created\\.push"
+        }
+      ]
+    },
+    {
+      "id": "K6",
+      "statement": "The plan hand-off moved from a file to a tracker issue: the architect inlines the plan, the fact-checker publishes and audits it by issue number.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/architect.md",
+          "pattern": "canonical home is a GitHub \\*\\*issue\\*\\*"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/architect.md",
+          "pattern": "inlined verbatim"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/architect.md",
+          "pattern": "verify-plan-claims\\.mjs --issue"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": ".opencode/agents/architect.md",
+          "pattern": "NEVER paste the plan text"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "You publish the plan"
+        },
+        {
+          "kind": "file_contains",
+          "path": ".opencode/agents/fact-checker.md",
+          "pattern": "byte-for-byte"
+        },
+        {
+          "kind": "file_contains",
+          "path": "library/architect/fact-check.mini.md",
+          "pattern": "verify-plan-claims\\.mjs --issue"
+        },
+        {
+          "kind": "file_not_contains",
+          "path": "library/architect/fact-check.mini.md",
+          "pattern": "cat > wip/fact-check/plan\\.md"
+        }
+      ]
+    },
+    {
+      "id": "K7",
+      "statement": "The five bespoke trackers are frozen behind a banner that redirects to Issues, with their original content intact.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "PLAN.md",
+          "pattern": "FROZEN — moved to GitHub Issues"
+        },
+        {
+          "kind": "file_contains",
+          "path": "BIFROST-CONFIG-SYNC-ISSUE.md",
+          "pattern": "FROZEN — moved to GitHub Issues"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-CANDIDATES.md",
+          "pattern": "FROZEN — moved to GitHub Issues"
+        },
+        {
+          "kind": "file_contains",
+          "path": "TRIAL-RANKING.md",
+          "pattern": "FROZEN — moved to GitHub Issues"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-JOURNAL.md",
+          "pattern": "FROZEN — moved to GitHub Issues"
+        },
+        {
+          "kind": "file_contains",
+          "path": "PLAN.md",
+          "pattern": "^# PLAN\\.md — retrofit plan"
+        },
+        {
+          "kind": "file_contains",
+          "path": "BIFROST-CONFIG-SYNC-ISSUE.md",
+          "pattern": "^# Draft upstream issue"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-CANDIDATES.md",
+          "pattern": "^# MODEL-CANDIDATES\\.md"
+        },
+        {
+          "kind": "file_contains",
+          "path": "TRIAL-RANKING.md",
+          "pattern": "^# TRIAL-RANKING\\.md"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-JOURNAL.md",
+          "pattern": "^# MODEL-JOURNAL\\.md — local model trials"
+        }
+      ]
+    },
+    {
+      "id": "K8",
+      "statement": "The journal banner maps its items to their issues and records the unresolved AGENTS.md contradiction instead of silently diverging from the contract.",
+      "severity": "medium",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "MODEL-JOURNAL.md",
+          "pattern": "gh-sync:journal-item-N"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-JOURNAL.md",
+          "pattern": "#55"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-JOURNAL.md",
+          "pattern": "#56"
+        },
+        {
+          "kind": "file_contains",
+          "path": "MODEL-JOURNAL.md",
+          "pattern": "do-not-touch list"
+        },
+        {
+          "kind": "file_contains",
+          "path": "AGENTS.md",
+          "pattern": "journaling every landed change to `MODEL-JOURNAL\\.md`"
+        }
+      ]
+    },
+    {
+      "id": "K9",
+      "statement": "The change set is machine-clean: every touched script parses and every offline suite passes.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "node --check scripts/gh-run.mjs && node --check scripts/review-gate.mjs && node --check scripts/verify-plan-claims.mjs && node --check scripts/gh-ensure-milestones.mjs && node --check scripts/gh-lib.mjs",
+          "expect_exit": 0
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/gh-lib.test.mjs",
+          "expect_exit": 0,
+          "expect_stdout": "RESULT: PASS"
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/verify-plan-claims.test.mjs",
+          "expect_exit": 0,
+          "expect_stdout": "RESULT: PASS"
+        }
+      ]
+    },
+    {
+      "id": "K10",
+      "statement": "The two defects this review found are pinned by regression tests that fail on the pre-fix code and pass now.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "checkMarkerCollision"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.test.mjs",
+          "pattern": "checkAdvisoryEnvelopeValidity"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "text\\.lastIndexOf\\(ENVELOPE_END\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "issue: a\\.issue \\|\\|"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "suggestion: a\\.suggestion \\|\\|"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "const selfCheck = validateEnvelope"
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/review-gate.test.mjs",
+          "expect_exit": 0,
+          "expect_stdout": "RESULT: PASS",
+          "cite": "scripts/review-gate.test.mjs:586"
+        }
+      ]
+    },
+    {
+      "id": "K11",
+      "statement": "The gate is import-safe (the direct unit test needs it) and still runs as a program in every invocation form.",
+      "severity": "high",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "if \\(process\\.argv\\[1\\] && resolve\\(process\\.argv\\[1\\]\\) === fileURLToPath\\(import\\.meta\\.url\\)\\)"
+        },
+        {
+          "kind": "file_contains",
+          "path": "scripts/review-gate.mjs",
+          "pattern": "export function extractEnvelopeText"
+        },
+        {
+          "kind": "command",
+          "run": "node -e 'import(\"./scripts/review-gate.mjs\").then(m=>console.log(typeof m.extractEnvelopeText))'",
+          "expect_exit": 0,
+          "expect_stdout": "function"
+        },
+        {
+          "kind": "command",
+          "run": "node scripts/review-gate.mjs --list",
+          "expect_exit": 0,
+          "expect_stdout": "F1-F5"
+        },
+        {
+          "kind": "command",
+          "run": "sh -c 'node scripts/review-gate.mjs --list'",
+          "expect_exit": 0,
+          "expect_stdout": "F1-F5"
+        }
+      ]
+    }
+  ],
+  "advisories": [
+    {
+      "severity": "low",
+      "claim": "K9",
+      "path": "scripts/review-gate.test.mjs",
+      "line": 44,
+      "issue": "The gate's own suite is deliberately NOT invoked from inside this checklist (that is infinite recursion). Its separate RESULT line is the evidence that the shipped F1-F5 checklist still passes."
+    },
+    {
+      "severity": "low",
+      "claim": "K5",
+      "path": "scripts/gh-ensure-milestones.mjs",
+      "line": 1,
+      "issue": "K5 pins the dry-run fix structurally. Its behavioural proof (rename kind:plan away -> dry run reports exactly that one label) was run live against the tracker and is recorded in MODEL-JOURNAL.md item 54; it is not repeated here because the checklist must stay runnable offline."
+    }
+  ]
+}

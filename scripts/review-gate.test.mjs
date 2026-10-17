@@ -53,6 +53,9 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// Imported (not spawned) so extractEnvelopeText can be tested directly. The gate
+// only runs its CLI under a main guard, so importing it here is inert.
+import { extractEnvelopeText } from "./review-gate.mjs"
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(SCRIPT_DIR, "..")
@@ -584,6 +587,100 @@ function checkShippedChecklistIsComplete() {
 }
 
 // ---------------------------------------------------------------------------
+// Regression: the envelope payload may legitimately CONTAIN the framing
+// markers. A review of the gate itself is the obvious case — and it is not
+// hypothetical: the P3/P4/P5 reviewer checklist asserts on
+// `gh-sync:envelope-end`, so its envelope quoted the marker inside itself.
+// Matching the FIRST end marker truncated that envelope at 4,101 of 16,214
+// bytes while the comment on GitHub was intact, and reported a hash mismatch
+// on a correct artefact.
+// ---------------------------------------------------------------------------
+
+function checkMarkerCollision() {
+  console.log("marker collision inside the payload")
+  const payload =
+    JSON.stringify(
+      {
+        task_id: "RV-MARK",
+        role: "reviewer",
+        status: "done",
+        summary: "an envelope that quotes its own framing markers",
+        checks: [
+          {
+            claim: "K1",
+            command: "file_contains scripts/review-gate.mjs /gh-sync:envelope-begin/",
+            outcome: "pass",
+            evidence: 'scripts/review-gate.mjs:544: const ENVELOPE_BEGIN = "<!-- gh-sync:envelope-begin -->"',
+          },
+          {
+            claim: "K1",
+            command: "file_contains scripts/review-gate.mjs /gh-sync:envelope-end/",
+            outcome: "pass",
+            evidence: 'scripts/review-gate.mjs:545: const ENVELOPE_END = "<!-- gh-sync:envelope-end -->"',
+          },
+        ],
+        findings: [],
+      },
+      null,
+      2,
+    ) + "\n"
+
+  const body = [
+    "<!-- gh-sync:envelope RV-MARK -->",
+    "",
+    "Full review-gate envelope for `RV-MARK` (role `reviewer`, status `done`).",
+    "",
+    "<!-- gh-sync:envelope-begin -->",
+    payload + "<!-- gh-sync:envelope-end -->",
+    "",
+  ].join("\n")
+
+  const got = extractEnvelopeText(body)
+  if (got === payload) ok(`payload quoting both markers round-trips byte-exact (${Buffer.byteLength(payload)} bytes)`)
+  else
+    fail(
+      `marker collision corrupted the payload: got ${
+        got === null ? "null" : Buffer.byteLength(got) + " bytes"
+      }, expected ${Buffer.byteLength(payload)} bytes`,
+    )
+
+  if (extractEnvelopeText("plain prose with no markers at all") === null) ok("a body without markers yields null")
+  else fail("a body without markers was treated as an envelope")
+}
+
+// ---------------------------------------------------------------------------
+// Regression: an advisory written without `issue`/`suggestion` must not yield
+// an envelope the runner's own validator rejects. The runner promises an
+// envelope that is valid by construction.
+// ---------------------------------------------------------------------------
+
+function checkAdvisoryEnvelopeValidity() {
+  console.log("advisory findings are valid by construction")
+  const checklist = writeChecklist("advisory-validity.claims.json", {
+    task_id: "RV-ADV",
+    role: "reviewer",
+    title: "advisory validity",
+    claims: [
+      { id: "K1", statement: "the gate script exists", checks: [{ kind: "file_exists", path: "scripts/review-gate.mjs" }] },
+    ],
+    // Deliberately omits `issue` and `suggestion`.
+    advisories: [{ severity: "low", claim: "K1", path: "scripts/review-gate.mjs", line: 1 }],
+  })
+  const artifact = join(TMP, "advisory-artifact.json")
+  const res = gate(["--checklist", checklist, "--attest", "--out", artifact])
+  if (res.status !== 0)
+    return fail(`--attest on an advisory-bearing checklist exited ${res.status}: ${res.stderr.trim()}`)
+
+  expectValid(readFileSync(artifact, "utf8"), "advisory-bearing full envelope")
+  expectValid(res.stdout, "advisory-bearing attestation")
+
+  const full = JSON.parse(readFileSync(artifact, "utf8"))
+  const adv = (full.findings || []).find((f) => f.path === "scripts/review-gate.mjs" && f.line === 1)
+  if (adv && adv.issue && adv.suggestion) ok("the advisory carries a non-empty issue and suggestion")
+  else fail(`the advisory lost its required fields: ${JSON.stringify(adv)}`)
+}
+
+// ---------------------------------------------------------------------------
 
 console.log("review-gate regression suite")
 checkShippedChecklistIsComplete()
@@ -595,6 +692,8 @@ checkListMode()
 checkReadOnly()
 checkAttestMode()
 checkShippedArtefactsUntouched()
+checkMarkerCollision()
+checkAdvisoryEnvelopeValidity()
 rmSync(TMP, { recursive: true, force: true })
 
 console.log(failures ? `\nRESULT: FAIL — ${failures} assertion(s) failed.` : "\nRESULT: PASS — the gate runner honoured every envelope guarantee.")

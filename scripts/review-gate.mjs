@@ -448,8 +448,16 @@ function buildEnvelope(checklist, taskId, claimResults) {
       claim: a.claim || "(advisory)",
       path: a.path || "(checklist)",
       line: a.line || 0,
-      issue: a.issue,
-      suggestion: a.suggestion,
+      // `issue` and `suggestion` MUST be defaulted, not passed through. The
+      // gate's own validator (validateEnvelope) requires both to be non-empty
+      // strings on every finding, and this runner promises an envelope that is
+      // valid by construction. Passing them through as `undefined` meant an
+      // advisory written without a suggestion silently produced an envelope
+      // that failed `--validate` — the CLI would have attested to something it
+      // could not itself verify. Found by the first checklist that used an
+      // advisory without a suggestion (the P3/P4/P5 reviewer pass).
+      issue: a.issue || `${a.claim || "(advisory)"}: see the referenced file`,
+      suggestion: a.suggestion || "(advisory only — no change required)",
     })
   })
   if (status !== "done") {
@@ -458,6 +466,20 @@ function buildEnvelope(checklist, taskId, claimResults) {
       detail: `${failedIds.length} of ${total} gate claims failed: ${failedIds.join(", ")}`,
       suggested_action: "revise_plan",
     })
+  }
+  // Never hand back an envelope the gate's own validator would reject. The
+  // header promises "valid by construction", and a convention-level promise is
+  // not enough: the advisory defaulting bug above shipped an invalid envelope
+  // through this exact return. Checking here converts a silent bad artefact
+  // into a loud, blocking one that names the offending field.
+  const selfCheck = validateEnvelope(JSON.stringify(envelope))
+  if (!selfCheck.valid) {
+    return blockedEnvelope(
+      taskId,
+      envelope.role,
+      `the runner produced an envelope its own validator rejects (this is a gate bug, not a checklist bug): ${selfCheck.problems.join("; ")}`,
+      "tool_error",
+    )
   }
   return envelope
 }
@@ -560,10 +582,20 @@ function issueCommentBody(envelope, artifactText, taskId) {
   ].join("\n")
 }
 
-function extractEnvelopeText(body) {
+export function extractEnvelopeText(body) {
   const text = String(body || "")
   const i = text.indexOf(ENVELOPE_BEGIN)
-  const j = text.indexOf(ENVELOPE_END)
+  // The END marker must be matched LAST, not first. The envelope body is
+  // arbitrary JSON and may legitimately contain these very marker strings — a
+  // review of the gate itself is the obvious case, and it is not hypothetical:
+  // the P3/P4 reviewer checklist asserts on `gh-sync:envelope-end`, so its
+  // envelope carried the marker inside itself. Taking the first END truncated
+  // that envelope at 4,101 of 16,214 bytes and reported a hash mismatch on a
+  // comment that was in fact stored intact. issueCommentBody appends the real
+  // END after the artefact, so the LAST occurrence is always the true
+  // delimiter, while the real BEGIN is still the first (the artefact follows
+  // it and never precedes it).
+  const j = text.lastIndexOf(ENVELOPE_END)
   if (i < 0 || j < 0 || j < i) return null
   let inner = text.slice(i + ENVELOPE_BEGIN.length, j)
   if (inner.startsWith("\n")) inner = inner.slice(1)
@@ -1016,4 +1048,10 @@ function run() {
   }
 }
 
-process.exit(run())
+// Run only when invoked as a program. Importing this module (the regression
+// suite does, to test extractEnvelopeText directly) must not execute the CLI:
+// an unconditional `process.exit(run())` at module scope would kill the
+// importer instead of the gate.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exit(run())
+}
