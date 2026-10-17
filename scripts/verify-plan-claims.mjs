@@ -684,10 +684,10 @@ async function validate(claim, ref, opts) {
 // output-grammar (BNF) shape audit
 // --------------------------------------------------------------------------
 
-// .opencode/agents/architect.md:123-145 — a plan turn is `phase { phase } wait`,
+// .opencode/agents/architect.md:199-218 — a plan turn is `phase { phase } wait`,
 // and every subtask carries exactly the four labelled lines below.
 const ROLE_TERMINALS = new Set(["coder", "researcher", "reviewer", "ui", "artist", "fact-checker"])
-const RE_PHASE_HEAD = /^##\s+Phase\s+\d+\s+[—–-]/
+const RE_PHASE_HEAD = /^##\s+Phase\s+\d+\s+[—–-]/m
 const RE_SUBTASK_HEAD = /^\s*\*\s+T\d+(?:\.\d+)?\s+[—–-]/
 const REQUIRED_SUBTASK_LINES = ["Files", "Change", "Check", "Role"]
 
@@ -707,7 +707,7 @@ function auditShape(text) {
       status: "MISSING",
       source: "plan shape",
       evidence:
-        "subtasks were found but no `## Phase <n> — <title>` header: the grammar is `plan ::= phase { phase } wait` (.opencode/agents/architect.md:128-131)",
+        "subtasks were found but no `## Phase <n> — <title>` header: the grammar is `plan ::= phase { phase } wait` (.opencode/agents/architect.md:206)",
     })
   }
   if (hasPhase && starts.length === 0) {
@@ -715,7 +715,7 @@ function auditShape(text) {
       status: "MISSING",
       source: "plan shape",
       evidence:
-        'a phase header was found but no `* T<n> — <title>` subtask: the grammar is `phase ::= "## Phase " INT " — " LINE NL { subtask }` (.opencode/agents/architect.md:131-132)',
+        'a phase header was found but no `* T<n> — <title>` subtask: the grammar is `phase ::= "## Phase " INT " — " LINE NL { subtask }` (.opencode/agents/architect.md:206-207)',
     })
   }
 
@@ -729,7 +729,7 @@ function auditShape(text) {
         findings.push({
           status: "MISSING",
           source: `subtask ${id}`,
-          evidence: `no \`- ${label}: \` line — the subtask production requires Files, Change, Check and Role (.opencode/agents/architect.md:132-136)`,
+          evidence: `no \`- ${label}: \` line — the subtask production requires Files, Change, Check and Role (.opencode/agents/architect.md:208-212)`,
         })
       }
     }
@@ -740,7 +740,7 @@ function auditShape(text) {
         findings.push({
           status: "MISSING",
           source: `subtask ${id}`,
-          evidence: `role '${role}' is not a ROLE terminal (coder | researcher | reviewer | ui | artist | fact-checker) (.opencode/agents/architect.md:142)`,
+          evidence: `role '${role}' is not a ROLE terminal (coder | researcher | reviewer | ui | artist | fact-checker) (.opencode/agents/architect.md:218)`,
         })
       }
     }
@@ -751,7 +751,7 @@ function auditShape(text) {
       status: "WARN",
       source: "plan shape",
       evidence:
-        "the turn does not end with the `wait` production (`I am waiting for approval`) or a `blocked` turn (.opencode/agents/architect.md:128-140)",
+        "the turn does not end with the `wait` production (`I am waiting for approval`) or a `blocked` turn (.opencode/agents/architect.md:206,214)",
     })
   }
 
