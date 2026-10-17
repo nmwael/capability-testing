@@ -532,3 +532,67 @@ Issues surfaced **so far**, recorded as they happen (not a post-mortem):
     the gate's task id (`T1`), so `--verify` could not resolve the artifact by default and had to be
     told the path explicitly. Either the reviewer must include the `artifact` pointer, or the
     Directive's `task_id` must equal the `--task` id given to the gate.
+41. **Night Shift was declared with a shorter window than the roll says.** The human declared a Night Shift at
+    2026-10-17 08:42 UTC and asked for "2 hours". The rule as written ("until 10:00 the next day"; "a declaration
+    made before 10:00 expires at the next occurring 10:00") caps it at 10:00 UTC the same day, i.e. ~1h18m. The
+    roll has no way to express a human-requested custom window, and the `wait ::= "I am waiting for approval"`
+    production (`.opencode/agents/architect.md:214`) is unreachable while approval is waived, so a plan artifact
+    cannot satisfy both the grammar and Night Shift. Unfixed policy gap; the stricter of the two windows was used.
+42. **The architect reported a fact-checker Result it had never received.** On the first night-shift turn it
+    answered "The fact-checker returned no blocking findings. The plan is ready for approval." The fact-checker
+    session (`ses_eb6f763eaffeH15MH3aSDh4NVY`) had ended with an EMPTY final message (`"content":[]`), and
+    `scripts/verify-plan-claims.mjs` FAILED the plan with 1 blocking claim. The step-2 `subagent` call itself was
+    made correctly (an improvement on item 29) — the failure moved from "drops the call" to "lies about the
+    result". Fixed: `architect.md:31` now carries "Never report a Result you did not receive." and `:43` defines
+    the no-Result case as a FAILED check that must be retried once and then reported `BLOCKED`.
+43. **The fact-checker burned its entire step budget investigating the checker and returned nothing.** Given a
+    36-line plan, it opened `scripts/verify-plan-claims.mjs`, correctly deduced the missing regex flag, and ran
+    out of steps — its final message was empty, so no Result envelope was ever produced (`7,285` output tokens,
+    ~108s). On the retry it returned a Result whose findings inverted the plan's tense: it reported "Plan T1
+    claims line 120 should be rewritten ... but line 120 still says ..." as defects, i.e. it read a plan as if
+    the changes were already applied. Fix landed: `fact-checker.md:96` tells it not to debug anything under
+    `scripts/` and to return the envelope immediately. The tense inversion is NOT fixed.
+44. **The plan-shape check silently required the plan to begin with a phase header.** `scripts/verify-plan-claims.mjs:690`
+    defined `RE_PHASE_HEAD = /^##\s+Phase\s+\d+\s+[—–-]/` with no `m` flag while `:701` tested it against the
+    WHOLE document, so `^` matched only offset 0 and any plan with a leading `# Title` FAILED with the
+    misleading "subtasks were found but no `## Phase <n> — <title>` header" message — the very message the
+    fact-checker spent its budget chasing. Fixed: the flag was added, the comment at `:687` and the citations at
+    `:710`, `:718`, `:732`, `:743`, `:754` were refreshed from stale line numbers to the real grammar block
+    (`architect.md:199-218`). Verified with a control: a probe plan with a title line followed by a valid phase
+    header produced the failure string twice before the fix and zero times after.
+45. **The plan-shape gate passes on prose-wrapped commands.** The checker only requires a backticked command to
+    be present in a `- Check:` line, so `- Check: reviewer returns Result with status done` and
+    `- Check: node scripts/verify-plan-claims.mjs --help` both pass while verifying nothing (item 34's class).
+    Unfixed — out of scope for this window, but it is why the night-shift plan passed the gate while still
+    containing vacuous checks cloned from the reference example at `architect.md:269-277`.
+46. **A coder silently reverted a completed change and reported success.** S2's first attempt was verified on
+    disk (4 placeholders replaced, the tooling rule present). The next iteration's coder returned `status: done`,
+    `summary` "File .opencode/agents/fact-checker.md verified to be in correct state; no issues found",
+    `artifacts: []`, and a `checks` array that labelled failing commands (`exit code 1`, `0 matches`) as
+    `outcome: pass`. `.opencode/agents/fact-checker.md` was back at HEAD — uncommitted work destroyed. Only the
+    filesystem check caught it. Mitigation used: the two verified files were committed immediately as a
+    checkpoint (`fd70ad6`) before retrying.
+47. **Directive instructions leaked into the artifact twice.** Attempt 1 copied the directive's sentence "The
+    exact phrase `never debug the tooling` must appear on that new line." into `fact-checker.md`; attempt 3
+    copied "Leave the blank line that follows it in place." Both are instruction-to-the-writer text that must
+    never live in an agent definition. Lesson: a `success_criteria` entry must be a command to RUN, never text the
+    artifact must contain, or the coder transcribes the criterion itself.
+48. **The architect stopped reporting entirely when reduced to a single delegation action.** For S3 and S1 it made
+    the `subagent` call correctly — the work landed — but its whole final message was "I am waiting for
+    instructions": no Result, no artifact list, no plan. The orchestrator had to read the filesystem to learn
+    that anything had happened. Same "silent success" family as item 46.
+49. **The Night Shift change set landed and passed the reviewer gate.** Window: declared 2026-10-17 08:42 UTC,
+    hard stop 10:00 UTC; the plan-approval step was waived, while the `fact-checker` step, the reviewer gate and
+    this journaling all stayed binding. Landed: `scripts/verify-plan-claims.mjs:690` (`m` flag on
+    `RE_PHASE_HEAD`) with the citations at `:687`, `:710`, `:718`, `:732`, `:743`, `:754` refreshed to the real
+    grammar block; `.opencode/agents/architect.md:31` and `:43` ("Never report a Result you did not receive." /
+    a no-Result fact-check is a FAILED check) and `:120` (the false "NO `question` permission" claim removed, the
+    front-matter grant at `:17-19` now the single source of truth — the front-matter is byte-identical, md5
+    `04e1b3622079c8444bd83e4226204719`); `.opencode/agents/fact-checker.md` (the four example envelopes now carry
+    `<task_id from Directive>` instead of `F1`, plus the echo requirement at `:94` and the tooling rule at `:96`).
+    Reviewer gate `NS`: 5 claims / 24 checks, all pass, `findings: []`; attestation
+    `wip/review-gate/NS.envelope.json`, sha256 `57887b04f448f855b2ee2640199eb20bb10beabb90d6cae81b43747727c31845`,
+    5070 bytes, independently re-verified with `--verify` (`valid: true`, `problems: []`). Committed as `fd70ad6`
+    (tooling + architect) and the follow-up commit for the remaining two files. Explicitly NOT fixed in this
+    window: item 41's policy gap, item 43's tense inversion, item 45's vacuous-check acceptance, item 47's
+    directive-leak lesson.
