@@ -1,3 +1,18 @@
+> ## ⛔ FROZEN — moved to GitHub Issues (2026-10-17)
+>
+> **All work tracking for this repository now lives in
+> [GitHub Issues](https://github.com/nmwael/capability-testing/issues).** This document is kept as a
+> **historical record only**. It is **frozen** — do not add to it, and do not treat it as the source of
+> truth for what is planned, claimed or done; **issues are**.
+>
+> - Work tracker: <https://github.com/nmwael/capability-testing/issues>
+> - Milestones — one per capability: <https://github.com/nmwael/capability-testing/milestones>
+> - Labels: `kind:*`, `role:*`, `capability:*`, `hitl:awaiting-approval` / `hitl:approved`
+>
+> **This is a draft report for an upstream feature repo, not this repo's work.** The text is kept
+> verbatim as the draft; if it is filed, it belongs upstream (the `bifrost-gateway` feature), and any
+> action on it for *this* repo is tracked as an issue rather than by editing this file.
+
 # Draft upstream issue: `bifrost-gateway` — model swaps leave stale providers and silently serve the wrong model
 
 **Intended target:** the `bifrost-gateway` devcontainer feature

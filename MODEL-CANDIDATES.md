@@ -1,3 +1,19 @@
+> ## ⛔ FROZEN — moved to GitHub Issues (2026-10-17)
+>
+> **All work tracking for this repository now lives in
+> [GitHub Issues](https://github.com/nmwael/capability-testing/issues).** This document is kept as a
+> **historical record only**. It is **frozen** — do not add to it, and do not treat it as the source of
+> truth for what is planned, claimed or done; **issues are**.
+>
+> - Work tracker: <https://github.com/nmwael/capability-testing/issues>
+> - Milestones — one per capability: <https://github.com/nmwael/capability-testing/milestones>
+> - Labels: `kind:*`, `role:*`, `capability:*`, `hitl:awaiting-approval` / `hitl:approved`
+>
+> **Model-seat candidate surveys are now tracker items.** Each candidate and its trial outcome belongs
+> in an issue labelled `role:architect` (plus `kind:task` or `kind:defect` as appropriate), where it
+> can be sorted, filtered and closed — rather than in a markdown table nothing can query. The survey
+> below is the frozen historical record.
+
 # MODEL-CANDIDATES.md — architect-seat candidate survey
 
 **Purpose.** A one-shot, evidence-backed survey of small GGUF models that could sit in the

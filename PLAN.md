@@ -1,3 +1,19 @@
+> ## ⛔ FROZEN — moved to GitHub Issues (2026-10-17)
+>
+> **All work tracking for this repository now lives in
+> [GitHub Issues](https://github.com/nmwael/capability-testing/issues).** This document is kept as a
+> **historical record only**. It is **frozen** — do not add to it, and do not treat it as the source of
+> truth for what is planned, claimed or done; **issues are**.
+>
+> - Work tracker: <https://github.com/nmwael/capability-testing/issues>
+> - Milestones — one per capability: <https://github.com/nmwael/capability-testing/milestones>
+> - Labels: `kind:*`, `role:*`, `capability:*`, `hitl:awaiting-approval` / `hitl:approved`
+>
+> **A plan's canonical home is now an issue, not this file.** The architect drafts the plan, the
+> `fact-checker` publishes it as a `kind:plan` + `hitl:awaiting-approval` issue, and approval lands on
+> that issue — see `.opencode/agents/architect.md`. The text below is unchanged and still readable
+> (`DEVELOPMENT.md` and the alerting frontend still cite it), but it is no longer where plans live.
+
 # PLAN.md — retrofit plan (BDD-driven)
 
 **Objective:** this repository is a **CAP v1.2 alerting system** — OASIS [Common Alerting

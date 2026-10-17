@@ -1,3 +1,32 @@
+> ## ⛔ FROZEN — moved to GitHub Issues (2026-10-17)
+>
+> **All work tracking for this repository now lives in
+> [GitHub Issues](https://github.com/nmwael/capability-testing/issues).** This journal is kept as a
+> **historical record only**. It is **frozen** — do not append to it, and do not treat it as the source
+> of truth for what is planned, claimed or done; **issues are**.
+>
+> - Work tracker: <https://github.com/nmwael/capability-testing/issues>
+> - Milestones — one per capability: <https://github.com/nmwael/capability-testing/milestones>
+> - Labels: `kind:*`, `role:*`, `capability:*`, `hitl:awaiting-approval` / `hitl:approved`
+>
+> **Where the entries went.** Every numbered item below has a corresponding **closed** issue on the
+> tracker, matched by a `<!-- gh-sync:journal-item-N -->` key:
+>
+> | journal | issue |
+> |---|---|
+> | items 1–52 | [issues #1–#52](https://github.com/nmwael/capability-testing/issues) |
+> | item 53 | [#55](https://github.com/nmwael/capability-testing/issues/55) |
+> | item 54 | [#56](https://github.com/nmwael/capability-testing/issues/56) |
+>
+> (Issues **#53** and **#54** are *not* journal items — they are the reviewer-gate attestation issue
+> and the live-path plan probe.)
+>
+> **Known inconsistency, unresolved.** `AGENTS.md` still instructs agents to journal landed changes to
+> this file (*"journaling every landed change to `MODEL-JOURNAL.md`"*), and `AGENTS.md` is on the
+> do-not-touch list. That instruction and this freeze contradict each other. Until `AGENTS.md` is
+> amended, items 1–54 above are the frozen record and a new entry belongs in an issue — not appended
+> here.
+
 # MODEL-JOURNAL.md — local model trials by role
 
 **Purpose.** A running, append-only record of which local GGUF models have been tried in the
