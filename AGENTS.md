@@ -41,8 +41,9 @@ The window:
 
 ### Worktree Convention
 - **One worktree per concurrent coder** - each active coder operates under `.worktrees/<task_id>`; the `.worktrees/` directory is gitignored to keep the main repo clean.
-- **Helper script** - `scripts/worktree.sh` manages worktree lifecycle (create, checkout, merge, remove).
-- **Enforcement guard** - the workflow rejects duplicate worktree claims for the same task; only one coder may claim a given task at a time.
+- **Helper script** - `scripts/worktree.sh` manages worktree lifecycle (create, enter, remove, reclaim). The `create_worktree <task_id> <path>` command runs `git worktree add "$path" .worktrees/<task_id>` AND takes the lock.
+- **Live owner guard** - `enter_worktree` checks if the recorded PID is live; if live, it refuses (exit 1); if dead, it reclaims the lock before entering.
+- **Stale lock reclaim** - `reclaim_worktree` reports "live" if PID is alive, "reclaimed" if dead (removes lock.pid).
 - **Parent merges** - at session end, the parent repo merges each coder's branch back sequentially, preserving commit history.
 
 ## Conventions when modifying

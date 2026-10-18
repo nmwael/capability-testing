@@ -7,7 +7,7 @@ WORKTREE_BASE="${WORKTREE_BASE:-$(pwd)/.worktrees}"
 LOCK_DIR="${LOCK_DIR:-$(pwd)/.worktrees}"
 
 # =============================================================================
-# create: create .worktrees/<task_id> directory and lock.pid with $$
+# create: create .worktrees/<task_id> directory, lock.pid, and run git worktree add
 # =============================================================================
 create_worktree() {
     _task_id="$1"
@@ -25,17 +25,19 @@ create_worktree() {
         return 1
     fi
 
+    # Create lock directory and lock file
     mkdir -p "$_lock_dir"
+    echo "$$" > "${_lock_dir}/lock.pid"
 
-    _lock_file="${_lock_dir}/lock.pid"
-    echo "$$" > "$_lock_file"
+    # Create worktree using git worktree add
+    git worktree add "$_path" >/dev/null 2>&1
 
     echo "Created worktree $_task_id at $_path"
     return 0
 }
 
 # =============================================================================
-# enter: git worktree add .worktrees/<task_id> <path>; verify lock; check lock
+# enter: verify lock; check if PID live; run git worktree add
 # =============================================================================
 enter_worktree() {
     _task_id="$1"
@@ -62,16 +64,15 @@ enter_worktree() {
 
     _current_pid="$$(cat "$_lock_file")"
 
+    # Check if PID is live; if live, refuse; if dead, reclaim
     if kill -0 "$_current_pid" 2>/dev/null; then
-        echo "Error: worktree $_task_id is locked by PID $_current_pid" >&2
+        echo "Refused: PID $_current_pid is live" >&2
         return 1
+    else
+        rm -f "$_lock_file"
     fi
 
-    # Clean up stale lock if needed
-    rm -f "$_lock_file"
-    echo "$$" > "$_lock_file"
-
-    # Create worktree - path basename becomes branch name if no commit-ish specified
+    # Create worktree
     git worktree add "$_path" >/dev/null 2>&1
 
     echo "Entered worktree $_task_id at $_path"
@@ -79,7 +80,7 @@ enter_worktree() {
 }
 
 # =============================================================================
-# remove: git worktree remove .worktrees/<task_id>; remove lock.pid if stale
+# remove: git worktree remove; remove lock; remove lock directory
 # =============================================================================
 remove_worktree() {
     _task_id="$1"
@@ -115,7 +116,7 @@ remove_worktree() {
 }
 
 # =============================================================================
-# reclaim: check lock.pid PID; if dead, remove lock; if alive, error
+# reclaim: check lock.pid PID; if dead, remove lock; report status
 # =============================================================================
 reclaim_worktree() {
     _task_id="$1"
@@ -142,11 +143,11 @@ reclaim_worktree() {
     _held_pid="$$(cat "$_lock_file")"
 
     if kill -0 "$_held_pid" 2>/dev/null; then
-        echo "Worktree $_task_id is actively locked by PID $_held_pid" >&2
-        return 1
+        echo "Lock status: live"
+        return 0
     else
         rm -f "$_lock_file"
-        echo "Reclaimed lock for $_task_id (old PID $_held_pid was dead)" >&2
+        echo "Lock status: reclaimed"
         return 0
     fi
 }
