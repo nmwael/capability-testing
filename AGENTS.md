@@ -39,6 +39,12 @@ The window:
 - **Closing comments** - every closed issue gets a one-line comment naming the commit SHA and the check that verified the fix.
 - Reference the `gh` commands used from the repo root, e.g. `gh issue close <n> --comment "..."` and `gh issue list --state open`.
 
+### Worktree Convention
+- **One worktree per concurrent coder** - each active coder operates under `.worktrees/<task_id>`; the `.worktrees/` directory is gitignored to keep the main repo clean.
+- **Helper script** - `scripts/worktree.sh` manages worktree lifecycle (create, checkout, merge, remove).
+- **Enforcement guard** - the workflow rejects duplicate worktree claims for the same task; only one coder may claim a given task at a time.
+- **Parent merges** - at session end, the parent repo merges each coder's branch back sequentially, preserving commit history.
+
 ## Conventions when modifying
 
 - The model id under `provider.models` in `opencode.json` and the `--alias` value in `scripts/auto-startup.sh` MUST stay in sync, or completion requests will 404. Both derive from the `name` field in the shared `stack.json` manifest (owned by the `models` feature).
