@@ -24,10 +24,6 @@ const DirtyContext = createContext<{ setDirty: () => void } | null>(null)
 function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
   const context = useContext(DirtyContext)
 
-  const handleValueChange = () => {
-    context?.setDirty()
-  }
-
   return (
     <div style={{
       background: '#bfdbfe',
@@ -45,8 +41,8 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
         <div key={field} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
           <span>{field}: </span>
           <select
-            value={data[field] ?? data.severity}
-            onChange={() => handleValueChange()}
+            value={data[field]}
+            onChange={(e) => { data[field] = e.target.value; context?.setDirty(); }}
             style={{ flex: 1, padding: 2 }}
           >
             <option value="low">low</option>
