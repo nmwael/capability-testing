@@ -266,6 +266,33 @@ function AlertRuleDesigner() {
     reactFlowInstance.current?.fitView?.()
   }
 
+  function applyRename() {
+    if (!selectedNodeId || !renameInput) return
+
+    const selectedNode = nodes.find(n => n.id === selectedNodeId)
+    if (!selectedNode) return
+
+    const oldId = selectedNodeId
+    const newId = renameInput
+
+    // Update the node's id
+    setNodes(nodes => nodes.map(n =>
+      n.id === oldId ? { ...n, id: newId } : n
+    ))
+
+    // Rebuild edges that reference the old id
+    setEdges(edges => edges.map(edge =>
+      edge.source === oldId || edge.target === oldId ? ({
+        ...edge,
+        ...(edge.source === oldId ? { source: newId } : { target: newId }),
+      }) : edge
+    ))
+
+    setSelectedNodeId(null)
+    setRenameInput(null)
+    setDirty(true)
+  }
+
   // Create dirty context provider
   const DirtyContextValue = useMemo(() => ({ setDirty: () => setDirty(true) }), [setDirty])
 
@@ -373,7 +400,7 @@ function AlertRuleDesigner() {
                 type="text"
                 value={renameInput}
                 onChange={(e) => setRenameInput(e.target.value)}
-                onBlur={() => { setRenameInput(null); setSelectedNodeId(null); setDirty(true); }}
+                onBlur={applyRename}
                 style={{ flex: 1, fontSize: 11, padding: 2 }}
                 autoFocus
               />
