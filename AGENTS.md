@@ -38,6 +38,14 @@ The window:
 - Keep `models/` gitignored. Never commit `.gguf` files; they're large and prone to bloat the repo. Use `/usr/local/share/llm-lab/models/fetch-models.sh` for reproducibility (iterates `stack.json` models).
 - CUDA architectures baked in: 80, 86, 89, 90, 120 (Ampere, Ada, Hopper, Blackwell). Older cards (Turing `75`) should add `75` to `CMAKE_CUDA_ARCHITECTURES` in the Dockerfile if you encounter "no kernel image available" errors on GPU init.
 
+## Bifrost (local LLM gateway)
+
+The local gateway serves `http://127.0.0.1:8082/v1` (`start-bifrost`; the model upstream is `llama-server`). Its config is materialised from the shared `stack.json` manifest by `/usr/local/share/llm-lab/bifrost/write-bifrost-config.sh` into `.../bifrost/config/bifrost.json`, which the launcher copies to `~/.config/bifrost/config.json`. Edit the materialiser, never the generated file — a restart re-materialises it.
+
+- **The config store must be enabled.** With `config_store.enabled: false` the dashboard reports "Config store setup is missing" and the bootstrap endpoints fail — `POST /api/session/ws-ticket` and `GET /api/notifications` return 503, logged as "auth middleware requires config store, skipping auth middleware initialization". The materialiser now emits a local `sqlite` store at `config/bifrost.db`, so no external database is needed.
+- **`client.enforce_auth_on_inference` must stay `false` on this box.** Turning the store on flips this to its default of `true`, which makes every inference call require a virtual key (`x-bf-vk`) and 401s the whole agent stack — opencode's `local-*` provider sends no API key. Explicit `false` keeps the old auth-middleware-skipped behaviour while the store is on. Verify with `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8082/v1/models` → `200`.
+- Dashboard login is a separate concern: it still needs a `setup_token` (in `config.json`, or the `BIFROST_SETUP_TOKEN` env var) before the first admin account can be created.
+
 ## Library
 
 `library/` holds condensed reference books, one per agent role — they are repo/consumer-local, not part of the shipped feature payload. `library/README.md` maps roles to books and records sources/attribution; where present, delegated agents read their role's book(s) before answering questions in their domain. The shipped payload is only `library/skills/`, `library/release-it.mini.md`, and `library/EXTENSIONS.md`. Repo-local layout (books can be added per `library/EXTENSIONS.md`):
