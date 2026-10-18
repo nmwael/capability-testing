@@ -31,6 +31,14 @@ The window:
 - It runs from the declaration until **10:00 the next day**, on the container clock. A declaration made before 10:00 expires at the next occurring 10:00, so the window is under 24 hours.
 - **Hard stop.** At 10:00 the agents stop immediately, even mid-subtask, report what landed with `path:line` references, and wait for instructions.
 
+### GitHub Tracker Discipline
+
+- **Issue lifecycle** - every issue opened gets at least one `role:/kind:` label and a milestone; keep work-in-progress issues open; **CLOSE** an issue only after the change is committed AND the mandatory reviewer gate has passed, using `Closes #NN` or `Fixes #NN` in the commit message so GitHub auto-closes it.
+- **End-of-session alignment** - at the end of every work session and every Night Shift window, reconcile the open-issue list against the real filesystem and `git log` state; close issues whose fix has landed (naming the commit SHA), comment the status on partially-done issues, and reopen/annotate any issue that no longer matches reality; a run that leaves solved issues open is incomplete.
+- **No duplicate plans** - search open issues before opening a plan issue; if work is already tracked, comment on the existing issue instead of opening a new one.
+- **Closing comments** - every closed issue gets a one-line comment naming the commit SHA and the check that verified the fix.
+- Reference the `gh` commands used from the repo root, e.g. `gh issue close <n> --comment "..."` and `gh issue list --state open`.
+
 ## Conventions when modifying
 
 - The model id under `provider.models` in `opencode.json` and the `--alias` value in `scripts/auto-startup.sh` MUST stay in sync, or completion requests will 404. Both derive from the `name` field in the shared `stack.json` manifest (owned by the `models` feature).
