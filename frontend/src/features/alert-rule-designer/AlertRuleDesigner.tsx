@@ -175,13 +175,13 @@ function AlertRuleDesigner() {
 
     // Check for orphans (action node with no incoming edge)
     const actionNodes = nodes.filter(n => n.data?.kind === 'action')
-    const sources = new Set(edges.map(e => e.source))
+    const targets = new Set(edges.map(e => e.target))
     for (const action of actionNodes) {
-      if (!sources.has(action.id)) return true
+      if (!targets.has(action.id)) return true
     }
 
     // Check for cycles using adjacency map (O(V+E))
-    if (hasCycle(edges, { source: '', target: '' })) return true
+    if (graphHasCycle(nodes, edges)) return true
 
     return false
   }
@@ -205,6 +205,30 @@ function AlertRuleDesigner() {
     }
 
     return false
+  }
+
+  // Detect a cycle anywhere in the graph using DFS colouring (O(V+E))
+  function graphHasCycle(graphNodes: Node[], graphEdges: Edge[]): boolean {
+    const adjacency = new Map<string, string[]>()
+    for (const e of graphEdges) {
+      const list = adjacency.get(e.source)
+      if (list) list.push(e.target)
+      else adjacency.set(e.source, [e.target])
+    }
+    const visiting = new Set<string>()
+    const done = new Set<string>()
+    const visit = (id: string): boolean => {
+      if (done.has(id)) return false
+      if (visiting.has(id)) return true
+      visiting.add(id)
+      for (const next of adjacency.get(id) ?? []) {
+        if (visit(next)) return true
+      }
+      visiting.delete(id)
+      done.add(id)
+      return false
+    }
+    return graphNodes.some(n => visit(n.id))
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
