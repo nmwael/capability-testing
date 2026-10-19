@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { AlertRuleDesigner } from '../alert-rule-designer/AlertRuleDesigner'
-import { cleanup, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 describe('alert-rule-edit frontend spec', () => {
   it('loads the default graph with condition-1, action-1 nodes', () => {

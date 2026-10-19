@@ -7,10 +7,10 @@ const CAP_VALUES = ['severity', 'urgency', 'category', 'certainty']
 
 interface ConditionNodeData {
   kind: 'condition'
-  severity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown'
-  urgency: 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown'
-  category: 'Geo' | 'Met' | 'Safety' | 'Security' | 'Rescue' | 'Fire' | 'Health' | 'Env' | 'Transport' | 'Infra' | 'CBRNE' | 'Other'
-  certainty: 'Observed' | 'Likely' | 'Possible' | 'Unlikely' | 'Unknown'
+  severity: string
+  urgency: string
+  category: string
+  certainty: string
   [key: string]: string
 }
 
