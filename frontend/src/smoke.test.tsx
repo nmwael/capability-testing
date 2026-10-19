@@ -16,8 +16,13 @@ describe('frontend toolchain', () => {
     expect(screen.getByText(/Alert flow/)).toBeTruthy()
   })
 
-  it('renders the routing rule designer', () => {
+  it('renders the alert rule designer with default condition node and CAP fields', () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Alert rule designer/)).toBeTruthy()
+    // Verify the default condition node is rendered with CAP fields
+    expect(screen.queryAllByText(/Condition/i)).toHaveLength(2)
+    expect(screen.getByText(/severity/i)).toBeTruthy()
+    expect(screen.getByText(/urgency/i)).toBeTruthy()
+    expect(screen.getByText(/category/i)).toBeTruthy()
+    expect(screen.getByText(/certainty/i)).toBeTruthy()
   })
 })

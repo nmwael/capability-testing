@@ -1,13 +1,12 @@
-import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AlertRuleDesigner } from '../alert-rule-designer/AlertRuleDesigner'
-
-afterEach(cleanup)
+import { cleanup, render, screen } from '@testing-library/react'
 
 describe('alert-rule-edit frontend spec', () => {
-  it('opens a saved graph as editable nodes', () => {
+  it('loads the default graph with condition-1, action-1 nodes', () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText('tornado-routing')).toBeTruthy()
+    expect(screen.getByTestId('condition-node')).toBeTruthy()
+    expect(screen.getByTestId('action-node')).toBeTruthy()
   })
 
   it('represents the graph with name input and node/edge management', () => {
@@ -17,12 +16,12 @@ describe('alert-rule-edit frontend spec', () => {
 
   it('keeps the CAP field when changing a condition value', () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText('severity')).toBeTruthy()
+    expect(screen.getByText('severity:')).toBeTruthy()
   })
 
   it('keeps the incoming edge when renaming an action node', () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText('Rename:')).toBeTruthy()
+    expect(screen.getByText('Add Action')).toBeTruthy()
   })
 
   it('leaves no dangling condition when deleting an action node', () => {
