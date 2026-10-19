@@ -149,7 +149,7 @@ function AlertRuleDesigner() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null)
   const [history, setHistory] = useState<any[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [historyIndex, setHistoryIndex] = useState(0)
   const [dirty, setDirty] = useState(true)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [renameInput, setRenameInput] = useState<string | null>(null)
@@ -241,11 +241,10 @@ function AlertRuleDesigner() {
       data: { kind: 'condition', severity: 'Moderate', urgency: 'Expected', category: 'Geo', certainty: 'Likely' },
       selected: true,
     }
-    setNodes(nodes => {
-      setDirty(true)
-      return [...nodes, newNode]
-    })
-    pushToHistory()
+    const nextNodes = [...nodes, newNode]
+    setNodes(nextNodes)
+    setDirty(true)
+    pushToHistory(nextNodes, edges)
     setSelectedNodeId(nextId)
     setRenameInput(nextId)
     setShowEmptyHint(nodes.length > 0)
@@ -260,11 +259,10 @@ function AlertRuleDesigner() {
       data: { kind: 'action', channel: 'sirens' },
       selected: true,
     }
-    setNodes(nodes => {
-      setDirty(true)
-      return [...nodes, newNode]
-    })
-    pushToHistory()
+    const nextNodes = [...nodes, newNode]
+    setNodes(nextNodes)
+    setDirty(true)
+    pushToHistory(nextNodes, edges)
     setSelectedNodeId(nextId)
     setRenameInput(nextId)
     setShowEmptyHint(nodes.length > 0)
@@ -289,12 +287,9 @@ function AlertRuleDesigner() {
     setDirty(true)
   }
 
-  function pushToHistory() {
-    setHistory(prev => {
-      const newHistory = [...prev.slice(0, historyIndex + 1), { nodes: [...prev[prev.length - 1]?.nodes || nodes], edges: [...prev[prev.length - 1]?.edges || edges] }]
-      return newHistory
-    })
-    setHistoryIndex(prev => prev + 1)
+  function pushToHistory(nextNodes: Node[] = nodes, nextEdges: Edge[] = edges) {
+    setHistory(prev => [...prev.slice(0, historyIndex + 1), { nodes: nextNodes, edges: nextEdges }])
+    setHistoryIndex(historyIndex + 1)
   }
 
   function undo() {
@@ -412,6 +407,14 @@ function AlertRuleDesigner() {
       setShowEmptyHint(false)
     }
   }, [nodes.length, isFirstRender])
+
+  // Seed the history with the initial graph so undo can restore it
+  useEffect(() => {
+    if (nodes.length > 0 && history.length === 0) {
+      setHistory([{ nodes, edges }])
+      setHistoryIndex(0)
+    }
+  }, [nodes.length, edges.length, history.length])
 
   // Mark as not first render after initialization
   useEffect(() => {
