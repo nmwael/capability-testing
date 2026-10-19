@@ -3,13 +3,14 @@ import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState,
 import '@xyflow/react/dist/style.css'
 
 const CHANNELS = ['sirens', 'broadcast', 'social']
-const CAP_VALUES = ['severity', 'urgency', 'certainty']
+const CAP_VALUES = ['severity', 'urgency', 'category', 'certainty']
 
 interface ConditionNodeData {
   kind: 'condition'
-  severity: 'low' | 'medium' | 'high'
-  urgency: 'low' | 'medium' | 'high'
-  certainty: 'low' | 'medium' | 'high'
+  severity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown'
+  urgency: 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown'
+  category: 'Geo' | 'Met' | 'Safety' | 'Security' | 'Rescue' | 'Fire' | 'Health' | 'Env' | 'Transport' | 'Infra' | 'CBRNE' | 'Other'
+  certainty: 'Observed' | 'Likely' | 'Possible' | 'Unlikely' | 'Unknown'
   [key: string]: string
 }
 
@@ -37,20 +38,71 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
     }}>
       <Handle type="target" position={Position.Left} style={{ background: '#3b82f6' }} />
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Condition</div>
-      {CAP_VALUES.map(field => (
-        <div key={field} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-          <span>{field}: </span>
-          <select
-            value={data[field]}
-            onChange={(e) => { data[field] = e.target.value; context?.setDirty(); }}
-            style={{ flex: 1, padding: 2 }}
-          >
-            <option value="low">low</option>
-            <option value="medium">medium</option>
-            <option value="high">high</option>
-          </select>
-        </div>
-      ))}
+      {CAP_VALUES.map(field => {
+        if (field === 'category') {
+          return (
+            <div key={field} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+              <span>{field}: </span>
+              <select
+                value={data[field]}
+                onChange={(e) => { data[field] = e.target.value; context?.setDirty(); }}
+                style={{ flex: 1, padding: 2 }}
+              >
+                <option value="Geo">Geo</option>
+                <option value="Met">Met</option>
+                <option value="Safety">Safety</option>
+                <option value="Security">Security</option>
+                <option value="Rescue">Rescue</option>
+                <option value="Fire">Fire</option>
+                <option value="Health">Health</option>
+                <option value="Env">Env</option>
+                <option value="Transport">Transport</option>
+                <option value="Infra">Infra</option>
+                <option value="CBRNE">CBRNE</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          )
+        }
+        return (
+          <div key={field} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+            <span>{field}: </span>
+            <select
+              value={data[field]}
+              onChange={(e) => { data[field] = e.target.value; context?.setDirty(); }}
+              style={{ flex: 1, padding: 2 }}
+            >
+              {field === 'severity' && (
+                <>
+                  <option value="Extreme">Extreme</option>
+                  <option value="Severe">Severe</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Minor">Minor</option>
+                  <option value="Unknown">Unknown</option>
+                </>
+              )}
+              {field === 'urgency' && (
+                <>
+                  <option value="Immediate">Immediate</option>
+                  <option value="Expected">Expected</option>
+                  <option value="Future">Future</option>
+                  <option value="Past">Past</option>
+                  <option value="Unknown">Unknown</option>
+                </>
+              )}
+              {field === 'certainty' && (
+                <>
+                  <option value="Observed">Observed</option>
+                  <option value="Likely">Likely</option>
+                  <option value="Possible">Possible</option>
+                  <option value="Unlikely">Unlikely</option>
+                  <option value="Unknown">Unknown</option>
+                </>
+              )}
+            </select>
+          </div>
+        )
+      })}
       <Handle type="source" position={Position.Right} style={{ background: '#3b82f6' }} />
     </div>
   )
@@ -186,7 +238,7 @@ function AlertRuleDesigner() {
       id: nextId,
       position: { x: 100 + nodes.length * 50, y: nodes.length * 50 },
       type: 'condition',
-      data: { kind: 'condition', severity: 'medium', urgency: 'medium', certainty: 'high' },
+      data: { kind: 'condition', severity: 'Moderate', urgency: 'Expected', category: 'Geo', certainty: 'Likely' },
       selected: true,
     }
     setNodes(nodes => {
@@ -316,7 +368,7 @@ function AlertRuleDesigner() {
             id: conditionId,
             position: { x: 100, y: 100 },
             type: 'condition',
-            data: { kind: 'condition', severity: 'Extreme', urgency: 'Immediate', certainty: 'Observed' },
+            data: { kind: 'condition', severity: 'Extreme', urgency: 'Immediate', category: 'Geo', certainty: 'Observed' },
           }
           setDirty(true)
           return [...prevNodes, newNode]
