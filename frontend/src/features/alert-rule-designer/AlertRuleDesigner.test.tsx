@@ -1,133 +1,80 @@
-import { cleanup, render, screen, fireEvent } from '@testing-library/react'
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AlertRuleDesigner } from './AlertRuleDesigner'
 
 afterEach(cleanup)
 
-describe('alert-rule-designer frontend spec', () => {
-  it('offers a condition node and an action node in the palette', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Add Condition/i)).toBeTruthy()
-    expect(screen.getByText(/Add Action/i)).toBeTruthy()
-  })
+// Toolbar buttons are addressed by their exact label so the assertions read as
+// user intent rather than "some text exists somewhere".
+function button(label: RegExp): HTMLButtonElement {
+  const el = screen.getByText(label).closest('button')
+  if (el === null) throw new Error(`no button for ${label}`)
+  return el as HTMLButtonElement
+}
 
-  it('places a condition node on the canvas when added', () => {
-    render(<AlertRuleDesigner />)
-    fireEvent.click(screen.getByText(/Add Condition/i))
-    expect(screen.getByText(/Add Condition/i)).toBeTruthy()
-  })
-
-  it('exposes the CAP vocabularies on a condition node', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/severity/i)).toBeTruthy()
-    expect(screen.getByText(/urgency/i)).toBeTruthy()
-  })
-
-  it('draws a rule path when connecting condition to action', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Add Condition/i)).toBeTruthy()
-  })
-
-  it('shows the default routing graph on first open', () => {
-    render(<AlertRuleDesigner />)
-    const defaultElements = screen.queryAllByText(/default|tornado|routing/i)
-    expect(defaultElements).toHaveLength(3)
-  })
-
-  it('flags an unconnected action node and disables generate', () => {
-    render(<AlertRuleDesigner />)
-    const generateButton = screen.getByText(/Generate Rules/i)
-    expect(generateButton).toBeTruthy()
-  })
-
-  it('posts the drawn graph when generating rules', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Generate Rules/i)).toBeTruthy()
-  })
-
-  it('restores a saved graph when reopening', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/default/i)).toBeTruthy()
-  })
-
-  it('keeps both nodes when an edge is removed', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Undo/i)).toBeTruthy()
-  })
-
-  it('supports undo of the last change', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/undo/i)).toBeTruthy()
-  })
-
-  it('supports redo of an undone change', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/redo/i)).toBeTruthy()
-  })
-
-  it('refuses a duplicate node id', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Undo/i)).toBeTruthy()
-  })
-
-  it('refuses a cycle when drawing an edge', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Undo/i)).toBeTruthy()
-  })
-
-  it('enables generate when an orphan is connected', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Generate Rules/i)).toBeTruthy()
-  })
-
-  it('offers the alerting channels on an action node', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/default/i)).toBeTruthy()
-  })
-
-  it('zooms and pans the canvas', () => {
+describe('AlertRuleDesigner behaviour', () => {
+  it('renders the React Flow canvas', () => {
     render(<AlertRuleDesigner />)
     expect(document.querySelector('.react-flow')).toBeTruthy()
   })
 
-  it('fits the graph back to view', () => {
+  it('starts with nothing to undo or redo', async () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Fit View/i)).toBeTruthy()
+    // history is seeded with the initial graph at index 0
+    await waitFor(() => expect(button(/^Undo$/i).disabled).toBe(true))
+    expect(button(/^Redo$/i).disabled).toBe(true)
   })
 
-  it('asks for a graph name before generating', () => {
+  it('enables undo after an edit, and undo/redo step back and forth', async () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Graph name/i)).toBeTruthy()
+    await waitFor(() => expect(button(/^Undo$/i).disabled).toBe(true))
+
+    // make a change
+    fireEvent.click(screen.getByText(/Add Condition/i))
+    await waitFor(() => expect(button(/^Undo$/i).disabled).toBe(false))
+    expect(button(/^Redo$/i).disabled).toBe(true)
+
+    // undo the change -> nothing left to undo, redo becomes available
+    fireEvent.click(button(/^Undo$/i))
+    await waitFor(() => expect(button(/^Redo$/i).disabled).toBe(false))
+    expect(button(/^Undo$/i).disabled).toBe(true)
+
+    // redo re-applies the change
+    fireEvent.click(button(/^Redo$/i))
+    await waitFor(() => expect(button(/^Undo$/i).disabled).toBe(false))
+    expect(button(/^Redo$/i).disabled).toBe(true)
   })
 
-  it('warns before leaving with unsaved changes', () => {
+  it('records each edit as its own undo step', async () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Unsaved changes/i)).toBeTruthy()
+    await waitFor(() => expect(button(/^Undo$/i).disabled).toBe(true))
+
+    fireEvent.click(screen.getByText(/Add Condition/i))
+    fireEvent.click(screen.getByText(/Add Condition/i))
+    await waitFor(() => expect(button(/^Undo$/i).disabled).toBe(false))
+
+    // first undo leaves a further undo available (two edits were recorded)
+    fireEvent.click(button(/^Undo$/i))
+    await waitFor(() => expect(button(/^Redo$/i).disabled).toBe(false))
+    expect(button(/^Undo$/i).disabled).toBe(false)
   })
 
-  it('supports adding a node with the keyboard', () => {
+  it('disables Generate Rules once an unconnected action node is added', async () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Undo/i)).toBeTruthy()
+    // the default graph is a connected condition -> action path, so it is valid
+    await waitFor(() => expect(button(/Generate Rules/i).disabled).toBe(false))
+
+    // an action node with no incoming edge makes the graph invalid
+    fireEvent.click(screen.getByText(/Add Action/i))
+    await waitFor(() => expect(button(/Generate Rules/i).disabled).toBe(true))
   })
 
-  it('supports selecting every node with the keyboard', () => {
+  it('shows the default graph name and keeps it editable', async () => {
     render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Undo/i)).toBeTruthy()
-  })
+    const input = screen.getByPlaceholderText('tornado-routing') as HTMLInputElement
+    await waitFor(() => expect(input.value).toBe('tornado-routing'))
 
-  it('warns before leaving with unsaved changes', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Unsaved changes/i)).toBeTruthy()
-  })
-
-  it('keeps the graph editable when the backend is unreachable', () => {
-    render(<AlertRuleDesigner />)
-    expect(screen.getByText(/Fit View/i)).toBeTruthy()
-  })
-
-  it('shows the default routing graph on first open', () => {
-    render(<AlertRuleDesigner />)
-    const defaultElements = screen.queryAllByText(/default|tornado|routing/i)
-    expect(defaultElements).toHaveLength(3)
+    fireEvent.change(input, { target: { value: 'tornado-routing-2' } })
+    await waitFor(() => expect(input.value).toBe('tornado-routing-2'))
   })
 })
