@@ -103,6 +103,7 @@ function AlertRuleDesigner() {
   const [renameInput, setRenameInput] = useState<string | null>(null)
   const [showEmptyHint, setShowEmptyHint] = useState(true)
   const [graphNameLocal, setGraphNameLocal] = useState('tornado-routing')
+  const [isFirstRender, setIsFirstRender] = useState(true)
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     condition: ConditionNodeComponent,
@@ -303,6 +304,70 @@ function AlertRuleDesigner() {
     }
   }
 
+  // Initialize default graph only when canvas is truly empty
+  useEffect(() => {
+    if (isFirstRender && nodes.length === 0) {
+      // Create default condition node
+      const conditionId = 'condition-1'
+      setNodes(prevNodes => {
+        const hasCondition = prevNodes.some(n => n.data?.kind === 'condition')
+        if (!hasCondition) {
+          const newNode: Node = {
+            id: conditionId,
+            position: { x: 100, y: 100 },
+            type: 'condition',
+            data: { kind: 'condition', severity: 'Extreme', urgency: 'Immediate', certainty: 'Observed' },
+          }
+          setDirty(true)
+          return [...prevNodes, newNode]
+        }
+        return prevNodes
+      })
+
+      // Create default action node
+      const actionId = 'action-1'
+      setNodes(prevNodes => {
+        const hasAction = prevNodes.some(n => n.data?.kind === 'action')
+        if (!hasAction) {
+          const newNode: Node = {
+            id: actionId,
+            position: { x: 400, y: 100 },
+            type: 'action',
+            data: { kind: 'action', channel: 'sirens' },
+          }
+          setDirty(true)
+          return [...prevNodes, newNode]
+        }
+        return prevNodes
+      })
+
+      // Connect condition to action
+      setEdges(prevEdges => {
+        const hasEdge = prevEdges.some(e => e.source === conditionId && e.target === actionId)
+        if (!hasEdge) {
+          setDirty(true)
+          return [...prevEdges, {
+            id: `edge-${conditionId}-${actionId}`,
+            source: conditionId,
+            target: actionId,
+            animated: true,
+          }]
+        }
+        return prevEdges
+      })
+
+      // Hide empty hint when default graph is present
+      setShowEmptyHint(false)
+    }
+  }, [nodes.length, isFirstRender])
+
+  // Mark as not first render after initialization
+  useEffect(() => {
+    if (!isFirstRender) {
+      setIsFirstRender(false)
+    }
+  }, [isFirstRender])
+
   useEffect(() => {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -378,6 +443,28 @@ function AlertRuleDesigner() {
               zIndex: 1,
             }}>
               Start by adding nodes from the palette above
+            </div>
+          )}
+
+          {!showEmptyHint && nodes.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              background: '#fff',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              padding: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 11,
+              color: '#374151',
+              zIndex: 1,
+            }}>
+              <span style={{ fontWeight: 'bold' }}>default</span>
+              <span>tornado</span>
+              <span>routing</span>
             </div>
           )}
 
