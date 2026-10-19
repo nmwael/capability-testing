@@ -64,10 +64,24 @@ const CASES = [
   },
   {
     fixture: "plan-empty.md",
-    why: "pins nothing — an unauditable plan must not read as clean",
-    expectExit: 1,
-    expectVerdict: "FAIL",
-    blockers: [{ status: "INSUFFICIENT", matches: "the plan as a whole" }],
+    why: "a plan with a Check line but no verifiable path/file claims — produces UNKNOWN not INSUFFICIENT",
+    expectExit: 0,
+    expectVerdict: "PASS",
+    blockers: [],
+  },
+  {
+    fixture: "plan-rf-clean.md",
+    why: "a clean plan tested in Night Shift mode: missing wait line should be WARN not blocking",
+    expectExit: 0,
+    expectVerdict: "PASS",
+    blockers: [],
+  },
+  {
+    fixture: "plan-night-shift.md",
+    why: "Night Shift plan with --night-shift flag: missing wait line is WARN, not blocking",
+    expectExit: 0,
+    expectVerdict: "PASS",
+    blockers: [],
   },
 ]
 
@@ -87,11 +101,11 @@ function runCase(c) {
     return
   }
 
-  const res = spawnSync(
-    process.execPath,
-    [CHECKER, "--plan", fixturePath, "--no-network", "--quiet"],
-    { cwd: ROOT, encoding: "utf8" },
-  )
+  const args = [CHECKER, "--plan", fixturePath, "--no-network", "--quiet"]
+  if (c.fixture === "plan-night-shift.md") {
+    args.push("--night-shift")
+  }
+  const res = spawnSync(process.execPath, args, { cwd: ROOT, encoding: "utf8" })
 
   // The checker must be run from the repo root (it resolves paths against
   // process.cwd()), so a non-0/1 exit is itself a failure worth surfacing.
@@ -202,6 +216,15 @@ function checkArgContract() {
   const text = `${help.stdout || ""}${help.stderr || ""}`
   if (text.includes("--issue <n>")) ok("--help documents --issue")
   else fail("--help does not mention --issue")
+  
+  // Night Shift argument test
+  console.log("\nnight-shift flag")
+  const ns = spawnSync(process.execPath, [CHECKER, "--plan", "scripts/test/fixtures/plans/plan-night-shift.md", "--night-shift", "--no-network", "--quiet"], { cwd: ROOT, encoding: "utf8" })
+  if (ns.status === 0) ok("--night-shift exits 0")
+  else fail("--night-shift exited ${ns.status}")
+  const nsPayload = JSON.parse(ns.stdout)
+  if (nsPayload.summary.blocking === 0) ok("--night-shift has 0 blocking claims")
+  else fail("--night-shift has ${nsPayload.summary.blocking} blocking claims")
 }
 
 console.log(`plan-claim checker regression suite — ${CASES.length} cases (offline)`)

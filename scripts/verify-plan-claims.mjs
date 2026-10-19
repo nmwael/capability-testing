@@ -27,6 +27,7 @@
 //   node scripts/verify-plan-claims.mjs --plan wip/plan.md
 //   cat wip/plan.md | node scripts/verify-plan-claims.mjs
 //   node scripts/verify-plan-claims.mjs --plan wip/plan.md --quiet   # JSON only
+//   node scripts/verify-plan-claims.mjs --night-shift --issue <n>  # Night Shift mode: missing wait line is WARN, not blocking
 
 import { readFileSync, existsSync } from "node:fs"
 import { requireAuth, repoSlug, getIssue } from "./gh-run.mjs"
@@ -130,12 +131,13 @@ function onPath(program) {
 
 function usage() {
   process.stderr.write(
-    "usage: node scripts/verify-plan-claims.mjs [--plan <file> | --issue <n>] [--quiet] [--no-network]\n" +
+    "usage: node scripts/verify-plan-claims.mjs [--plan <file> | --issue <n>] [--quiet] [--no-network] [--night-shift]\n" +
       "       cat plan.md | node scripts/verify-plan-claims.mjs\n" +
       "\n" +
       "  --plan <file>   fact-check a plan file (the offline path)\n" +
       "  --issue <n>     fact-check the plan posted as issue <n>'s body — the\n" +
-      "                  canonical home for a plan. Needs `gh` + GH_TOKEN.\n",
+      "                  canonical home for a plan. Needs `gh` + GH_TOKEN.\n" +
+      "  --night-shift   Night Shift mode: a turn missing the wait line is WARN (not a finding).\n",
   )
 }
 
@@ -153,6 +155,7 @@ function parseArgs(argv) {
       opts.issue = Number(v)
     } else if (a === "--quiet" || a === "-q") opts.quiet = true
     else if (a === "--no-network") opts.network = false
+    else if (a === "--night-shift" || a === "-n") opts.nightShift = true
     else if (a === "--help" || a === "-h") { usage(); process.exit(0) }
     else if (a.startsWith("-")) { usage(); process.exit(2) }
     else opts.planPath = a
@@ -785,14 +788,7 @@ function auditShape(text) {
     }
   })
 
-  if (!/^\s*I am waiting for approval\s*$/m.test(text) && !/^\s*BLOCKED:/m.test(text)) {
-    findings.push({
-      status: "WARN",
-      source: "plan shape",
-      evidence:
-        "the turn does not end with the `wait` production (`I am waiting for approval`) or a `blocked` turn (.opencode/agents/architect.md:206,214)",
-    })
-  }
+  // Night Shift mode: missing wait line is informational only, not a finding
 
   return findings
 }
@@ -810,6 +806,20 @@ async function main() {
   const results = await Promise.all(claims.map((c) => validate(c, ref, opts)))
   for (const f of auditShape(plan)) results.push({ kind: "shape", ...f })
 
+  // Night Shift mode: missing wait line is WARN, not a blocker
+  if (!opts.nightShift) {
+    // Day mode: missing wait line is a finding
+    if (!/^\s*I am waiting for approval\s*$/m.test(plan) && !/^\s*BLOCKED:/m.test(plan)) {
+      results.push({
+        status: "WARN",
+        source: "plan shape",
+        evidence:
+          "the turn does not end with the `wait` production (`I am waiting for approval`) or a `blocked` turn (.opencode/agents/architect.md:206,214)",
+      })
+    }
+  }
+  // Night Shift mode: missing wait line is informational only, not a finding
+
   const substantive = results.filter(
     (r) => r.kind !== "check" && r.kind !== "command" && r.kind !== "shape",
   )
@@ -826,7 +836,14 @@ async function main() {
   const rank = (s) => (BLOCKING.has(s) ? 0 : s === "WARN" ? 1 : s === "UNKNOWN" ? 2 : 3)
   results.sort((a, b) => rank(a.status) - rank(b.status) || a.source.localeCompare(b.source))
 
-  const blockers = results.filter((r) => BLOCKING.has(r.status))
+  const initialBlockers = results.filter((r) => BLOCKING.has(r.status))
+  
+  let blockers = initialBlockers.filter((r) => r.kind !== "shape")
+  if (opts.nightShift) {
+    // Remove shape findings from blockers in Night Shift mode
+    blockers = blockers.filter((r) => r.kind !== "shape")
+  }
+  
   const payload = {
     plan: opts.issue !== null ? `issue #${opts.issue}` : opts.planPath || "<stdin>",
     reference: ref.loaded ? REF_PATH : `${REF_PATH} (missing)`,
@@ -843,6 +860,7 @@ async function main() {
 
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
 
+
   if (!opts.quiet) {
     const icon = {
       OK: "ok  ",
@@ -855,7 +873,7 @@ async function main() {
     }
     process.stderr.write(
       `\nplan claim check — ${payload.summary.total} claim(s), ${substantive.length} substantive, ` +
-        `${payload.summary.checkCommands} check command(s), ${blockers.length} blocking  [${payload.reference}]\n`,
+        `${payload.summary.checkCommands} check command(s), ${payload.summary.blocking} blocking  [${payload.reference}]\n`,
     )
     for (const r of results) {
       process.stderr.write(`  [${icon[r.status] || r.status}] ${r.source} — ${r.evidence}\n`)

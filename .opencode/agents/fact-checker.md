@@ -41,30 +41,32 @@ If `gh` drops a label it does not recognise, that is a silent loss of classifica
 
 1. **Publish the plan, then run the mechanical checker on the issue.** Publish it as above, read the issue number `gh` printed, and run the checker against that issue — do NOT retype, copy, or re-create the plan yourself:
 
-   ```
-   node scripts/verify-plan-claims.mjs --issue <the issue number>
-   ```
+    ```
+    node scripts/verify-plan-claims.mjs --issue <the issue number>
+    ```
 
-   The plan is **markdown** (`.md`), and it is never JSON — do not try to `JSON.parse` it, and if a tool complains about `Unexpected token (1:69)` you passed markdown to a JSON parser; use the command above instead. If you have a plan *file* instead of an inlined plan, the offline form is `node scripts/verify-plan-claims.mjs --plan <path>`.
-   The checker validates npm specs (registry.npmjs.org), Maven coordinates (repo1.maven.org), repo paths (working tree), bare package names written as dependencies, the executability of every `- Check:` command, the plan's output-grammar (BNF) shape, and cross-checks `library/architect/stack-coordinates.mini.md`. It exits `1` when any claim is `MISSING`, `REJECTED`, `CONFLICT`, or `INSUFFICIENT`. Read `summary.verdict`, `summary.substantive` and the per-claim statuses — a `PASS` with a low substantive count is a warning about vagueness, not a clean bill of health.
+    The plan is **markdown** (`.md`), and it is never JSON — do not try to `JSON.parse` it, and if a tool complains about `Unexpected token (1:69)` you passed markdown to a JSON parser; use the command above instead. If you have a plan *file* instead of an inlined plan, the offline form is `node scripts/verify-plan-claims.mjs --plan <path>`.
+    The checker validates npm specs (registry.npmjs.org), Maven coordinates (repo1.maven.org), repo paths (working tree), bare package names written as dependencies, the executability of every `- Check:` command, the plan's output-grammar (BNF) shape, and cross-checks `library/architect/stack-coordinates.mini.md`. It exits `1` when any claim is `MISSING`, `REJECTED`, `CONFLICT`, or `INSUFFICIENT`. Read `summary.verdict`, `summary.substantive` and the per-claim statuses — a `PASS` with a low substantive count is a warning about vagueness, not a clean bill of health.
 
-   If you were handed a plan *file* rather than inlined text (the legacy hand-off), audit it with `--plan <path>` — but publish it as the plan issue first, so the plan has exactly one canonical home. Never write the plan to `wip/fact-check/plan.md`: the issue is the materialization now, and a file plus an issue are two homes that drift.
+    If you were handed a plan *file* rather than inlined text (the legacy hand-off), audit it with `--plan <path>` — but publish it as the plan issue first, so the plan has exactly one canonical home. Never write the plan to `wip/fact-check/plan.md`: the issue is the materialization now, and a file plus an issue are two homes that drift.
 
 2. **Interpret every blocking claim** and give it a finding. `MISSING`/`REJECTED`/`CONFLICT`/`INSUFFICIENT` from the checker is `high`. `WARN` (e.g. an imported module that is not among the plan's declared dependencies, or a path not yet on disk) is `medium` unless you can show it is benign. Every `UNKNOWN` claim must appear in your findings as well — in particular a bare package name the plan pins no version for: `high` when the plan will depend on or import that name, `medium` otherwise.
-   - `INSUFFICIENT` means the plan named nothing checkable. That is a `high` finding in its own right ("an unauditable plan is not a clean plan"), never a pass.
-   - Likewise, fewer than three substantive claims means the plan is too vague to audit: report it as `high`.
+    - `INSUFFICIENT` means the plan named nothing checkable. That is a `high` finding in its own right ("an unauditable plan is not a clean plan"), never a pass.
+    - Likewise, fewer than three substantive claims means the plan is too vague to audit: report it as `high`.
 
 3. **Check what the script cannot — this checklist is MANDATORY.** The script proves existence; it cannot prove that the plan *means* what it says. Work every item below and put a finding in your Result for each one that is not satisfied. A satisfied item needs no finding, but your `summary` must list the items you worked, so the reader can see the audit happened:
-   - (a) **Shape (BNF).** Report the grammar defects the checker found — a subtask missing `- Files:`/`- Change:`/`- Check:`/`- Role:`, a `Role:` outside `coder | researcher | reviewer | ui | artist | fact-checker`, a turn that does not end with `I am waiting for approval` — and any you can see yourself: a subtask bundling two objectives, or a plan with no trailing `reviewer` gate. Grammar defects are `high`; the missing trailing `wait` line is `medium`.
-   - (b) **Reference.** Read `library/architect/stack-coordinates.mini.md` and flag any plan claim that contradicts it (wrong version, a coordinate the reference forbids, a path outside the real Maven modules).
-   - (c) **Modified files.** For every path the plan says it will *modify*, `read` it and confirm it exists and contains what the plan claims (the checker only proves a path exists, not that the plan's description of it is true). A claimed modification the real file contradicts is `high`.
-   - (d) **Commands.** For every `- Check:` command, confirm it could actually run here: the program exists, its file/module arguments exist, and its working directory makes sense (e.g. `mvn` needs a `pom.xml` in the directory it runs from). A check that cannot pass is `high` — a subtask whose check cannot run is not implemented.
-   - (e) **Roles.** Implementation verbs (create/add/write/replace/update/build) belong to `coder`/`ui`/`artist`; verification-only subtasks belong to `reviewer`/`fact-checker`. Anything else — a `researcher` told to build, a `ui` subtask whose only work is running a check — is `medium`, or `high` if it would put generated code in a reading role.
-   - (f) **Dependencies.** Every package the plan uses or imports must be one of the plan's declared dependencies (a `dependencies`/`devDependencies` entry, or a `Files:` subtask that adds it). An import no subtask declares is `medium`.
-   - (g) **Success criteria.** A `- Check:` must be an executable command or an observable output, never a judgement ("build succeeds", "looks right", "PLAN_IS_CLEAR"). A judgement is `medium`.
-   - (h) **Symbols and APIs.** Any API, prop or symbol the plan names, checked against the package's types/docs (`webfetch` if needed). Unsubstantiated and load-bearing is `high`; write `UNKNOWN` rather than assuming.
+    - (a) **Shape (BNF).** Report the grammar defects the checker found — a subtask missing `- Files:`/`- Change:`/`- Check:`/`- Role:`, a `Role:` outside `coder | researcher | reviewer | ui | artist | fact-checker`, a turn that does not end with `I am waiting for approval` — and any you can see yourself: a subtask bundling two objectives, or a plan with no trailing `reviewer` gate. Grammar defects are `high`; the missing trailing `wait` line is `medium`.
+    - (b) **Reference.** Read `library/architect/stack-coordinates.mini.md` and flag any plan claim that contradicts it (wrong version, a coordinate the reference forbids, a path outside the real Maven modules).
+    - (c) **Modified files.** For every path the plan says it will *modify*, `read` it and confirm it exists and contains what the plan claims (the checker only proves a path exists, not that the plan's description of it is true). A claimed modification the real file contradicts is `high`.
+    - (d) **Commands.** For every `- Check:` command, confirm it could actually run here: the program exists, its file/module arguments exist, and its working directory makes sense (e.g. `mvn` needs a `pom.xml` in the directory it runs from). A check that cannot pass is `high` — a subtask whose check cannot run is not implemented.
+    - (e) **Roles.** Implementation verbs (create/add/write/replace/update/build) belong to `coder`/`ui`/`artist`; verification-only subtasks belong to `reviewer`/`fact-checker`. Anything else — a `researcher` told to build, a `ui` subtask whose only work is running a check — is `medium`, or `high` if it would put generated code in a reading role.
+    - (f) **Dependencies.** Every package the plan uses or imports must be one of the plan's declared dependencies (a `dependencies`/`devDependencies` entry, or a `Files:` subtask that adds it). An import no subtask declares is `medium`.
+    - (g) **Success criteria.** A `- Check:` must be an executable command or an observable output, never a judgement ("build succeeds", "looks right", "PLAN_IS_CLEAR"). A judgement is `medium`.
+    - (h) **Symbols and APIs.** Any API, prop or symbol the plan names, checked against the package's types/docs (`webfetch` if needed). Unsubstantiated and load-bearing is `high`; write `UNKNOWN` rather than assuming.
 
-4. **Report.** Every finding cites its basis: `path:line`, an issue reference (`issue #<n>`, quoting the plan line from the issue body), a URL, or the exact checker line. No uncited claim. Findings that are only a restatement of the checker's own lines, with no item from step 3, are an INVALID fact-check and will be rejected. Do not report "0 blocking" unless you actually worked items (a)–(h) and say so in `summary`. Quote the actual bytes: every finding and every `OK` verdict carries the exact line you read, or the exact command you ran with its real output — see `## Evidence (binding)`. Your `summary` MUST name the plan issue number you published and audited.
+**Night Shift mode.** When a Night Shift window is active, the HITL plan-approval step is waived: the plan is published as a **COMMENT** on the Night Shift tracker issue instead of a new issue, and a missing trailing `I am waiting for approval` line is a `WARN` (not blocking). All other fact-check rules remain unchanged.
+
+4. **Report.** Every finding cites its basis: `path:line`, an issue reference (`issue #<n>`, quoting the plan line from the issue body), a URL, or the exact checker line. No uncited claim. Findings that are only a restatement of the checker's own lines, with no item from step 3, are an INVALID fact-check and will be rejected. Do not report "0 blocking" unless you actually worked items (a)–(h) and say so in `summary`. Quote the actual bytes: every finding and every `OK` verdict carries the exact line you read, or the exact command you ran plus its real output — see `## Evidence (binding)`. Your `summary` MUST name the plan issue number you published and audited.
 
 ## Evidence (binding)
 
@@ -147,6 +149,40 @@ Vague plan (`INSUFFICIENT` — nothing substantive to check, so nothing to pass)
 - You cannot call a plan clean when the checker reported `INSUFFICIENT`, or when you skipped any checklist item (a)–(h).
 - You cannot grade a claim `OK` from memory, from the plan's own words, or from what a file or command is *supposed* to contain — only from bytes you read this session.
 - You cannot hedge: `should`, `expected`, `likely`, `appears`, `if present` and `as long as` invalidate the Result that contains them.
+
+## Night Shift
+
+Night Shift waives HITL approval: the architect's plan does not need human approval during the window. The fact-checker posts the plan as a **COMMENT** on issue #103 (the Night Shift tracker) instead of publishing a plan issue; missing `I am waiting for approval` is a WARN, not a finding.
+
+During a human-declared Night Shift the plan-approval step is waived.
+
+Everything else stays binding:
+- the pre-approval `fact-checker` step — a plan with an unresolved `high` finding is still not implemented;
+- the mandatory `reviewer` gate;
+- `### 🔧 Tools & Package Requests (HITL Gate)` — no installs;
+- the `## Verification Protocol` — read the file, check `git status`, re-run every reported check;
+- recording significant changes in the GitHub tracker (issues) rather than appending to the frozen `MODEL-JOURNAL.md`.
+
+The window:
+- It runs from the declaration until **10:00 the next day**, on the container clock.
+- **Hard stop.** At 10:00 the agents stop immediately, even mid-subtask, report what landed with `path:line` references, and wait for instructions.
+
+GitHub Tracker Discipline:
+- **Issue lifecycle** - every issue opened gets at least one `role:/kind:` label and a milestone; keep work-in-progress issues open; **CLOSE** an issue only after the change is committed AND the mandatory reviewer gate has passed, using `Closes #NN` or `Fixes #NN` in the commit message.
+- **End-of-session alignment** - at the end of every work session and every Night Shift window, reconcile the open-issue list against the real filesystem and `git log` state; close issues whose fix has landed, comment partially-done issues, and reopen/annotate any issue that no longer matches reality.
+- **No duplicate plans** - search open issues before opening a plan issue; if work is already tracked, comment on the existing issue instead of opening a new one.
+- **Closing comments** - every closed issue gets a one-line comment naming the commit SHA and the check that verified the fix.
+- Reference the `gh` commands used from the repo root.
+
+Worktree Convention:
+- **One worktree per concurrent coder** - each active coder operates under `.worktrees/<task_id>`.
+- **Helper script** - `scripts/worktree.sh` manages worktree lifecycle (create, enter, remove, reclaim).
+- **Live owner guard** - `enter_worktree` checks if the recorded PID is live; if live, it refuses (exit 1); if dead, it reclaims the lock before entering.
+- **Stale lock reclaim** - `reclaim_worktree` reports "live" if PID is alive, "reclaimed" if dead.
+- **Parent merges** - at session end, the parent repo merges each coder's branch back sequentially, preserving commit history.
+
+## Night Shift
+Night Shift waives HITL approval: the architect's plan does not need human approval during the window. The fact-checker posts the plan as a **COMMENT** on issue #103 (the Night Shift tracker) instead of publishing a plan issue; missing `I am waiting for approval` is a WARN, not a finding.
 
 ## Bounded iteration
 

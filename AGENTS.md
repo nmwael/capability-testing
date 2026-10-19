@@ -31,6 +31,8 @@ The window:
 - It runs from the declaration until **10:00 the next day**, on the container clock. A declaration made before 10:00 expires at the next occurring 10:00, so the window is under 24 hours.
 - **Hard stop.** At 10:00 the agents stop immediately, even mid-subtask, report what landed with `path:line` references, and wait for instructions.
 
+**Night Shift waives HITL approval:** the architect's plan does not need human approval during the window. The fact-checker posts the plan as a **COMMENT** on issue #103 (the Night Shift tracker) instead of publishing a plan issue; missing `I am waiting for approval` is a WARN, not a finding.
+
 ### GitHub Tracker Discipline
 
 - **Issue lifecycle** - every issue opened gets at least one `role:/kind:` label and a milestone; keep work-in-progress issues open; **CLOSE** an issue only after the change is committed AND the mandatory reviewer gate has passed, using `Closes #NN` or `Fixes #NN` in the commit message so GitHub auto-closes it.
