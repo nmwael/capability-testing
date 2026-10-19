@@ -15,8 +15,8 @@ createRoot(container).render(
   <StrictMode>
     <main>
       <h1>CAP v1.2 alerting</h1>
-      <AlertFlow />
       <AlertRuleDesigner />
+      <AlertFlow />
     </main>
   </StrictMode>,
 )

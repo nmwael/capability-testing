@@ -428,7 +428,19 @@ function AlertRuleDesigner() {
   return (
     <DirtyContext.Provider value={DirtyContextValue}>
       <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: 8, background: '#f3f4f6', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Sticky toolbar at top of viewport */}
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          padding: 8,
+          background: '#f3f4f6',
+          display: 'flex',
+          gap: 8,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          borderBottom: '1px solid #e5e7eb',
+        }}>
           <button onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button onClick={fitView}>Fit View</button>
@@ -449,7 +461,16 @@ function AlertRuleDesigner() {
           </label>
         </div>
 
-        <div style={{ padding: 8, background: '#f9fafb', display: 'flex', gap: 8 }}>
+        <div style={{
+          padding: 8,
+          background: '#f9fafb',
+          display: 'flex',
+          gap: 8,
+          position: 'sticky',
+          top: 48,
+          zIndex: 9,
+          borderBottom: '1px solid #e5e7eb',
+        }}>
           <button onClick={() => { addConditionNode(); }}>Add Condition</button>
           <button onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
