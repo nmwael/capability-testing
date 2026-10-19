@@ -35,7 +35,7 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
       display: 'flex',
       flexDirection: 'column',
       gap: 4,
-    }}>
+    }} data-testid="condition-node">
       <Handle type="target" position={Position.Left} style={{ background: '#3b82f6' }} />
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Condition</div>
       {CAP_VALUES.map(field => {
@@ -125,7 +125,7 @@ function ActionNodeComponent({ data }: { data: ActionNodeData }) {
       display: 'flex',
       flexDirection: 'column',
       gap: 4,
-    }}>
+    }} data-testid="action-node">
       <Handle type="target" position={Position.Left} style={{ background: '#0ea5e9' }} />
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Action</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
