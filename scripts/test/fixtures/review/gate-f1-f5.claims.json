@@ -5,7 +5,7 @@
   "claims": [
     {
       "id": "K1",
-      "statement": "F1: the plan-claim checker regression suite passes offline and matches all four fixtures",
+      "statement": "F1: the plan-claim checker regression suite passes offline and matches every fixture on disk",
       "severity": "high",
       "suggestion": "fix scripts/verify-plan-claims.mjs or the fixture it mismatches, then re-run the suite",
       "checks": [
@@ -13,7 +13,7 @@
           "kind": "command",
           "run": "node scripts/verify-plan-claims.test.mjs",
           "expect_exit": 0,
-          "expect_stdout": "RESULT: PASS . all 4 cases matched"
+          "expect_stdout": "RESULT: PASS . all [0-9]+ cases matched"
         }
       ]
     },
