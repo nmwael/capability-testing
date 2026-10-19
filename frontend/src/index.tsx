@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './theme.css'
 import { AlertRuleDesigner } from './features/alert-rule-designer/AlertRuleDesigner'
 import { AlertFlow } from './features/alert-flow/AlertFlow'
 

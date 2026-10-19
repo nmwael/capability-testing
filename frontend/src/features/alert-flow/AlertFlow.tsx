@@ -30,8 +30,8 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = 'http://localhost:
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data: RoutingDecision = await res.json()
         if (cancelled) return
-        const alertNode: Node = { id: 'alert', position: { x: 0, y: 0 }, data: { label: `${data.severity} / ${data.urgency}` }, style: { background: data.severity === 'Extreme' ? '#fca5a5' : data.severity === 'Minor' ? '#fde68a' : '#bfdbfe', padding: 8, borderRadius: 4 } }
-        const chNodes: Node[] = data.channels.map((ch, i) => ({ id: ch.label, position: { x: 200, y: i * 80 }, data: { label: ch.label }, style: { background: ch.reached ? '#86efac' : '#e5e7eb', padding: 8, borderRadius: 4 } }))
+        const alertNode: Node = { id: 'alert', position: { x: 0, y: 0 }, data: { label: `${data.severity} / ${data.urgency}` }, style: { background: data.severity === 'Extreme' ? 'var(--cap-badge-extreme)' : data.severity === 'Minor' ? 'var(--cap-badge-minor)' : 'var(--cap-badge-default)', padding: 8, borderRadius: 4 } }
+        const chNodes: Node[] = data.channels.map((ch, i) => ({ id: ch.label, position: { x: 200, y: i * 80 }, data: { label: ch.label }, style: { background: ch.reached ? 'var(--cap-badge-reached)' : 'var(--cap-badge-unreached)', padding: 8, borderRadius: 4 } }))
         const chEdges: Edge[] = data.channels.map(ch => ({ id: `e-alert-${ch.label}`, source: 'alert', target: ch.label }))
         setNodes([alertNode, ...chNodes])
         setEdges(chEdges)

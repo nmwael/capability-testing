@@ -27,8 +27,8 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
 
   return (
     <div style={{
-      background: '#bfdbfe',
-      border: '2px solid #3b82f6',
+      background: 'var(--cap-node-condition-bg)',
+      border: '2px solid var(--cap-accent)',
       borderRadius: 8,
       padding: 8,
       minWidth: 120,
@@ -36,7 +36,7 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
       flexDirection: 'column',
       gap: 4,
     }} data-testid="condition-node">
-      <Handle type="target" position={Position.Left} style={{ background: '#3b82f6' }} />
+      <Handle type="target" position={Position.Left} style={{ background: 'var(--cap-accent)' }} />
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Condition</div>
       {CAP_VALUES.map(field => {
         if (field === 'category') {
@@ -103,7 +103,7 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
           </div>
         )
       })}
-      <Handle type="source" position={Position.Right} style={{ background: '#3b82f6' }} />
+      <Handle type="source" position={Position.Right} style={{ background: 'var(--cap-accent)' }} />
     </div>
   )
 }
@@ -117,8 +117,8 @@ function ActionNodeComponent({ data }: { data: ActionNodeData }) {
 
   return (
     <div style={{
-      background: '#e0f2fe',
-      border: '2px solid #0ea5e9',
+      background: 'var(--cap-node-action-bg)',
+      border: '2px solid var(--cap-accent-action)',
       borderRadius: 8,
       padding: 8,
       minWidth: 120,
@@ -126,7 +126,7 @@ function ActionNodeComponent({ data }: { data: ActionNodeData }) {
       flexDirection: 'column',
       gap: 4,
     }} data-testid="action-node">
-      <Handle type="target" position={Position.Left} style={{ background: '#0ea5e9' }} />
+      <Handle type="target" position={Position.Left} style={{ background: 'var(--cap-accent-action)' }} />
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Action</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
         <span>Channel: </span>
@@ -461,12 +461,12 @@ function AlertRuleDesigner() {
           top: 0,
           zIndex: 10,
           padding: 8,
-          background: '#f3f4f6',
+          background: 'var(--cap-toolbar-bg)',
           display: 'flex',
           gap: 8,
           alignItems: 'center',
           flexWrap: 'wrap',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--cap-border)',
         }}>
           <button onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
@@ -490,13 +490,13 @@ function AlertRuleDesigner() {
 
         <div style={{
           padding: 8,
-          background: '#f9fafb',
+          background: 'var(--cap-bg)',
           display: 'flex',
           gap: 8,
           position: 'sticky',
           top: 48,
           zIndex: 9,
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--cap-border)',
         }}>
           <button onClick={() => { addConditionNode(); }}>Add Condition</button>
           <button onClick={() => { addActionNode(); }}>Add Action</button>
@@ -522,7 +522,7 @@ function AlertRuleDesigner() {
           >
             <Background gap={16} />
             <MiniMap
-              nodeColor={(node: Node) => (node.type === 'condition' ? '#bfdbfe' : '#e0f2fe')}
+              nodeColor={(node: Node) => (node.type === 'condition' ? 'var(--cap-node-condition-bg)' : 'var(--cap-node-action-bg)')}
             />
             <Controls />
           </ReactFlow>
@@ -533,13 +533,13 @@ function AlertRuleDesigner() {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              background: '#fff',
-              border: '2px dashed #9ca3af',
+              background: 'var(--cap-surface)',
+              border: '2px dashed var(--cap-text-muted)',
               borderRadius: 8,
               padding: 12,
               fontSize: 13,
               textAlign: 'center',
-              color: '#6b7280',
+              color: 'var(--cap-text-secondary)',
               zIndex: 1,
             }}>
               Start by adding nodes from the palette above
@@ -551,15 +551,15 @@ function AlertRuleDesigner() {
               position: 'absolute',
               top: 8,
               left: 8,
-              background: '#fff',
-              border: '1px solid #d1d5db',
+              background: 'var(--cap-surface)',
+              border: '1px solid var(--cap-input-border)',
               borderRadius: 6,
               padding: 6,
               display: 'flex',
               alignItems: 'center',
               gap: 4,
               fontSize: 11,
-              color: '#374151',
+              color: 'var(--cap-text)',
               zIndex: 1,
             }}>
               <span style={{ fontWeight: 'bold' }}>default</span>
@@ -573,8 +573,8 @@ function AlertRuleDesigner() {
               position: 'absolute',
               top: 8,
               right: 8,
-              background: '#fff',
-              border: '1px solid #d1d5db',
+              background: 'var(--cap-surface)',
+              border: '1px solid var(--cap-input-border)',
               borderRadius: 6,
               padding: 6,
               display: 'flex',
@@ -582,7 +582,7 @@ function AlertRuleDesigner() {
               gap: 4,
               zIndex: 2,
             }}>
-              <span style={{ fontSize: 11, color: '#6b7280' }}>Rename:</span>
+              <span style={{ fontSize: 11, color: 'var(--cap-text-secondary)' }}>Rename:</span>
               <input
                 type="text"
                 value={renameInput}
@@ -595,12 +595,12 @@ function AlertRuleDesigner() {
           )}
         </div>
 
-        <div style={{ padding: 8, background: '#e5e7eb', fontSize: 12, display: 'flex', gap: 8 }}>
-          {dirty && <span style={{ color: '#f59e0b' }}>Unsaved changes</span>}
+        <div style={{ padding: 8, background: 'var(--cap-border)', fontSize: 12, display: 'flex', gap: 8 }}>
+          {dirty && <span style={{ color: 'var(--cap-warn)' }}>Unsaved changes</span>}
 
           <div style={{ marginLeft: 16, display: 'flex', gap: 8 }}>
             <span>Channels:</span>
-            {CHANNELS.map(c => <span key={c} style={{ background: '#e0f2fe', padding: 2, borderRadius: 4 }}>{c}</span>)}
+            {CHANNELS.map(c => <span key={c} style={{ background: 'var(--cap-node-action-bg)', padding: 2, borderRadius: 4 }}>{c}</span>)}
           </div>
         </div>
       </div>

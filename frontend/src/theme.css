@@ -1,0 +1,76 @@
+/*
+ * CAP alerting design tokens (issue #83).
+ *
+ * Dark is the default: the bare `:root` block below holds the dark palette, and
+ * an explicit `prefers-color-scheme: light` preference overrides it. When the
+ * user agent reports no preference, the dark palette applies.
+ *
+ * Component inline styles reference these via var(--cap-*) so no light-only
+ * literal survives in the mounted components.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --cap-bg: #0b1220;
+  --cap-surface: #1f2937;
+  --cap-toolbar-bg: #111827;
+
+  --cap-border: #334155;
+  --cap-input-border: #475569;
+
+  --cap-text: #e5e7eb;
+  --cap-text-secondary: #cbd5e1;
+  --cap-text-muted: #94a3b8;
+
+  --cap-accent: #60a5fa;
+  --cap-accent-action: #38bdf8;
+
+  --cap-node-condition-bg: #1e3a8a;
+  --cap-node-action-bg: #0c4a6e;
+
+  --cap-warn: #fbbf24;
+
+  --cap-badge-extreme: #7f1d1d;
+  --cap-badge-minor: #78350f;
+  --cap-badge-default: #1e3a8a;
+  --cap-badge-reached: #14532d;
+  --cap-badge-unreached: #334155;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --cap-bg: #f9fafb;
+    --cap-surface: #ffffff;
+    --cap-toolbar-bg: #f3f4f6;
+
+    --cap-border: #e5e7eb;
+    --cap-input-border: #d1d5db;
+
+    --cap-text: #374151;
+    --cap-text-secondary: #6b7280;
+    --cap-text-muted: #9ca3af;
+
+    --cap-accent: #3b82f6;
+    --cap-accent-action: #0ea5e9;
+
+    --cap-node-condition-bg: #bfdbfe;
+    --cap-node-action-bg: #e0f2fe;
+
+    --cap-warn: #f59e0b;
+
+    --cap-badge-extreme: #fca5a5;
+    --cap-badge-minor: #fde68a;
+    --cap-badge-default: #bfdbfe;
+    --cap-badge-reached: #86efac;
+    --cap-badge-unreached: #e5e7eb;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--cap-bg);
+  color: var(--cap-text);
+}
