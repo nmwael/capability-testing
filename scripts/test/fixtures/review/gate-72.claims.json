@@ -1,0 +1,188 @@
+{
+  "task_id": "T72",
+  "role": "reviewer",
+  "title": "rule-designer-smoothness (#72)",
+  "claims": [
+    {
+      "id": "K1",
+      "statement": "#72: the designer test file carries the six original tests plus nine new pinning tests and all pass",
+      "severity": "high",
+      "suggestion": "restore the missing tests and make them pass",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "cd frontend && npx vitest run src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "expect_exit": 0,
+          "expect_stdout": "Tests\\s+[0-9]+ passed \\([0-9]+\\)"
+        }
+      ]
+    },
+    {
+      "id": "K2",
+      "statement": "#72: the nine @todo scenarios are pinned by named behaviour tests",
+      "severity": "high",
+      "suggestion": "add the missing test",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "exposes a connection handle"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "offers a minimap"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "snaps dragged nodes to the grid"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "Backspace deletes the selected node exactly once"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "typing in the graph-name field does not trigger the canvas shortcut"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "a disabled generate control says what is missing"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "the two node kinds are visually distinguishable"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "selecting a node is not an edit"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "draws only the nodes in view"
+        }
+      ]
+    },
+    {
+      "id": "K3",
+      "statement": "#72: the ReactFlow snap and visibility props are captured by the tests",
+      "severity": "high",
+      "suggestion": "capture the props handed to ReactFlow",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "snapToGrid"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "onlyRenderVisibleElements"
+        }
+      ]
+    },
+    {
+      "id": "K4",
+      "statement": "#72: onSelectionChange syncs the selected node into selectedNodeId and is defined after it",
+      "severity": "high",
+      "suggestion": "wire onSelectionChange to the selected node",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.tsx",
+          "pattern": "onSelectionChange={onSelectionChange}"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.tsx",
+          "pattern": "setSelectedNodeId\\(selected\\.length > 0"
+        }
+      ]
+    },
+    {
+      "id": "K5",
+      "statement": "#72: the nine feature scenarios no longer carry @todo",
+      "severity": "high",
+      "suggestion": "retire the @todo markers",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "! grep -q '@todo' features/frontend/alert-rule-designer.feature",
+          "expect_exit": 0
+        }
+      ]
+    },
+    {
+      "id": "K6",
+      "statement": "#72: TypeScript compiles",
+      "severity": "high",
+      "suggestion": "fix the type error",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "cd frontend && npx tsc --noEmit",
+          "expect_exit": 0
+        }
+      ]
+    },
+    {
+      "id": "K7",
+      "statement": "#72: the frontend builds",
+      "severity": "high",
+      "suggestion": "fix the build error",
+      "checks": [
+        {
+          "kind": "command",
+          "run": "cd frontend && npm run build",
+          "expect_exit": 0
+        }
+      ]
+    },
+    {
+      "id": "K8",
+      "statement": "#72: the six pre-existing tests are intact",
+      "severity": "high",
+      "suggestion": "restore the original tests",
+      "checks": [
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "renders the React Flow canvas"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "starts with nothing to undo or redo"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "enables undo after an edit"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "records each edit as its own undo step"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "disables Generate Rules once an unconnected action node is added"
+        },
+        {
+          "kind": "file_contains",
+          "path": "frontend/src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+          "pattern": "shows the default graph name and keeps it editable"
+        }
+      ]
+    }
+  ],
+  "advisories": []
+}
