@@ -53,7 +53,7 @@ gh issue create --repo <owner>/<name> \
 PLAN
 )" --label kind:plan --label hitl:awaiting-approval
 
-node scripts/verify-plan-claims.mjs --issue <the number gh printed>
+node scripts/verify-plan-claims.mjs --issue <n>
 ```
 
 - Publish the plan **byte-for-byte**: the issue body is the artifact, and `--issue` fact-checks exactly the

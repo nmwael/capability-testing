@@ -64,7 +64,7 @@ If `gh` drops a label it does not recognise, that is a silent loss of classifica
     - (g) **Success criteria.** A `- Check:` must be an executable command or an observable output, never a judgement ("build succeeds", "looks right", "PLAN_IS_CLEAR"). A judgement is `medium`.
     - (h) **Symbols and APIs.** Any API, prop or symbol the plan names, checked against the package's types/docs (`webfetch` if needed). Unsubstantiated and load-bearing is `high`; write `UNKNOWN` rather than assuming.
 
-**Night Shift mode.** When a Night Shift window is active, the HITL plan-approval step is waived: the plan is published as a **COMMENT** on the work-item issue (the issue being implemented) instead of a new issue, and a missing trailing `I am waiting for approval` line is a `WARN` (not blocking). All other fact-check rules remain unchanged.
+**Night Shift mode.** When a Night Shift window is active, the HITL plan-approval step is waived: the plan is published as a **COMMENT** on the work-item issue (the issue being implemented) instead of creating a new issue. In Day mode, the plan is published as a new GitHub issue with `kind:plan` and `hitl:awaiting-approval` labels. During Night Shift, a missing trailing `I am waiting for approval` line is a `WARN` (not blocking). All other fact-check rules remain unchanged.
 
 4. **Report.** Every finding cites its basis: `path:line`, an issue reference (`issue #<n>`, quoting the plan line from the issue body), a URL, or the exact checker line. No uncited claim. Findings that are only a restatement of the checker's own lines, with no item from step 3, are an INVALID fact-check and will be rejected. Do not report "0 blocking" unless you actually worked items (a)–(h) and say so in `summary`. Quote the actual bytes: every finding and every `OK` verdict carries the exact line you read, or the exact command you ran plus its real output — see `## Evidence (binding)`. Your `summary` MUST name the plan issue number you published and audited.
 
@@ -152,7 +152,7 @@ Vague plan (`INSUFFICIENT` — nothing substantive to check, so nothing to pass)
 
 ## Night Shift
 
-Night Shift waives HITL approval: the architect's plan does not need human approval during the window. The fact-checker posts the plan as a **COMMENT** on the work-item issue (the issue being implemented) instead of publishing a plan issue; missing `I am waiting for approval` is a WARN, not a finding.
+Night Shift waives HITL approval: the architect's plan does not need human approval during the window. In Day mode, the fact-checker publishes the plan as a new GitHub issue with `kind:plan` and `hitl:awaiting-approval` labels. During Night Shift, the fact-checker posts the plan as an **issue comment** on the work-item issue (the issue being implemented) instead of creating a new plan issue; missing `I am waiting for approval` is a WARN, not a finding.
 
 During a human-declared Night Shift the plan-approval step is waived.
 
