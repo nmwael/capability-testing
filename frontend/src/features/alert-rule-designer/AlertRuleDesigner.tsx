@@ -602,7 +602,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
           <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button onClick={fitView}>Fit View</button>
           <button onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
-          <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid()}>
+          <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid()} title={isGraphInvalid() ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
 
