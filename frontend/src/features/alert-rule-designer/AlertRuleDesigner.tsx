@@ -169,7 +169,7 @@ function graphFromWire(wire: WireGraph): { nodes: Node[]; edges: Edge[] } {
   }
 }
 
-function AlertRuleDesigner() {
+function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpoint?: string } = {}) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null)
@@ -181,11 +181,95 @@ function AlertRuleDesigner() {
   const [showEmptyHint, setShowEmptyHint] = useState(true)
   const [graphNameLocal, setGraphNameLocal] = useState('tornado-routing')
   const [isFirstRender, setIsFirstRender] = useState(true)
+  // One status line carries every endpoint state: while a request is in
+  // flight, after a successful save (the rule count comes back in the
+  // message), after a rejection, and when the backend cannot be reached.
+  const [sync, setSync] = useState<{ kind: 'idle' | 'loading' | 'ok' | 'error' | 'info'; message: string }>({ kind: 'idle', message: '' })
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     condition: ConditionNodeComponent,
     action: ActionNodeComponent,
   }), [])
+
+  // --- rule design endpoint ---------------------------------------------
+  // Save and Generate Rules both post the drawn graph to POST /rules and
+  // show the rule count the response reports back
+  // (features/frontend/alert-rule-designer.feature:48-53 and
+  // features/frontend/alert-rule-edit.feature:21-26). A rejection is shown
+  // verbatim and the canvas is left untouched so the edit stays on it; an
+  // unreachable backend keeps the graph editable.
+  async function postGraph(): Promise<void> {
+    setSync({ kind: 'loading', message: 'Saving graph...' })
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(graphToWire(graphNameLocal, nodes, edges)),
+      })
+      if (!res.ok) {
+        // POST /rules answers 400 with SaveResult(ruleCount, problems)
+        const body = await res.json().catch(() => ({ problems: [] as string[] }))
+        const detail = Array.isArray(body?.problems) && body.problems.length > 0
+          ? String(body.problems[0])
+          : `the endpoint rejected the graph (HTTP ${res.status})`
+        setSync({ kind: 'error', message: detail })
+        return
+      }
+      const ok = await res.json().catch(() => ({ ruleCount: 0 }))
+      const count = typeof ok?.ruleCount === 'number' ? ok.ruleCount : 0
+      setDirty(false)
+      setSync({ kind: 'ok', message: `Generated ${count} rules` })
+    } catch {
+      setSync({ kind: 'error', message: 'Could not reach the rule design endpoint. Your graph is still editable.' })
+    }
+  }
+
+  // Reopening the designer fetches the graph stored under the graph name
+  // (alert-rule-designer.feature:55-58). A slow endpoint must show a loading
+  // state rather than an empty canvas (154-158) and an unreachable one must
+  // leave the browser's own graph editable while reporting the failure
+  // (160-164), so neither path ever touches the canvas.
+  useEffect(() => {
+    let cancelled = false
+    async function load(): Promise<void> {
+      setSync({ kind: 'loading', message: 'Loading graph...' })
+      try {
+        const res = await fetch(`${endpoint}/${encodeURIComponent(graphNameLocal)}`)
+        if (cancelled) return
+        if (!res.ok) {
+          // GET /rules/{name} answers 404 with an empty body for a graph that
+          // was never stored - that is not a failure to reach the backend, so
+          // the default example stays up instead of raising an error.
+          if (res.status === 404) {
+            setSync({ kind: 'info', message: `No saved graph named ${graphNameLocal}. The default example is shown.` })
+          } else {
+            setSync({ kind: 'error', message: 'Could not reach the rule design endpoint. Your graph is still editable.' })
+          }
+          return
+        }
+        const wire = await res.json()
+        if (cancelled) return
+        if (!wire || !Array.isArray(wire.nodes) || !Array.isArray(wire.edges)) {
+          setSync({ kind: 'info', message: `No saved graph named ${graphNameLocal}. The default example is shown.` })
+          return
+        }
+        const restored = graphFromWire(wire)
+        setNodes(restored.nodes)
+        setEdges(restored.edges)
+        if (typeof wire.name === 'string' && wire.name.length > 0) setGraphNameLocal(wire.name)
+        setShowEmptyHint(false)
+        setSync({ kind: 'idle', message: '' })
+      } catch {
+        if (!cancelled) {
+          setSync({ kind: 'error', message: 'Could not reach the rule design endpoint. Your graph is still editable.' })
+        }
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+    // Runs once when the designer opens: graphNameLocal is the name in effect
+    // at that point, and renaming it must not re-fetch over the officer's work.
+  }, [endpoint])
 
   // Memoize graph validity check with O(V+E) cycle detection
   function isGraphInvalid(): boolean {
@@ -496,8 +580,8 @@ function AlertRuleDesigner() {
           <button onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button onClick={fitView}>Fit View</button>
-          <button onClick={() => { pushToHistory(); }}>Save</button>
-          <button onClick={() => { pushToHistory(); }} disabled={isGraphInvalid()}>
+          <button onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
+          <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid()}>
             Generate Rules
           </button>
 
@@ -552,7 +636,7 @@ function AlertRuleDesigner() {
             <Controls />
           </ReactFlow>
 
-          {showEmptyHint && nodes.length === 0 && (
+          {showEmptyHint && nodes.length === 0 && sync.kind !== 'loading' && (
             <div style={{
               position: 'absolute',
               top: '50%',
@@ -571,7 +655,24 @@ function AlertRuleDesigner() {
             </div>
           )}
 
-          {!showEmptyHint && nodes.length > 0 && (
+          {sync.kind === 'loading' && (
+            <div role="status" style={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              background: 'var(--cap-surface)',
+              border: '1px solid var(--cap-input-border)',
+              borderRadius: 6,
+              padding: 6,
+              fontSize: 11,
+              color: 'var(--cap-text-secondary)',
+              zIndex: 3,
+            }}>
+              {sync.message}
+            </div>
+          )}
+
+          {!showEmptyHint && nodes.length > 0 && sync.kind !== 'loading' && (
             <div style={{
               position: 'absolute',
               top: 8,
@@ -622,6 +723,12 @@ function AlertRuleDesigner() {
 
         <div style={{ padding: 8, background: 'var(--cap-border)', fontSize: 12, display: 'flex', gap: 8 }}>
           {dirty && <span style={{ color: 'var(--cap-warn)' }}>Unsaved changes</span>}
+
+          {sync.kind !== 'idle' && sync.kind !== 'loading' && (
+            <span role="status" style={{ color: sync.kind === 'error' ? 'var(--cap-warn)' : 'var(--cap-text-secondary)' }}>
+              {sync.message}
+            </span>
+          )}
 
           <div style={{ marginLeft: 16, display: 'flex', gap: 8 }}>
             <span>Channels:</span>

@@ -34,7 +34,8 @@ public class RuleDesignResource {
     @Inject
     AlertRoutingRulesProducer rulesProducer;
 
-    private final Map<String, RuleGraph> storedGraphs = new java.util.concurrent.ConcurrentHashMap<>();
+    @Inject
+    StoredGraphs storedGraphs;
 
     /**
      * POST /rules
