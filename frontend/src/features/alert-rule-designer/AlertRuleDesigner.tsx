@@ -5,13 +5,17 @@ import '@xyflow/react/dist/style.css'
 const CHANNELS = ['sirens', 'broadcast', 'social']
 // The CAP condition fields the designer offers, and each field's schema
 // enumeration. A condition node names ONE field and ONE value from it.
+import capCatalogue from './cap-fields.json'
+const catalogue = capCatalogue as Record<string, { type: string; values?: string[] }>
 const CAP_FIELDS = ['severity', 'urgency', 'certainty'] as const
 type CapField = (typeof CAP_FIELDS)[number]
-const CAP_FIELD_VALUES: Record<CapField, readonly string[]> = {
-  severity: ['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown'],
-  urgency: ['Immediate', 'Expected', 'Future', 'Past', 'Unknown'],
-  certainty: ['Observed', 'Likely', 'Possible', 'Unlikely', 'Unknown'],
+const CAP_FIELD_VALUES: Record<string, readonly string[]> = {
+  severity: catalogue.severity?.values ?? ['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown'],
+  urgency: catalogue.urgency?.values ?? ['Immediate', 'Expected', 'Future', 'Past', 'Unknown'],
+  certainty: catalogue.certainty?.values ?? ['Observed', 'Likely', 'Possible', 'Unlikely', 'Unknown'],
 }
+// Full catalogue available for extension (issue #68)
+export const CAP_CATALOGUE = catalogue
 
 interface ConditionNodeData {
   kind: 'condition'

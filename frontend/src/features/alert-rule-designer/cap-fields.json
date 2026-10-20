@@ -1,0 +1,231 @@
+{
+  "alert": {
+    "type": "dateTime"
+  },
+  "identifier": {
+    "type": "string"
+  },
+  "sender": {
+    "type": "string"
+  },
+  "sent": {
+    "type": "dateTime"
+  },
+  "status": {
+    "type": "string",
+    "values": [
+      "Actual",
+      "Exercise",
+      "System",
+      "Test",
+      "Draft"
+    ]
+  },
+  "msgType": {
+    "type": "string",
+    "values": [
+      "Alert",
+      "Update",
+      "Cancel",
+      "Ack",
+      "Error"
+    ]
+  },
+  "source": {
+    "type": "string"
+  },
+  "scope": {
+    "type": "string",
+    "values": [
+      "Public",
+      "Restricted",
+      "Private"
+    ]
+  },
+  "restriction": {
+    "type": "string"
+  },
+  "addresses": {
+    "type": "string"
+  },
+  "code": {
+    "type": "string"
+  },
+  "note": {
+    "type": "string"
+  },
+  "references": {
+    "type": "string"
+  },
+  "incidents": {
+    "type": "string"
+  },
+  "info": {
+    "type": "string",
+    "values": [
+      "Geo",
+      "Met",
+      "Safety",
+      "Security",
+      "Rescue",
+      "Fire",
+      "Health",
+      "Env",
+      "Transport",
+      "Infra",
+      "CBRNE",
+      "Other"
+    ]
+  },
+  "language": {
+    "type": "language"
+  },
+  "category": {
+    "type": "string",
+    "values": [
+      "Geo",
+      "Met",
+      "Safety",
+      "Security",
+      "Rescue",
+      "Fire",
+      "Health",
+      "Env",
+      "Transport",
+      "Infra",
+      "CBRNE",
+      "Other"
+    ]
+  },
+  "event": {
+    "type": "string"
+  },
+  "responseType": {
+    "type": "string",
+    "values": [
+      "Shelter",
+      "Evacuate",
+      "Prepare",
+      "Execute",
+      "Avoid",
+      "Monitor",
+      "Assess",
+      "AllClear",
+      "None"
+    ]
+  },
+  "urgency": {
+    "type": "string",
+    "values": [
+      "Immediate",
+      "Expected",
+      "Future",
+      "Past",
+      "Unknown"
+    ]
+  },
+  "severity": {
+    "type": "string",
+    "values": [
+      "Extreme",
+      "Severe",
+      "Moderate",
+      "Minor",
+      "Unknown"
+    ]
+  },
+  "certainty": {
+    "type": "string",
+    "values": [
+      "Observed",
+      "Likely",
+      "Possible",
+      "Unlikely",
+      "Unknown"
+    ]
+  },
+  "audience": {
+    "type": "string"
+  },
+  "eventCode": {
+    "type": "string"
+  },
+  "effective": {
+    "type": "dateTime"
+  },
+  "onset": {
+    "type": "dateTime"
+  },
+  "expires": {
+    "type": "dateTime"
+  },
+  "senderName": {
+    "type": "string"
+  },
+  "headline": {
+    "type": "string"
+  },
+  "description": {
+    "type": "string"
+  },
+  "instruction": {
+    "type": "string"
+  },
+  "web": {
+    "type": "anyURI"
+  },
+  "contact": {
+    "type": "string"
+  },
+  "parameter": {
+    "type": "string"
+  },
+  "resource": {
+    "type": "string"
+  },
+  "resourceDesc": {
+    "type": "string"
+  },
+  "mimeType": {
+    "type": "string"
+  },
+  "size": {
+    "type": "integer"
+  },
+  "uri": {
+    "type": "anyURI"
+  },
+  "derefUri": {
+    "type": "string"
+  },
+  "digest": {
+    "type": "string"
+  },
+  "area": {
+    "type": "string"
+  },
+  "areaDesc": {
+    "type": "string"
+  },
+  "polygon": {
+    "type": "string"
+  },
+  "circle": {
+    "type": "string"
+  },
+  "geocode": {
+    "type": "string"
+  },
+  "altitude": {
+    "type": "decimal"
+  },
+  "ceiling": {
+    "type": "decimal"
+  },
+  "valueName": {
+    "type": "string"
+  },
+  "value": {
+    "type": "string"
+  }
+}
