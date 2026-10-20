@@ -176,11 +176,18 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
       setDirty(true)
     }
   }, [baseOnEdgesChange])
+  // React Flow owns the canvas selection: clicking a node selects it there.
+  // The designer's own Backspace handler works on selectedNodeId, so that
+  // state mirrors the canvas selection - the last selected node wins and an
+  // empty selection clears it.
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null)
   const [history, setHistory] = useState<any[]>([])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [dirty, setDirty] = useState(true)
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const onSelectionChange = useCallback(({ nodes: selected }: { nodes: Node[] }) => {
+    setSelectedNodeId(selected.length > 0 ? selected[selected.length - 1].id : null)
+  }, [])
   const [renameInput, setRenameInput] = useState<string | null>(null)
   const [renameInputDraft, setRenameInputDraft] = useState<string>('')
   const [showEmptyHint, setShowEmptyHint] = useState(true)
@@ -648,6 +655,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
             onConnect={onConnect}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onSelectionChange={onSelectionChange}
             onNodeDragStop={onNodeDragStop}
             fitView
             deleteKeyCode={undefined}
