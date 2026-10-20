@@ -36,22 +36,14 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
   const context = useContext(DirtyContext)
 
   return (
-    <div style={{
-      background: 'var(--cap-node-condition-bg)',
-      border: '2px solid var(--cap-accent)',
-      borderRadius: 8,
-      padding: 8,
-      minWidth: 120,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4,
-    }} data-testid="condition-node">
-      <Handle type="target" position={Position.Left} style={{ background: 'var(--cap-accent)' }} />
-      <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Condition</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+    <div className="cap-node cap-node-condition" data-testid="condition-node">
+      <Handle type="target" position={Position.Left} className="cap-handle" />
+      <div className="cap-node-header">Condition</div>
+      <div className="cap-node-row">
         <span>field: </span>
         <select
           aria-label="condition field"
+          className="cap-node-select"
           value={data.field}
           onChange={(e) => {
             const nextField = e.target.value as CapField
@@ -59,23 +51,22 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
             data.value = CAP_FIELD_VALUES[nextField][0]
             context?.setDirty()
           }}
-          style={{ flex: 1, padding: 2 }}
         >
           {CAP_FIELDS.map(field => <option key={field} value={field}>{field}</option>)}
         </select>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+      <div className="cap-node-row">
         <span>value: </span>
         <select
           aria-label="condition value"
+          className="cap-node-select"
           value={data.value}
           onChange={(e) => { data.value = e.target.value; context?.setDirty(); }}
-          style={{ flex: 1, padding: 2 }}
         >
           {(CAP_FIELD_VALUES[data.field as CapField] ?? []).map(value => <option key={value} value={value}>{value}</option>)}
         </select>
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: 'var(--cap-accent)' }} />
+      <Handle type="source" position={Position.Right} className="cap-handle" />
     </div>
   )
 }
@@ -83,29 +74,21 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
 function ActionNodeComponent({ data }: { data: ActionNodeData }) {
   const context = useContext(DirtyContext)
 
-  const handleValueChange = () => {
+  const handleValueChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    data.channel = e.target.value as ActionNodeData['channel']
     context?.setDirty()
   }
 
   return (
-    <div style={{
-      background: 'var(--cap-node-action-bg)',
-      border: '2px solid var(--cap-accent-action)',
-      borderRadius: 8,
-      padding: 8,
-      minWidth: 120,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4,
-    }} data-testid="action-node">
-      <Handle type="target" position={Position.Left} style={{ background: 'var(--cap-accent-action)' }} />
-      <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Action</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+    <div className="cap-node cap-node-action" data-testid="action-node">
+      <Handle type="target" position={Position.Left} className="cap-handle-action" />
+      <div className="cap-node-header">Action</div>
+      <div className="cap-node-row">
         <span>Channel: </span>
         <select
           value={data.channel}
-          onChange={() => handleValueChange()}
-          style={{ flex: 1, padding: 2 }}
+          className="cap-node-select"
+          onChange={handleValueChange}
         >
           {CHANNELS.map(ch => (
             <option key={ch} value={ch}>{ch}</option>
@@ -180,7 +163,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
   const onNodesChange = useCallback((changes: any[]) => {
     baseOnNodesChange(changes)
     // Only mark dirty for structural changes, not just position updates during drag
-    const shouldDirty = changes.some((c: any) => c.type === 'add' || c.type === 'remove' || c.type === 'select')
+    const shouldDirty = changes.some((c: any) => c.type === 'add' || c.type === 'remove')
     if (shouldDirty) {
       setDirty(true)
     }
@@ -188,7 +171,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
 
   const onEdgesChange = useCallback((changes: any[]) => {
     baseOnEdgesChange(changes)
-    const shouldDirty = changes.some((c: any) => c.type === 'add' || c.type === 'remove' || c.type === 'select')
+    const shouldDirty = changes.some((c: any) => c.type === 'add' || c.type === 'remove')
     if (shouldDirty) {
       setDirty(true)
     }
@@ -199,8 +182,10 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
   const [dirty, setDirty] = useState(true)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [renameInput, setRenameInput] = useState<string | null>(null)
+  const [renameInputDraft, setRenameInputDraft] = useState<string>('')
   const [showEmptyHint, setShowEmptyHint] = useState(true)
   const [graphNameLocal, setGraphNameLocal] = useState('tornado-routing')
+  const [graphNameDraft, setGraphNameDraft] = useState('tornado-routing')
   const [isFirstRender, setIsFirstRender] = useState(true)
   // One status line carries every endpoint state: while a request is in
   // flight, after a successful save (the rule count comes back in the
@@ -277,7 +262,10 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
         const restored = graphFromWire(wire)
         setNodes(restored.nodes)
         setEdges(restored.edges)
-        if (typeof wire.name === 'string' && wire.name.length > 0) setGraphNameLocal(wire.name)
+        if (typeof wire.name === 'string' && wire.name.length > 0) {
+          setGraphNameLocal(wire.name)
+          setGraphNameDraft(wire.name)
+        }
         setShowEmptyHint(false)
         setSync({ kind: 'idle', message: '' })
       } catch {
@@ -292,8 +280,8 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
     // at that point, and renaming it must not re-fetch over the officer's work.
   }, [endpoint])
 
-  // Memoize graph validity check with O(V+E) cycle detection
-  function isGraphInvalid(): boolean {
+  // Memoized graph validity check with O(V+E) cycle detection
+  const isGraphInvalid = useMemo(() => {
     // Check for unnamed nodes
     const hasUnnamed = nodes.some(n => !n.id)
     if (hasUnnamed) return true
@@ -314,7 +302,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
     if (graphHasCycle(nodes, edges)) return true
 
     return false
-  }
+  }, [nodes, edges])
 
   // Build adjacency map once per call
   function hasCycle(edges: Edge[], conn: { source: string; target: string }): boolean {
@@ -401,6 +389,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
     pushToHistory(nextNodes, edges)
     setSelectedNodeId(nextId)
     setRenameInput(nextId)
+    setRenameInputDraft(nextId)
     setShowEmptyHint(nodes.length > 0)
   }
 
@@ -419,6 +408,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
     pushToHistory(nextNodes, edges)
     setSelectedNodeId(nextId)
     setRenameInput(nextId)
+    setRenameInputDraft(nextId)
     setShowEmptyHint(nodes.length > 0)
   }
 
@@ -475,11 +465,15 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
   function applyRename() {
     if (!selectedNodeId || !renameInput) return
 
-    const selectedNode = nodes.find(n => n.id === selectedNodeId)
-    if (!selectedNode) return
+    const newId = renameInputDraft.length > 0 ? renameInputDraft : renameInput
+    if (!newId || newId === selectedNodeId) {
+      setSelectedNodeId(null)
+      setRenameInput(null)
+      setRenameInputDraft('')
+      return
+    }
 
     const oldId = selectedNodeId
-    const newId = renameInput
 
     // Update the node's id
     setNodes(nodes => nodes.map(n =>
@@ -496,8 +490,21 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
 
     setSelectedNodeId(null)
     setRenameInput(null)
+    setRenameInputDraft('')
     setDirty(true)
   }
+
+  useEffect(() => {
+    if (renameInput !== null) {
+      setRenameInputDraft(renameInput)
+    } else {
+      setRenameInputDraft('')
+    }
+  }, [renameInput])
+
+  useEffect(() => {
+    setGraphNameDraft(graphNameLocal)
+  }, [graphNameLocal])
 
   // Create dirty context provider
   const DirtyContextValue = useMemo(() => ({ setDirty: () => setDirty(true) }), [setDirty])
@@ -588,50 +595,48 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
 
   return (
     <DirtyContext.Provider value={DirtyContextValue}>
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="cap-designer">
         {/* Sticky toolbar at top of viewport */}
-        <div style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          padding: 8,
-          background: 'var(--cap-toolbar-bg)',
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          borderBottom: '1px solid var(--cap-border)',
-        }}>
+        <div className="cap-toolbar">
           <button onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button onClick={fitView}>Fit View</button>
           <button onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
-          <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid()} title={isGraphInvalid() ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
+          <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
 
-          <label style={{ marginLeft: 8 }}>
+          <label className="cap-graph-name-label">
             <span>Graph name</span>
             <input
               type="text"
-              value={graphNameLocal}
-              onChange={(e) => { setGraphNameLocal(e.target.value); pushToHistory(); }}
+              className="cap-graph-name-input"
+              value={graphNameDraft}
+              onChange={(e) => { setGraphNameDraft(e.target.value); }}
+              onBlur={() => {
+                if (graphNameDraft !== graphNameLocal) {
+                  setGraphNameLocal(graphNameDraft)
+                  pushToHistory()
+                  setDirty(true)
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (graphNameDraft !== graphNameLocal) {
+                    setGraphNameLocal(graphNameDraft)
+                    pushToHistory()
+                    setDirty(true)
+                  }
+                  ;(e.target as HTMLInputElement).blur()
+                }
+              }}
               placeholder="tornado-routing"
-              style={{ marginLeft: 4 }}
             />
           </label>
         </div>
 
-        <div style={{
-          padding: 8,
-          background: 'var(--cap-bg)',
-          display: 'flex',
-          gap: 8,
-          position: 'sticky',
-          top: 48,
-          zIndex: 9,
-          borderBottom: '1px solid var(--cap-border)',
-        }}>
+        <div className="cap-palette">
           <button onClick={() => { addConditionNode(); }}>Add Condition</button>
           <button onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
@@ -662,57 +667,19 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
           </ReactFlow>
 
           {showEmptyHint && nodes.length === 0 && sync.kind !== 'loading' && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'var(--cap-surface)',
-              border: '2px dashed var(--cap-text-muted)',
-              borderRadius: 8,
-              padding: 12,
-              fontSize: 13,
-              textAlign: 'center',
-              color: 'var(--cap-text-secondary)',
-              zIndex: 1,
-            }}>
+            <div className="cap-empty-hint">
               Start by adding nodes from the palette above
             </div>
           )}
 
           {sync.kind === 'loading' && (
-            <div role="status" style={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              background: 'var(--cap-surface)',
-              border: '1px solid var(--cap-input-border)',
-              borderRadius: 6,
-              padding: 6,
-              fontSize: 11,
-              color: 'var(--cap-text-secondary)',
-              zIndex: 3,
-            }}>
+            <div role="status" className="cap-status-pill">
               {sync.message}
             </div>
           )}
 
           {!showEmptyHint && nodes.length > 0 && sync.kind !== 'loading' && (
-            <div style={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              background: 'var(--cap-surface)',
-              border: '1px solid var(--cap-input-border)',
-              borderRadius: 6,
-              padding: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 11,
-              color: 'var(--cap-text)',
-              zIndex: 1,
-            }}>
+            <div className="cap-graph-badge">
               <span style={{ fontWeight: 'bold' }}>default</span>
               <span>tornado</span>
               <span>routing</span>
@@ -720,44 +687,38 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
           )}
 
           {selectedNodeId && renameInput && (
-            <div style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: 'var(--cap-surface)',
-              border: '1px solid var(--cap-input-border)',
-              borderRadius: 6,
-              padding: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              zIndex: 2,
-            }}>
-              <span style={{ fontSize: 11, color: 'var(--cap-text-secondary)' }}>Rename:</span>
+            <div className="cap-rename-panel">
+              <span className="cap-rename-label">Rename:</span>
               <input
                 type="text"
-                value={renameInput}
-                onChange={(e) => setRenameInput(e.target.value)}
+                className="cap-rename-input"
+                value={renameInputDraft}
+                onChange={(e) => setRenameInputDraft(e.target.value)}
                 onBlur={applyRename}
-                style={{ flex: 1, fontSize: 11, padding: 2 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    applyRename()
+                  }
+                }}
                 autoFocus
               />
             </div>
           )}
         </div>
 
-        <div style={{ padding: 8, background: 'var(--cap-border)', fontSize: 12, display: 'flex', gap: 8 }}>
-          {dirty && <span style={{ color: 'var(--cap-warn)' }}>Unsaved changes</span>}
+        <div className="cap-footer">
+          {dirty && <span className="cap-footer-unsaved">Unsaved changes</span>}
 
           {sync.kind !== 'idle' && sync.kind !== 'loading' && (
-            <span role="status" style={{ color: sync.kind === 'error' ? 'var(--cap-warn)' : 'var(--cap-text-secondary)' }}>
+            <span role="status" className={sync.kind === 'error' ? 'cap-footer-status-error' : 'cap-footer-status'}>
               {sync.message}
             </span>
           )}
 
-          <div style={{ marginLeft: 16, display: 'flex', gap: 8 }}>
+          <div className="cap-footer-channels">
             <span>Channels:</span>
-            {CHANNELS.map(c => <span key={c} style={{ background: 'var(--cap-node-action-bg)', padding: 2, borderRadius: 4 }}>{c}</span>)}
+            {CHANNELS.map(c => <span key={c} className="cap-footer-channel-badge">{c}</span>)}
           </div>
         </div>
       </div>
