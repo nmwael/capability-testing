@@ -22,7 +22,6 @@ describe('frontend toolchain', () => {
     expect(screen.queryAllByText(/Condition/i)).toHaveLength(2)
     expect(screen.getByText(/severity/i)).toBeTruthy()
     expect(screen.getByText(/urgency/i)).toBeTruthy()
-    expect(screen.getByText(/category/i)).toBeTruthy()
     expect(screen.getByText(/certainty/i)).toBeTruthy()
   })
 })

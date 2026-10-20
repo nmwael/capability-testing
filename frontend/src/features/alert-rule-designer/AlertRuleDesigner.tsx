@@ -3,14 +3,20 @@ import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState,
 import '@xyflow/react/dist/style.css'
 
 const CHANNELS = ['sirens', 'broadcast', 'social']
-const CAP_VALUES = ['severity', 'urgency', 'category', 'certainty']
+// The CAP condition fields the designer offers, and each field's schema
+// enumeration. A condition node names ONE field and ONE value from it.
+const CAP_FIELDS = ['severity', 'urgency', 'certainty'] as const
+type CapField = (typeof CAP_FIELDS)[number]
+const CAP_FIELD_VALUES: Record<CapField, readonly string[]> = {
+  severity: ['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown'],
+  urgency: ['Immediate', 'Expected', 'Future', 'Past', 'Unknown'],
+  certainty: ['Observed', 'Likely', 'Possible', 'Unlikely', 'Unknown'],
+}
 
 interface ConditionNodeData {
   kind: 'condition'
-  severity: string
-  urgency: string
-  category: string
-  certainty: string
+  field: string
+  value: string
   [key: string]: string
 }
 
@@ -38,71 +44,33 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
     }} data-testid="condition-node">
       <Handle type="target" position={Position.Left} style={{ background: 'var(--cap-accent)' }} />
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Condition</div>
-      {CAP_VALUES.map(field => {
-        if (field === 'category') {
-          return (
-            <div key={field} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-              <span>{field}: </span>
-              <select
-                value={data[field]}
-                onChange={(e) => { data[field] = e.target.value; context?.setDirty(); }}
-                style={{ flex: 1, padding: 2 }}
-              >
-                <option value="Geo">Geo</option>
-                <option value="Met">Met</option>
-                <option value="Safety">Safety</option>
-                <option value="Security">Security</option>
-                <option value="Rescue">Rescue</option>
-                <option value="Fire">Fire</option>
-                <option value="Health">Health</option>
-                <option value="Env">Env</option>
-                <option value="Transport">Transport</option>
-                <option value="Infra">Infra</option>
-                <option value="CBRNE">CBRNE</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          )
-        }
-        return (
-          <div key={field} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-            <span>{field}: </span>
-            <select
-              value={data[field]}
-              onChange={(e) => { data[field] = e.target.value; context?.setDirty(); }}
-              style={{ flex: 1, padding: 2 }}
-            >
-              {field === 'severity' && (
-                <>
-                  <option value="Extreme">Extreme</option>
-                  <option value="Severe">Severe</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Minor">Minor</option>
-                  <option value="Unknown">Unknown</option>
-                </>
-              )}
-              {field === 'urgency' && (
-                <>
-                  <option value="Immediate">Immediate</option>
-                  <option value="Expected">Expected</option>
-                  <option value="Future">Future</option>
-                  <option value="Past">Past</option>
-                  <option value="Unknown">Unknown</option>
-                </>
-              )}
-              {field === 'certainty' && (
-                <>
-                  <option value="Observed">Observed</option>
-                  <option value="Likely">Likely</option>
-                  <option value="Possible">Possible</option>
-                  <option value="Unlikely">Unlikely</option>
-                  <option value="Unknown">Unknown</option>
-                </>
-              )}
-            </select>
-          </div>
-        )
-      })}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+        <span>field: </span>
+        <select
+          aria-label="condition field"
+          value={data.field}
+          onChange={(e) => {
+            const nextField = e.target.value as CapField
+            data.field = nextField
+            data.value = CAP_FIELD_VALUES[nextField][0]
+            context?.setDirty()
+          }}
+          style={{ flex: 1, padding: 2 }}
+        >
+          {CAP_FIELDS.map(field => <option key={field} value={field}>{field}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+        <span>value: </span>
+        <select
+          aria-label="condition value"
+          value={data.value}
+          onChange={(e) => { data.value = e.target.value; context?.setDirty(); }}
+          style={{ flex: 1, padding: 2 }}
+        >
+          {(CAP_FIELD_VALUES[data.field as CapField] ?? []).map(value => <option key={value} value={value}>{value}</option>)}
+        </select>
+      </div>
       <Handle type="source" position={Position.Right} style={{ background: 'var(--cap-accent)' }} />
     </div>
   )
@@ -142,6 +110,63 @@ function ActionNodeComponent({ data }: { data: ActionNodeData }) {
       </div>
     </div>
   )
+}
+
+// --- wire format -----------------------------------------------------------
+// The JSON the rule design endpoint accepts (see RuleGraph.java). A condition
+// node crosses as { id, kind, field, value }; an action node as
+// { id, kind, channel }; an edge as { from, to }. React Flow's own
+// source/target/position never leave the browser.
+
+interface WireNode {
+  id: string
+  kind: 'condition' | 'action'
+  field?: string
+  value?: string
+  channel?: string
+}
+
+interface WireEdge {
+  from: string
+  to: string
+}
+
+interface WireGraph {
+  name: string
+  nodes: WireNode[]
+  edges: WireEdge[]
+}
+
+function graphToWire(name: string, graphNodes: Node[], graphEdges: Edge[]): WireGraph {
+  return {
+    name,
+    nodes: graphNodes.map((node): WireNode => {
+      const data = (node.data ?? {}) as Record<string, string>
+      return node.data?.kind === 'action'
+        ? { id: node.id, kind: 'action', channel: data.channel }
+        : { id: node.id, kind: 'condition', field: data.field, value: data.value }
+    }),
+    edges: graphEdges.map((edge): WireEdge => ({ from: edge.source, to: edge.target })),
+  }
+}
+
+function graphFromWire(wire: WireGraph): { nodes: Node[]; edges: Edge[] } {
+  return {
+    nodes: wire.nodes.map((node, index) => ({
+      id: node.id,
+      type: node.kind,
+      position: { x: 100 + (index % 4) * 220, y: 100 + Math.floor(index / 4) * 140 },
+      data: node.kind === 'action'
+        ? { kind: 'action', channel: node.channel ?? CHANNELS[0] }
+        : { kind: 'condition', field: node.field ?? 'severity', value: node.value ?? 'Extreme' },
+    })),
+    edges: wire.edges.map((edge) => ({
+      id: `edge-${edge.from}-${edge.to}`,
+      source: edge.from,
+      target: edge.to,
+      animated: true,
+    })),
+  }
 }
 
 function AlertRuleDesigner() {
@@ -262,7 +287,7 @@ function AlertRuleDesigner() {
       id: nextId,
       position: { x: 100 + nodes.length * 50, y: nodes.length * 50 },
       type: 'condition',
-      data: { kind: 'condition', severity: 'Moderate', urgency: 'Expected', category: 'Geo', certainty: 'Likely' },
+      data: { kind: 'condition', field: 'severity', value: 'Moderate' },
       selected: true,
     }
     const nextNodes = [...nodes, newNode]
@@ -387,7 +412,7 @@ function AlertRuleDesigner() {
             id: conditionId,
             position: { x: 100, y: 100 },
             type: 'condition',
-            data: { kind: 'condition', severity: 'Extreme', urgency: 'Immediate', category: 'Geo', certainty: 'Observed' },
+            data: { kind: 'condition', field: 'severity', value: 'Extreme' },
           }
           setDirty(true)
           return [...prevNodes, newNode]
@@ -608,4 +633,4 @@ function AlertRuleDesigner() {
   )
 }
 
-export { AlertRuleDesigner }
+export { AlertRuleDesigner, graphToWire, graphFromWire }
