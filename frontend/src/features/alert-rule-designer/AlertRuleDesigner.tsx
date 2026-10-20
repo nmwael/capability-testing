@@ -567,7 +567,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
 
   return (
     <DirtyContext.Provider value={DirtyContextValue}>
-      <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* Sticky toolbar at top of viewport */}
         <div style={{
           position: 'sticky',
@@ -631,7 +631,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
             snapToGrid
             snapGrid={[10, 10]}
             nodeOrigin={[0.5, 0]}
-            ref={(r: HTMLDivElement | null) => { reactFlowInstance.current = r as ReactFlowInstance | null }}
+            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance }}
           >
             <Background gap={16} />
             <MiniMap
