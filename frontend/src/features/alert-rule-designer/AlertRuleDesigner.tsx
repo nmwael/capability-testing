@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react'
+import { createContext, useContext, useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState, addEdge, type Node, type Edge, type ReactFlowInstance, type NodeTypes, Handle, Position } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -174,8 +174,25 @@ function graphFromWire(wire: WireGraph): { nodes: Node[]; edges: Edge[] } {
 }
 
 function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpoint?: string } = {}) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  const [nodes, setNodes, baseOnNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, baseOnEdgesChange] = useEdgesState<Edge>([])
+
+  const onNodesChange = useCallback((changes: any[]) => {
+    baseOnNodesChange(changes)
+    // Only mark dirty for structural changes, not just position updates during drag
+    const shouldDirty = changes.some((c: any) => c.type === 'add' || c.type === 'remove' || c.type === 'select')
+    if (shouldDirty) {
+      setDirty(true)
+    }
+  }, [baseOnNodesChange])
+
+  const onEdgesChange = useCallback((changes: any[]) => {
+    baseOnEdgesChange(changes)
+    const shouldDirty = changes.some((c: any) => c.type === 'add' || c.type === 'remove' || c.type === 'select')
+    if (shouldDirty) {
+      setDirty(true)
+    }
+  }, [baseOnEdgesChange])
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null)
   const [history, setHistory] = useState<any[]>([])
   const [historyIndex, setHistoryIndex] = useState(0)
