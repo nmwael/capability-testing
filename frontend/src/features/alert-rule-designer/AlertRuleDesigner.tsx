@@ -465,7 +465,11 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
   }
 
   function fitView() {
-    reactFlowInstance.current?.fitView?.()
+    try {
+      reactFlowInstance.current?.fitView?.({ padding: 0.2 })
+    } catch {
+      // ignore
+    }
   }
 
   function applyRename() {
