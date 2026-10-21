@@ -14,48 +14,51 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArrayBuilder;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.json.JsonWriter;
-import jakarta.json.JsonWriterFactory;
-import jakarta.json.stream.JsonGenerator;
-
 public class CapFieldCatalogue {
   public static void main(String[] args) throws IOException {
     Path xsd = Paths.get("backend/common/src/main/resources/cap-v1.2.xsd");
     String content = Files.readString(xsd);
     List<String> ordered = extractOrderedElementNames(content);
-    JsonObject catalogue = buildCatalogue(content, ordered);
-    Path out = Paths.get("backend/common/src/main/resources/cap-fields.json");
-    writeJson(catalogue, out);
+    Map<String, CatalogueEntry> catalogue = buildCatalogue(content, ordered);
+    
+    // Write JSON
+    Path jsonOut = Paths.get("backend/common/src/main/resources/cap-fields.json");
+    writeJson(catalogue, jsonOut);
+    
+    // Write YAML
+    Path yamlOut = Paths.get("backend/common/src/main/resources/cap-fields.yml");
+    writeYaml(catalogue, yamlOut);
   }
 
   private static List<String> extractOrderedElementNames(String content) {
-    Pattern p = Pattern.compile("<element name\\s*=\\s*\"([^\"]+)\"");
+    Pattern p = Pattern.compile("<element(?:\\s+name\\s*=\\s*[\"']([^\"]+)\"'?|\\s*ref\\s*=\\s*[\"']cap:[^\"]+\"')");
     Matcher m = p.matcher(content);
     List<String> names = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     while (m.find()) {
       String name = m.group(1);
-      if (!seen.contains(name)) {
-        seen.add(name);
-        names.add(name);
+      if (name == null) {
+        name = m.group(2);
+        if (name != null) {
+          name = name.replace("cap:valueName", "valueName").replace("cap:value", "value");
+        }
+      }
+      if (name != null) {
+        if (!seen.contains(name)) { seen.add(name); names.add(name); }
       }
     }
     return names;
   }
 
-  private static JsonObject buildCatalogue(String content, List<String> names) {
-    JsonObjectBuilder root = Json.createObjectBuilder();
+  private static Map<String, CatalogueEntry> buildCatalogue(String content, List<String> names) {
+    Map<String, CatalogueEntry> catalogue = new HashMap<>();
     for (String name : names) {
-      root.add(name, fieldFor(name, content));
+      catalogue.put(name, fieldFor(name, content));
     }
-    return root.build();
+    return catalogue;
   }
 
-  private static JsonObject fieldFor(String name, String content) {
+  private static CatalogueEntry fieldFor(String name, String content) {
     String elementRe = "<element name\\s*=\\s*\"" + Pattern.quote(name) + "\"[^>]*>";
     Pattern pElemAttrs = Pattern.compile(elementRe, Pattern.DOTALL);
     Matcher mAttrs = pElemAttrs.matcher(content);
@@ -65,17 +68,17 @@ public class CapFieldCatalogue {
       if (mt.find()) {
         String t = mt.group(1);
         if ("xs:dateTime".equals(t)) {
-          return Json.createObjectBuilder().add("type", "dateTime").build();
+          return new CatalogueEntry("dateTime", null);
         } else if ("xs:anyURI".equals(t)) {
-          return Json.createObjectBuilder().add("type", "anyURI").build();
+          return new CatalogueEntry("anyURI", null);
         } else if ("xs:integer".equals(t)) {
-          return Json.createObjectBuilder().add("type", "integer").build();
+          return new CatalogueEntry("integer", null);
         } else if ("xs:decimal".equals(t)) {
-          return Json.createObjectBuilder().add("type", "decimal").build();
+          return new CatalogueEntry("decimal", null);
         } else if ("xs:language".equals(t)) {
-          return Json.createObjectBuilder().add("type", "language").build();
+          return new CatalogueEntry("language", null);
         } else {
-          return Json.createObjectBuilder().add("type", "string").build();
+          return new CatalogueEntry("string", null);
         }
       }
     }
@@ -90,26 +93,76 @@ public class CapFieldCatalogue {
         enums.add(me.group(1));
       }
       if (!enums.isEmpty()) {
-        JsonArrayBuilder vab = Json.createArrayBuilder();
-        for (String e : enums) {
-          vab.add(e);
-        }
-        return Json.createObjectBuilder().add("type", "string").add("values", vab.build()).build();
+        return new CatalogueEntry("string", enums);
       }
       if (block.contains("xs:dateTime")) {
-        return Json.createObjectBuilder().add("type", "dateTime").build();
+        return new CatalogueEntry("dateTime", null);
       }
     }
-    return Json.createObjectBuilder().add("type", "string").build();
+    return new CatalogueEntry("string", null);
   }
 
-  private static void writeJson(JsonObject obj, Path out) throws IOException {
-    Map<String, Object> cfg = new HashMap<>();
-    cfg.put(JsonGenerator.PRETTY_PRINTING, true);
-    JsonWriterFactory factory = Json.createWriterFactory(cfg);
-    try (FileWriter fw = new FileWriter(out.toFile());
-         JsonWriter jw = factory.createWriter(fw)) {
-      jw.writeObject(obj);
+  private static void writeJson(Map<String, CatalogueEntry> catalogue, Path out) throws IOException {
+    FileWriter fw = new FileWriter(out.toFile());
+    fw.write("{\n");
+    List<String> names = extractOrderedElementNames(Files.readString(Paths.get("backend/common/src/main/resources/cap-v1.2.xsd")));
+    fw.write("  \"names\": [");
+    for (int i = 0; i < names.size(); i++) {
+      if (i > 0) fw.write(", ");
+      fw.write("\"" + names.get(i) + "\"");
+    }
+    fw.write("],\n");
+    fw.write("  \"catalogue\": {\n");
+    for (int i = 0; i < names.size(); i++) {
+      String name = names.get(i);
+      CatalogueEntry entry = catalogue.get(name);
+      fw.write("    \"" + name + "\": {\n");
+      fw.write("      \"type\": \"" + entry.type + "\"");
+      if (entry.values != null && !entry.values.isEmpty()) {
+        fw.write(",\n      \"values\": [");
+        for (int j = 0; j < entry.values.size(); j++) {
+          if (j > 0) fw.write(", ");
+          fw.write("\"" + entry.values.get(j) + "\"");
+        }
+        fw.write("]\n");
+      }
+      fw.write("    }");
+      if (i < names.size() - 1) fw.write(",");
+      fw.write("\n");
+    }
+    fw.write("  }\n");
+    fw.write("}\n");
+    fw.close();
+  }
+
+  private static void writeYaml(Map<String, CatalogueEntry> catalogue, Path out) throws IOException {
+    FileWriter fw = new FileWriter(out.toFile());
+    fw.write("# CAP Field Catalogue - YAML format\n");
+    fw.write("\n");
+    List<String> names = extractOrderedElementNames(Files.readString(Paths.get("backend/common/src/main/resources/cap-v1.2.xsd")));
+    for (String name : names) {
+      CatalogueEntry entry = catalogue.get(name);
+      fw.write(name + ": " + entry.type);
+      if (entry.values != null && !entry.values.isEmpty()) {
+        fw.write(", [");
+        for (int i = 0; i < entry.values.size(); i++) {
+          if (i > 0) fw.write(", ");
+          fw.write(entry.values.get(i));
+        }
+        fw.write("]");
+      }
+      fw.write("\n");
+    }
+    fw.close();
+  }
+
+  private static class CatalogueEntry {
+    String type;
+    List<String> values;
+
+    CatalogueEntry(String type, List<String> values) {
+      this.type = type;
+      this.values = values;
     }
   }
 }

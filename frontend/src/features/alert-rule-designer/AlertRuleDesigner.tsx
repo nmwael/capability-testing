@@ -1,5 +1,7 @@
 import { createContext, useContext, useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState, addEdge, type Node, type Edge, type ReactFlowInstance, type NodeTypes, Handle, Position } from '@xyflow/react'
+import { CapFieldCatalogue } from './CapFieldCatalogue'
+import './CapFieldCatalogue.css'
 import '@xyflow/react/dist/style.css'
 
 const CHANNELS = ['sirens', 'broadcast', 'social']

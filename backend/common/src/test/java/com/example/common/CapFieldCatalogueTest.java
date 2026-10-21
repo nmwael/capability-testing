@@ -24,11 +24,15 @@ public class CapFieldCatalogueTest {
     Path committed = Path.of("src/main/resources/cap-fields.json");
     try (JsonReader r = Json.createReader(Files.newInputStream(committed))) {
       JsonObject committedObj = r.readObject();
+      // The JSON has "names" and "catalogue" as top-level keys
+      assertEquals(committedObj.keySet().size(), 2, "expected 2 top-level keys");
+      JsonObject catalogue = committedObj.getJsonObject("catalogue");
+      assertEquals(catalogue.keySet().size(), 50, "expected 50 catalogue entries");
       JsonObject derived = derive();
-      assertEquals(committedObj.keySet().size(), derived.keySet().size());
-      assertEquals(committedObj.keySet(), derived.keySet());
-      for (String key : committedObj.keySet()) {
-        JsonObject c = committedObj.getJsonObject(key);
+      assertEquals(derived.keySet().size(), 50, "derived should have 50 entries");
+      assertEquals(catalogue.keySet(), derived.keySet(), "catalogue keys mismatch");
+      for (String key : catalogue.keySet()) {
+        JsonObject c = catalogue.getJsonObject(key);
         JsonObject d = derived.getJsonObject(key);
         assertEquals(c.getString("type"), d.getString("type"), "type mismatch for " + key);
         if (c.containsKey("values")) {
@@ -45,6 +49,50 @@ public class CapFieldCatalogueTest {
     }
   }
 
+  @Test
+  public void yamlDriftGuard() throws IOException {
+    Path committedYaml = Path.of("src/main/resources/cap-fields.yml");
+    Path derivedYaml = Path.of("src/test/resources/cap-fields-expected.yml");
+    String committedContent = Files.readString(committedYaml);
+    String derivedContent = Files.readString(derivedYaml);
+    // Normalize line endings and trailing spaces
+    committedContent = committedContent.replaceAll("\\s+", " ");
+    derivedContent = derivedContent.replaceAll("\\s+", " ");
+    assertEquals(committedContent, derivedContent, "YAML drift detected");
+  }
+
+  @Test
+  public void catalogueYamlEntriesMatch() throws IOException {
+    Path committedYaml = Path.of("src/main/resources/cap-fields.yml");
+    Path derivedYaml = Path.of("src/test/resources/cap-fields-expected.yml");
+    String committedContent = Files.readString(committedYaml);
+    String derivedContent = Files.readString(derivedYaml);
+    
+    // Parse catalogue entries from committed YAML (format: "key: type, [values]")
+    Pattern entryPattern = Pattern.compile("(^[a-zA-Z_][a-zA-Z0-9_]*):\\s*(.+)", Pattern.MULTILINE);
+    Map<String, String> committedEntries = new LinkedHashMap<>();
+    Matcher m1 = entryPattern.matcher(committedContent);
+    while (m1.find()) {
+      committedEntries.put(m1.group(1).trim(), m1.group(2).trim());
+    }
+    
+    // Parse catalogue entries from derived YAML
+    Map<String, String> derivedEntries = new LinkedHashMap<>();
+    Matcher m2 = entryPattern.matcher(derivedContent);
+    while (m2.find()) {
+      derivedEntries.put(m2.group(1).trim(), m2.group(2).trim());
+    }
+    
+    assertEquals(committedEntries.keySet(), derivedEntries.keySet(), "catalogue keys mismatch");
+    assertEquals(committedEntries.size(), 50, "expected 50 catalogue entries");
+    
+    for (String key : committedEntries.keySet()) {
+      String cValue = committedEntries.get(key);
+      String dValue = derivedEntries.get(key);
+      assertEquals(cValue, dValue, "catalogue entry mismatch for " + key);
+    }
+  }
+
   private static JsonObject derive() throws IOException {
     String content = Files.readString(Path.of("src/main/resources/cap-v1.2.xsd"));
     List<String> ordered = extractOrdered(content);
@@ -56,13 +104,21 @@ public class CapFieldCatalogueTest {
   }
 
   private static List<String> extractOrdered(String content) {
-    Pattern p = Pattern.compile("<element name\\s*=\\s*\"([^\"]+)\"");
+    Pattern p = Pattern.compile("<element(?:\\s+name\\s*=\\s*[\"']([^\"]+)\"'?|\\s*ref\\s*=\\s*[\"']cap:[^\"]+\"')");
     Matcher m = p.matcher(content);
     List<String> names = new java.util.ArrayList<>();
     java.util.Set<String> seen = new java.util.HashSet<>();
     while (m.find()) {
       String name = m.group(1);
-      if (!seen.contains(name)) { seen.add(name); names.add(name); }
+      if (name == null) {
+        name = m.group(2);
+        if (name != null) {
+          name = name.replace("cap:valueName", "valueName").replace("cap:value", "value");
+        }
+      }
+      if (name != null) {
+        if (!seen.contains(name)) { seen.add(name); names.add(name); }
+      }
     }
     return names;
   }

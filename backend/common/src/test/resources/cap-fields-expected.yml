@@ -1,0 +1,52 @@
+# CAP Field Catalogue - YAML format
+
+alert: dateTime
+identifier: string
+sender: string
+sent: dateTime
+status: string, [Actual, Exercise, System, Test, Draft]
+msgType: string, [Alert, Update, Cancel, Ack, Error]
+source: string
+scope: string, [Public, Restricted, Private]
+restriction: string
+addresses: string
+code: string
+note: string
+references: string
+incidents: string
+info: string, [Geo, Met, Safety, Security, Rescue, Fire, Health, Env, Transport, Infra, CBRNE, Other]
+language: language
+category: string, [Geo, Met, Safety, Security, Rescue, Fire, Health, Env, Transport, Infra, CBRNE, Other]
+event: string
+responseType: string, [Shelter, Evacuate, Prepare, Execute, Avoid, Monitor, Assess, AllClear, None]
+urgency: string, [Immediate, Expected, Future, Past, Unknown]
+severity: string, [Extreme, Severe, Moderate, Minor, Unknown]
+certainty: string, [Observed, Likely, Possible, Unlikely, Unknown]
+audience: string
+eventCode: string
+effective: dateTime
+onset: dateTime
+expires: dateTime
+senderName: string
+headline: string
+description: string
+instruction: string
+web: anyURI
+contact: string
+parameter: string
+resource: string
+resourceDesc: string
+mimeType: string
+size: integer
+uri: anyURI
+derefUri: string
+digest: string
+area: string
+areaDesc: string
+polygon: string
+circle: string
+geocode: string
+altitude: decimal
+ceiling: decimal
+valueName: string
+value: string

@@ -1,0 +1,69 @@
+.cap-catalogue {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: var(--cap-bg-secondary);
+  border-radius: 4px;
+}
+
+.cap-catalogue-header {
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cap-catalogue-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cap-text-primary);
+}
+
+.cap-catalogue-header p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cap-text-secondary);
+}
+
+.cap-catalogue-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  background: var(--cap-bg-card);
+  border-radius: 4px;
+  border: 1px solid var(--cap-border);
+}
+
+.cap-catalogue-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.cap-catalogue-field span:first-child {
+  font-weight: 600;
+  color: var(--cap-text-primary);
+  min-width: 120px;
+}
+
+.cap-catalogue-type {
+  font-size: 0.75rem;
+  color: var(--cap-text-secondary);
+  font-style: italic;
+}
+
+.cap-catalogue-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.cap-catalogue-value {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  background: var(--cap-bg-secondary);
+  border-radius: 2px;
+  color: var(--cap-text-secondary);
+}
