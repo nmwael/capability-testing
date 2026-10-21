@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -46,8 +46,8 @@
   <build>
     <testResources>
       <!-- The capability .feature files live under features/<module>/ at the repo root
-           (capabilities.yml and the traceability gate reference these paths), so pull
-           them onto this module's test classpath instead of duplicating them. -->
+            (capabilities.yml and the traceability gate reference these paths), so pull
+            them onto this module's test classpath instead of duplicating them. -->
       <testResource>
         <directory>${project.basedir}/../../features/publication</directory>
         <includes>
@@ -58,5 +58,22 @@
         <directory>src/test/resources</directory>
       </testResource>
     </testResources>
+    <plugins>
+      <plugin>
+        <groupId>io.quarkus.platform</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
+        <configuration>
+          <capabilities>publication</capabilities>
+        </configuration>
+        <executions>
+          <execution>
+            <id>build</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

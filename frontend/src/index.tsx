@@ -12,12 +12,19 @@ if (container === null) {
   throw new Error('index.html must provide a #root element')
 }
 
+// Read query params from URL
+const urlParams = new URLSearchParams(window.location.search)
+const params = {
+  alert: urlParams.get('alertId') ?? undefined,
+  endpoint: urlParams.get('endpoint') ?? undefined,
+}
+
 createRoot(container).render(
   <StrictMode>
     <main>
       <h1>CAP v1.2 alerting</h1>
-      <AlertRuleDesigner />
-      <AlertFlow />
+      <AlertRuleDesigner endpoint={params.endpoint} />
+      <AlertFlow alertId={params.alert} endpoint={params.endpoint} />
     </main>
   </StrictMode>,
 )

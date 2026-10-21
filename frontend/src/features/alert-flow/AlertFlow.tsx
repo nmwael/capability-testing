@@ -14,17 +14,22 @@ interface AlertFlowProps {
   endpoint?: string
 }
 
-export function AlertFlow({ alertId = 'ALERT-001', endpoint = 'http://localhost:8080/alerts' }: AlertFlowProps) {
+export function AlertFlow({ alertId, endpoint }: AlertFlowProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [status, setStatus] = useState<'loading' | 'ok' | 'error' | 'notfound'>('loading')
   const [error, setError] = useState('')
+  const [networkError, setNetworkError] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
+        if (!alertId || !endpoint) {
+          if (!cancelled) { setStatus('error'); setError('Missing required parameters'); return }
+          return
+        }
         const res = await fetch(`${endpoint}/${alertId}/distribution`)
         if (res.status === 404) { if (!cancelled) setStatus('notfound'); return }
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -37,7 +42,16 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = 'http://localhost:
         setEdges(chEdges)
         setStatus('ok')
       } catch (e) {
-        if (!cancelled) { setError(String(e)); setStatus('error') }
+        if (!cancelled) {
+          if (e instanceof TypeError) {
+            setNetworkError(true)
+            setStatus('error')
+            setError('Network error: unable to fetch alert data')
+          } else {
+            setError(String(e))
+            setStatus('error')
+          }
+        }
       }
     }
     load()
@@ -53,11 +67,14 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = 'http://localhost:
       <h2>Alert flow</h2>
       {status === 'loading' && <div>Loading…</div>}
       {status === 'notfound' && <div>Alert {alertId} not found.</div>}
-      {status === 'error' && (
+      {networkError && (
+        <div>Network error: unable to connect to endpoint</div>
+      )}
+      {status === 'error' && !networkError && (
         <div>Failed to load: {error}</div>
       )}
-      {status === 'error' && (
-        <button onClick={() => { setStatus('loading'); setError('') }}>Retry</button>
+      {(status === 'error' || networkError) && (
+        <button onClick={() => { setStatus('loading'); setError(''); setNetworkError(false) }}>Retry</button>
       )}
       <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} fitView>
         <Background />
