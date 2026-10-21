@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, useEffect, useRef, useCallback } from 'react'
-import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState, addEdge, type Node, type Edge, type ReactFlowInstance, type NodeTypes, Handle, Position } from '@xyflow/react'
+import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState, addEdge, useReactFlow, type Node, type Edge, type ReactFlowInstance, type NodeTypes, Handle, Position } from '@xyflow/react'
 import { CapFieldCatalogue } from './CapFieldCatalogue'
 import './CapFieldCatalogue.css'
 import '@xyflow/react/dist/style.css'
@@ -34,7 +34,8 @@ interface ActionNodeData {
 // Create a React context for dirty state management
 const DirtyContext = createContext<{ setDirty: () => void } | null>(null)
 
-function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
+function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeData }) {
+  const { setNodes } = useReactFlow()
   const context = useContext(DirtyContext)
 
   return (
@@ -49,8 +50,8 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
           value={data.field}
           onChange={(e) => {
             const nextField = e.target.value as CapField
-            data.field = nextField
-            data.value = CAP_FIELD_VALUES[nextField][0]
+            setNodes((nds) => nds.map((n) =>
+              n.id === id ? { ...n, data: { ...n.data, field: nextField, value: CAP_FIELD_VALUES[nextField][0] } } : n))
             context?.setDirty()
           }}
         >
@@ -63,7 +64,12 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
           aria-label="condition value"
           className="cap-node-select"
           value={data.value}
-          onChange={(e) => { data.value = e.target.value; context?.setDirty(); }}
+          onChange={(e) => {
+            const nextValue = e.target.value
+            setNodes((nds) => nds.map((n) =>
+              n.id === id ? { ...n, data: { ...n.data, value: nextValue } } : n))
+            context?.setDirty()
+          }}
         >
           {(CAP_FIELD_VALUES[data.field as CapField] ?? []).map(value => <option key={value} value={value}>{value}</option>)}
         </select>
@@ -73,11 +79,14 @@ function ConditionNodeComponent({ data }: { data: ConditionNodeData }) {
   )
 }
 
-function ActionNodeComponent({ data }: { data: ActionNodeData }) {
+function ActionNodeComponent({ id, data }: { id: string; data: ActionNodeData }) {
+  const { setNodes } = useReactFlow()
   const context = useContext(DirtyContext)
 
   const handleValueChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    data.channel = e.target.value as ActionNodeData['channel']
+    const nextChannel = e.target.value as ActionNodeData['channel']
+    setNodes((nds) => nds.map((n) =>
+      n.id === id ? { ...n, data: { ...n.data, channel: nextChannel } } : n))
     context?.setDirty()
   }
 
