@@ -1,16 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-  "small_model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-  "provider": {
+  "providers": {
     "local-qwen3.5-9b-mtp": {
-      "npm": "@ai-sdk/openai-compatible",
+      "package": "aisdk:@ai-sdk/openai-compatible",
       "name": "Bifrost (local qwen3.5-9b-mtp)",
-      "options": {
-        "baseURL": "http://127.0.0.1:8082/v1",
-        "headers": {
-          "x-bf-passthrough-extra-params": "true"
-        }
+      "settings": {
+        "baseURL": "http://127.0.0.1:8082/v1"
+      },
+      "headers": {
+        "x-bf-passthrough-extra-params": "true"
       },
       "models": {
         "qwen3.5-9b-mtp": {
@@ -37,58 +36,101 @@
       }
     },
     "opencode": {
-      "options": {
+      "settings": {
         "setCacheKey": false
       }
     }
   },
-  "agent": {
+  "agents": {
     "architect": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-      "temperature": 0.1,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
       "steps": 500
     },
     "researcher": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-      "temperature": 0.1,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
       "steps": 20
     },
     "reviewer": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-      "temperature": 0.1,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
       "steps": 15
     },
     "build": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-      "temperature": 0.2,
+      "request": {
+        "body": {
+          "temperature": 0.2
+        }
+      },
       "steps": 40
     },
     "ui": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-      "temperature": 0.2,
+      "request": {
+        "body": {
+          "temperature": 0.2
+        }
+      },
       "steps": 20
     },
     "artist": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
-      "temperature": 0.3,
+      "request": {
+        "body": {
+          "temperature": 0.3
+        }
+      },
       "steps": 15
     },
     "coder": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s0",
-      "temperature": 0.1,
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
       "steps": 25
     }
   },
-  "enabled_providers": [
-    "local-qwen3.5-9b-mtp",
-    "opencode"
+  "permissions": [
+    {
+      "action": "*",
+      "resource": "*",
+      "effect": "allow"
+    }
   ],
-  "subagent_depth": 2,
-  "permission": "allow",
-  "server": {
-    "port": 4096
-  },
-  "limit": {
-    "context": 131072
+  "policies": [
+    {
+      "action": "provider.use",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "provider.use",
+      "resource": "local-qwen3.5-9b-mtp",
+      "effect": "allow"
+    },
+    {
+      "action": "provider.use",
+      "resource": "opencode",
+      "effect": "allow"
+    }
+  ],
+  "experimental": {
+    "subagent_depth": 3
   }
 }

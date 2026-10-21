@@ -31,7 +31,7 @@
     },
     "ghcr.io/devcontainers-extra/features/npm-package:1.0.4": {
       "package": "@opencode/cli",
-      "version": "2.0.26"
+      "version": "2.1.2"
     },
     "ghcr.io/devcontainers-extra/features/devcontainers-cli:1": {}
   },
@@ -92,7 +92,8 @@
     "SKIP_LLAMA_START": "${localEnv:SKIP_LLAMA_START}",
     "BIFROST_SETUP_TOKEN": "${localEnv:BIFROST_SETUP_TOKEN}",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
-    "OPENCODE_PASSWORD": "${localEnv:OPENCODE_SERVER_PASSWORD}"
+    "OPENCODE_PASSWORD": "${localEnv:OPENCODE_SERVER_PASSWORD}",
+    "SUBAGENT_DEPTH": "3"
   },
   "postCreateCommand": "bash scripts/post-create.sh",
   "postStartCommand": "bash scripts/auto-startup.sh"

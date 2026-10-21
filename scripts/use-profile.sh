@@ -90,7 +90,7 @@ else
             models_dir: $md,
             bifrost_port: 8082,
             opencode_port: 4096,
-            subagent_depth: 2,
+            subagent_depth: 3,
             cloud: false,
             cloud_provider: "opencode",
             models: $m,
@@ -107,9 +107,14 @@ else
     echo "[use-profile] WARNING: write-bifrost-config.sh not found — bifrost routing stale"
 fi
 
-OA="/usr/local/share/opencode-agents"
-if [ -x "$OA/generate-opencode.sh" ]; then
-    sh "$OA/generate-opencode.sh" "$STACK" "$ROOT/opencode.json"
+# Prefer the repo-local generator: it emits the OpenCode V2 shape. The
+# feature copy under /usr/local/share/opencode-agents/ is restored on every
+# container rebuild and still emits the V1 shape that OpenCode 2 drops.
+if [ -x "$ROOT/scripts/generate-opencode.sh" ]; then
+    sh "$ROOT/scripts/generate-opencode.sh" "$STACK" "$ROOT/opencode.json"
+elif [ -x "/usr/local/share/opencode-agents/generate-opencode.sh" ]; then
+    echo "[use-profile] WARNING: repo-local generate-opencode.sh missing — falling back to the feature copy (V1 shape)"
+    sh "/usr/local/share/opencode-agents/generate-opencode.sh" "$STACK" "$ROOT/opencode.json"
 else
     echo "[use-profile] WARNING: generate-opencode.sh not found — opencode.json stale"
 fi
