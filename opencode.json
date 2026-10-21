@@ -46,7 +46,7 @@
     "architect": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
       "temperature": 0.1,
-      "steps": 30
+      "steps": 500
     },
     "researcher": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
