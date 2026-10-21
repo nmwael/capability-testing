@@ -14,7 +14,7 @@ interface AlertFlowProps {
   endpoint?: string
 }
 
-export function AlertFlow({ alertId = 'ALERT-001', endpoint = 'http://localhost:8080/alerts' }: AlertFlowProps) {
+export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: AlertFlowProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [status, setStatus] = useState<'loading' | 'ok' | 'error' | 'notfound'>('loading')

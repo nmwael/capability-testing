@@ -6,6 +6,12 @@ import { defineConfig } from 'vitest/config'
 // skeleton only has to prove the toolchain runs.
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/rules': 'http://localhost:8080',
+      '/alerts': 'http://localhost:8080',
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],

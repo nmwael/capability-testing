@@ -158,7 +158,7 @@ function graphFromWire(wire: WireGraph): { nodes: Node[]; edges: Edge[] } {
   }
 }
 
-function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpoint?: string } = {}) {
+function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) {
   const [nodes, setNodes, baseOnNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, baseOnEdgesChange] = useEdgesState<Edge>([])
 
