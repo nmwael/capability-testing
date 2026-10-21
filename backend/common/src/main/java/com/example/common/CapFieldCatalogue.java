@@ -64,7 +64,7 @@ public class CapFieldCatalogue {
     Matcher mAttrs = pElemAttrs.matcher(content);
     if (mAttrs.find()) {
       String attrs = mAttrs.group(0);
-      Matcher mt = Pattern.compile("type\\s*=\\s*\"([^\\\"]+)\"").matcher(attrs);
+      Matcher mt = Pattern.compile("type\\s*=\\s*\"([^\"]+)\"").matcher(attrs);
       if (mt.find()) {
         String t = mt.group(1);
         if ("xs:dateTime".equals(t)) {
@@ -156,9 +156,26 @@ public class CapFieldCatalogue {
     fw.close();
   }
 
-  private static class CatalogueEntry {
-    String type;
-    List<String> values;
+  /**
+   * Returns the catalogue map containing all field entries.
+   */
+  public Map<String, CatalogueEntry> getCatalogue() {
+    // Build catalogue on demand
+    try {
+      // Use resources from the classpath - XSD is in common module resources
+      // Path is relative to the workspace root (backend directory)
+      Path xsd = Paths.get("backend/common/src/main/resources/cap-v1.2.xsd");
+      String content = Files.readString(xsd);
+      List<String> ordered = extractOrderedElementNames(content);
+      return buildCatalogue(content, ordered);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to read CAP XSD: " + e.getMessage(), e);
+    }
+  }
+
+  public static class CatalogueEntry {
+    public String type;
+    public List<String> values;
 
     CatalogueEntry(String type, List<String> values) {
       this.type = type;
