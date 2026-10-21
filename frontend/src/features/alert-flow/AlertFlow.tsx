@@ -14,7 +14,7 @@ interface AlertFlowProps {
   endpoint?: string
 }
 
-export function AlertFlow({ alertId, endpoint }: AlertFlowProps) {
+export function AlertFlow({ alertId = 'ALERT-001', endpoint = 'http://localhost:8080/alerts' }: AlertFlowProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [status, setStatus] = useState<'loading' | 'ok' | 'error' | 'notfound'>('loading')
@@ -26,7 +26,7 @@ export function AlertFlow({ alertId, endpoint }: AlertFlowProps) {
     let cancelled = false
     async function load() {
       try {
-        if (!alertId || !endpoint) {
+        if (alertId === undefined || endpoint === undefined) {
           if (!cancelled) { setStatus('error'); setError('Missing required parameters'); return }
           return
         }
