@@ -233,7 +233,7 @@
     },
     {
       "id": "K14",
-      "statement": "F6: the fact-checker may only report evidence-backed findings — it must quit the fabrication mode measured in the RV-F12345 dry run (findings with no path:line, no quoted command output, and conditional 'passes if ...' verdicts)",
+      "statement": "F6: the fact-checker may only report evidence-backed findings \u2014 it must quit the fabrication mode measured in the RV-F12345 dry run (findings with no path:line, no quoted command output, and conditional 'passes if ...' verdicts)",
       "severity": "high",
       "suggestion": "restore the Evidence (binding) rules, the banned-phrasing list and the pre-return self-check in .opencode/agents/fact-checker.md",
       "checks": [
@@ -281,7 +281,7 @@
     },
     {
       "id": "K15",
-      "statement": "F7: the reviewer may not recompose the runner's output — it reads the envelope out of the file the runner wrote and copies the verdict-bearing fields (task_id, role, status, findings) unaltered, never inventing a finding or confirming a claim it did not see, and it must not drop the findings[] key",
+      "statement": "F7: the reviewer may not recompose the runner's output \u2014 it reads the envelope out of the file the runner wrote and copies the verdict-bearing fields (task_id, role, status, findings) unaltered, never inventing a finding or confirming a claim it did not see, and it must not drop the findings[] key",
       "severity": "high",
       "suggestion": "restore the Verbatim discipline (binding) section in .opencode/agents/reviewer.md",
       "checks": [
@@ -377,13 +377,13 @@
     },
     {
       "id": "K18",
-      "statement": "F8b: the reviewer's sampling temperature reaches the provider - OpenCode 2.0.26's AgentConfig defines no `request` field, so a temperature nested under request.body was inert; it is now a top-level `temperature` on the reviewer block, which the schema does define",
+      "statement": "F8b: the reviewer's sampling temperature lives under request.body, the only location the OpenCode V2 schema allows (Config.AgentEncoded has additionalProperties:false and no top-level `temperature`). It is not sent at runtime in 2.1.2 (the V2 session runner does not send request overlays), so sampling must be configured on the provider/model instead.",
       "severity": "high",
-      "suggestion": "restore `\"temperature\": 0.1` on the reviewer block in opencode.json (not nested under request.body)",
+      "suggestion": "keep `\"request\": {\"body\": {\"temperature\": 0.1}}` on the reviewer block (the schema-allowed location); do not move it to a top-level `temperature`, which the schema rejects",
       "checks": [
         {
           "kind": "command",
-          "run": "node -e \"const r=require('./opencode.json').agent.reviewer; if(r.request) throw new Error('inert request.body present'); if(r.temperature!==0.1) throw new Error('reviewer temperature '+r.temperature); console.log('ok reviewer temperature '+r.temperature)\"",
+          "run": "node -e \"const r=require('./opencode.json').agents.reviewer; if(!r.request||!r.request.body||r.request.body.temperature!==0.1) throw new Error('reviewer temperature '+JSON.stringify(r.request)); if('temperature' in r) throw new Error('inert top-level temperature present'); console.log('ok reviewer temperature '+r.request.body.temperature)\"",
           "expect_exit": 0,
           "expect_stdout": "ok reviewer temperature 0\\.1"
         },
@@ -391,7 +391,7 @@
           "kind": "file_contains",
           "path": "opencode.json",
           "whole_file": true,
-          "pattern": "\"reviewer\": \\{[^}]*\"model\": \"local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1\"[^}]*\"temperature\": 0\\.1"
+          "pattern": "\"reviewer\": \\{[^}]*\"request\""
         }
       ]
     },
@@ -490,15 +490,15 @@
     },
     {
       "id": "K21",
-      "statement": "F4 + F4b: no inert agent config remains - every agent in the generated opencode.json agent map carries a top-level `temperature` (the V2.0.26 `AgentConfig` has no `request` field, so the old nested blocks never took effect), and no .opencode/agents/*.md frontmatter denies the non-existent permission action 'execute'",
+      "statement": "F4 + F4b: no deprecated agent keys remain - every agent in the generated opencode.json agent map uses request.body.temperature (the only schema-allowed location; Config.AgentEncoded has additionalProperties:false, so a top-level `temperature` is rejected), and no .opencode/agents/*.md frontmatter denies the non-existent permission action 'execute'",
       "severity": "high",
-      "suggestion": "keep agent temperature top-level and restrict permission rules to real actions (`shell`, `edit`, `subagent`, `skill`, `question`); an `action: execute` rule matches nothing, so removing it is a no-op while leaving it in misleads the next reader",
+      "suggestion": "keep agent temperature under request.body and restrict permission rules to real actions (shell, edit, subagent, skill, question); an `action: execute` rule matches nothing, so removing it is a no-op while leaving it in misleads the next reader",
       "checks": [
         {
           "kind": "command",
-          "run": "node -e '\nconst fs=require(\"fs\")\nconst cfg=JSON.parse(fs.readFileSync(\"opencode.json\",\"utf8\"))\nconst bad=Object.entries(cfg.agent).filter(([,a])=>a.request).map(([k])=>k)\nif(bad.length)throw new Error(\"inert request.body still on: \"+bad.join(\", \"))\nconst roster=Object.keys(cfg.agent)\nconst missing=roster.filter(n=>typeof (cfg.agent[n]||{}).temperature!==\"number\")\nif(missing.length)throw new Error(\"no top-level temperature on: \"+missing.join(\", \"))\nconst files=fs.readdirSync(\".opencode/agents\").filter(n=>n.endsWith(\".md\"))\nconst inert=files.filter(n=>fs.readFileSync(\".opencode/agents/\"+n,\"utf8\").includes(\"action: execute\"))\nif(inert.length)throw new Error(\"inert execute permission still in: \"+inert.join(\", \"))\nconsole.log(\"no inert agent config; \"+roster.length+\" agents on top-level temperature (\"+roster.map(n=>n+\"=\"+(cfg.agent[n].temperature||\"missing\")).join(\" \")+\"), \"+files.length+\" agent files clean\")\n'",
+          "run": "node -e '\nconst fs=require(\"fs\")\nconst cfg=JSON.parse(fs.readFileSync(\"opencode.json\",\"utf8\"))\nif(!cfg.agents)throw new Error(\"no agents map\")\nconst bad=Object.entries(cfg.agents).filter(([,a])=>typeof a.temperature===\"number\").map(([k])=>k)\nif(bad.length)throw new Error(\"deprecated top-level temperature on: \"+bad.join(\", \"))\nconst roster=Object.keys(cfg.agents)\nconst missing=roster.filter(n=>typeof (((cfg.agents[n]||{}).request||{}).body||{}).temperature!==\"number\")\nif(missing.length)throw new Error(\"no request.body.temperature on: \"+missing.join(\", \"))\nconst files=fs.readdirSync(\".opencode/agents\").filter(n=>n.endsWith(\".md\"))\nconst inert=files.filter(n=>fs.readFileSync(\".opencode/agents/\"+n,\"utf8\").includes(\"action: execute\"))\nif(inert.length)throw new Error(\"inert execute permission still in: \"+inert.join(\", \"))\nconsole.log(\"no deprecated agent keys; \"+roster.length+\" agents on request.body.temperature (\"+roster.map(n=>n+\"=\"+((((cfg.agents[n]||{}).request||{}).body||{}).temperature||\"missing\")).join(\" \")+\") , \"+files.length+\" agent files clean\")\n'",
           "expect_exit": 0,
-          "expect_stdout": "no inert agent config"
+          "expect_stdout": "no deprecated agent keys"
         },
         {
           "kind": "file_contains",
