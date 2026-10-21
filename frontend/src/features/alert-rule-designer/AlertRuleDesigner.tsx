@@ -194,7 +194,9 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
   const [renameInputDraft, setRenameInputDraft] = useState<string>('')
   const [showEmptyHint, setShowEmptyHint] = useState(true)
   const [graphNameLocal, setGraphNameLocal] = useState('tornado-routing')
+  const [catalogueOpen, setCatalogueOpen] = useState(false)
   const [graphNameDraft, setGraphNameDraft] = useState('tornado-routing')
+  const [catalogue, setCatalogue] = useState<Record<string, { type: string; values?: string[] }>>(capCatalogue as Record<string, { type: string; values?: string[] }>)
   const [isFirstRender, setIsFirstRender] = useState(true)
   // One status line carries every endpoint state: while a request is in
   // flight, after a successful save (the rule count comes back in the
@@ -607,6 +609,7 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
       <div className="cap-designer">
         {/* Sticky toolbar at top of viewport */}
         <div className="cap-toolbar">
+          <button onClick={() => setCatalogueOpen(!catalogueOpen)} disabled={catalogueOpen}>Toggle Catalogue</button>
           <button onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button onClick={fitView}>Fit View</button>
@@ -614,6 +617,12 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
           <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
+
+          {catalogueOpen && (
+            <div className="cap-catalogue-panel">
+              <CapFieldCatalogue catalogue={catalogue} />
+            </div>
+          )}
 
           <label className="cap-graph-name-label">
             <span>Graph name</span>

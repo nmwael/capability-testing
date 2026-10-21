@@ -1,0 +1,13 @@
+.cap-catalogue-panel {
+  position: absolute;
+  top: 70px;
+  right: 0;
+  width: 350px;
+  max-height: 50vh;
+  overflow: auto;
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border);
+  border-radius: 4px;
+  padding: 8px;
+  z-index: 10;
+}
