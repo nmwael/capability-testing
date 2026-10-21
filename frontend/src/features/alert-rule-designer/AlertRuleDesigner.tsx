@@ -196,7 +196,6 @@ function AlertRuleDesigner({ endpoint = 'http://localhost:8080/rules' }: { endpo
   const [graphNameLocal, setGraphNameLocal] = useState('tornado-routing')
   const [catalogueOpen, setCatalogueOpen] = useState(false)
   const [graphNameDraft, setGraphNameDraft] = useState('tornado-routing')
-  const [catalogue, setCatalogue] = useState<Record<string, { type: string; values?: string[] }>>(capCatalogue as Record<string, { type: string; values?: string[] }>)
   const [isFirstRender, setIsFirstRender] = useState(true)
   // One status line carries every endpoint state: while a request is in
   // flight, after a successful save (the rule count comes back in the
