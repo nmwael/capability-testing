@@ -45,12 +45,12 @@ public class AlertFlowSteps {
         sb.append("  <info>\n");
         sb.append("    <event>Tornado Warning</event>\n");
         if (severity != null && !severity.isEmpty()) {
-            sb.append("    <severity value=\"").append(severity).append("\"/>\n");
+            sb.append("    <severity>").append(severity).append("</severity>\n");
         }
         if (urgency != null && !urgency.isEmpty()) {
-            sb.append("    <urgency value=\"").append(urgency).append("\"/>\n");
+            sb.append("    <urgency>").append(urgency).append("</urgency>\n");
         }
-        sb.append("    <certainty value=\"Observed\"/>\n");
+        sb.append("    <certainty>Observed</certainty>\n");
         sb.append("  </info>\n");
         sb.append("</alert>");
         return sb.toString();
