@@ -39,36 +39,21 @@ public class AlertFlowResource {
             return Response.status(404).build();
         }
 
-        // Parse the alert's danger level from XML header elements
+        // Parse the alert's danger level
         String severity = "Unknown";
         String urgency = "Unknown";
-        String certainty = "Unknown";
         try {
-            // Extract severity from <severity value="..."/> (attribute)
-            int sevStart = xml.indexOf("<severity value=");
-            if (sevStart != -1) {
-                int sevEnd = xml.indexOf("\"/>", sevStart);
-                if (sevEnd != -1) {
-                    severity = xml.substring(sevStart + 17, sevEnd).trim();
-                }
+            javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            org.w3c.dom.Document doc = factory.newDocumentBuilder()
+                    .parse(new org.xml.sax.InputSource(new java.io.StringReader(xml)));
+            org.w3c.dom.NodeList sevNodes = doc.getElementsByTagName("severity");
+            if (sevNodes.getLength() > 0) {
+                severity = sevNodes.item(0).getTextContent().trim();
             }
-            
-            // Extract urgency from <urgency value="..."/> (attribute)
-            int urgStart = xml.indexOf("<urgency value=");
-            if (urgStart != -1) {
-                int urgEnd = xml.indexOf("\"/>", urgStart);
-                if (urgEnd != -1) {
-                    urgency = xml.substring(urgStart + 16, urgEnd).trim();
-                }
-            }
-            
-            // Extract certainty from <certainty value="..."/> (attribute)
-            int certStart = xml.indexOf("<certainty value=");
-            if (certStart != -1) {
-                int certEnd = xml.indexOf("\"/>", certStart);
-                if (certEnd != -1) {
-                    certainty = xml.substring(certStart + 19, certEnd).trim();
-                }
+            org.w3c.dom.NodeList urgNodes = doc.getElementsByTagName("urgency");
+            if (urgNodes.getLength() > 0) {
+                urgency = urgNodes.item(0).getTextContent().trim();
             }
         } catch (Exception e) {
             // Ignore parse errors, use defaults
@@ -84,7 +69,7 @@ public class AlertFlowResource {
         // Social: floor Moderate (rank 3), rule is "moderate"
         channels.add(new Channel("social", CapAlertFact.rankOf(severity) >= CapAlertFact.rankOf("Moderate"), "moderate"));
 
-        return Response.ok(new Distribution(identifier, severity, urgency, certainty, channels))
+        return Response.ok(new Distribution(identifier, severity, urgency, channels))
                 .build();
     }
 
@@ -103,6 +88,5 @@ public class AlertFlowResource {
             String identifier,
             String severity,
             String urgency,
-            String certainty,
             List<Channel> channels) {}
 }

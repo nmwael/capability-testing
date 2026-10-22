@@ -119,22 +119,22 @@ public class AlertResource {
     @PostConstruct
     public void initDemoAlert() {
         String demoAlert = """
-            <CAP version="1.2">
-              <header>
-                <identifier value="ALERT-001"/>
-                <eventDescription value="Demonstration CAP Alert"/>
-                <source value="Demo Source"/>
-                <sender value="Demo Sender"/>
-                <received>2026-10-21T12:00:00Z</received>
-                <eventType value="Test"/>
-                <severity value="Extreme"/>
-                <urgency value="Immediate"/>
-                <certainty value="High"/>
-              </header>
-              <instruction>
-                <areaDesc value="Demonstration Area"/>
-              </instruction>
-            </CAP>
+            <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+              <identifier>ALERT-001</identifier>
+              <sender>capability-testing</sender>
+              <sent>2026-10-21T12:00:00+00:00</sent>
+              <status>Actual</status>
+              <msgType>Alert</msgType>
+              <scope>Public</scope>
+              <info>
+                <event>Demo</event>
+                <urgency>Expected</urgency>
+                <severity>Minor</severity>
+                <certainty>Observed</certainty>
+                <headline>Demo alert</headline>
+                <instruction>Follow official guidance.</instruction>
+              </info>
+            </alert>
             """;
         storedAlerts.put("ALERT-001", demoAlert);
     }
