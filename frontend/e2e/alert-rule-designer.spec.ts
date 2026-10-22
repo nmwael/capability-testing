@@ -67,7 +67,7 @@ test.describe('alert.rule-designer', () => {
   test('@bdd reopens saved graph restores the graph', async ({ page }) => {
     await page.goto('/')
     await page.click('[data-testid="save-button"]')
-    await page.click('[data-testid="reopen-button"]')
+    await page.click('[data-testid="rule-designer-reopen-button"]')
     await expect(page.locator('.react-flow__node-condition')).toBeVisible()
     await expect(page.locator('.react-flow__node-action')).toBeVisible()
   })
@@ -93,7 +93,7 @@ test.describe('alert.rule-designer', () => {
   test('@bdd delete removes selected node', async ({ page }) => {
     await page.goto('/')
     await page.keyboard.press('c')
-    const canvas = page.locator('[data-testid="canvas"]')
+    const canvas = page.locator('[data-testid="alert-flow-canvas"]')
     await canvas.dblclick()
     await page.keyboard.press('Delete')
     await expect(page.locator('[data-testid="condition-node"]')).not.toBeVisible()
@@ -102,8 +102,8 @@ test.describe('alert.rule-designer', () => {
   test('@bdd rename panel appears when node is selected', async ({ page }) => {
     await page.goto('/')
     await page.keyboard.press('c')
-    const canvas = page.locator('[data-testid="canvas"]')
+    const canvas = page.locator('[data-testid="alert-flow-canvas"]')
     await canvas.dblclick()
-    await expect(page.getByTestId('rename-panel')).toBeVisible()
+    await expect(page.getByTestId('rule-designer-rename-panel')).toBeVisible()
   })
 })

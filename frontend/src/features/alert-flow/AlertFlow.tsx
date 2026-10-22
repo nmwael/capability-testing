@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { ReactFlow, Controls, useNodesState, useEdgesState, addEdge, type Node, type Edge, type Connection, type NodeTypes, type EdgeTypes } from '@xyflow/react'
+import { ReactFlow, Controls, Handle, Position, useNodesState, useEdgesState, addEdge, type Node, type Edge, type Connection, type NodeTypes, type EdgeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import './alert-flow-controls.css'
 import { EdgeComponent } from './Edge'
@@ -13,7 +13,19 @@ interface ChannelNodeData {
 function ChannelNodeComponent({ data }: { data: ChannelNodeData }) {
   return (
     <div className="cap-node cap-node-channel" data-testid="alert-flow-channel-node" style={{ background: data.reached ? 'var(--cap-badge-reached)' : 'var(--cap-badge-unreached)', padding: 8, borderRadius: 4 }}>
+      <Handle
+        type="source"
+        position={Position.Right}
+        className='cap-handle cap-handle-source'
+        data-testid="handle-source"
+      />
       <div style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 'bold' }}>{data.label}</div>
+      <Handle
+        type="target"
+        position={Position.Left}
+        className='cap-handle cap-handle-target'
+        data-testid="handle-target"
+      />
     </div>
   )
 }
@@ -91,8 +103,7 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
 
   return (
     <div ref={containerRef} data-testid="alert-flow-container" style={{
-      width: '100%',
-      minWidth: 600,
+      width: 600,
       height: 400,
     }}>
       <h2 data-testid="alert-flow-title">Alert flow</h2>

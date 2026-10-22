@@ -4,6 +4,7 @@ import type { Position } from '@xyflow/react'
 export interface AlertEdgeData {
   'data-testid'?: string
   style?: React.CSSProperties
+  markerEnd?: string
 }
 
 export function EdgeComponent(props: {
@@ -30,10 +31,9 @@ export function EdgeComponent(props: {
       path={edgePath}
       markerEnd={data?.markerEnd ?? 'cap-arrow'}
       data-testid="alert-flow-edge"
-      data-testid="connection"
       style={data?.style}
     />
   )
 }
 
-export const edgeTypes = {} satisfies EdgeTypes
+export const edgeTypes: Record<string, React.ComponentType<Record<string, unknown>>> = {}

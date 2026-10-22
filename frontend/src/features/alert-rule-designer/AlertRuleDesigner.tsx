@@ -141,10 +141,10 @@ function graphToWire(name: string, graphNodes: Node[], graphEdges: Edge[]): Wire
   return {
     name,
     nodes: graphNodes.map((node): WireNode => {
-      const nodeData = node.data ?? {}
+      const nodeData = (node.data ?? {}) as Record<string, string | undefined>
       return node.data?.kind === 'action'
-        ? { id: node.id, kind: 'action', channel: nodeData.channel }
-        : { id: node.id, kind: 'condition', field: nodeData.field, value: nodeData.value }
+        ? { id: node.id, kind: 'action', channel: nodeData.channel ?? '' }
+        : { id: node.id, kind: 'condition', field: nodeData.field ?? '', value: nodeData.value ?? '' }
     }),
     edges: graphEdges.map((edge): WireEdge => ({ from: edge.source, to: edge.target })),
   }
@@ -623,8 +623,8 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-undo" onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button data-testid="rule-designer-redo" onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button data-testid="rule-designer-fit-view" onClick={fitView}>Fit View</button>
-          <button data-testid="rule-designer-save" onClick={() => { pushToHistory(); void postGraph(); }} data-testid="save-button">Save</button>
-          <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} data-testid="retry-button" disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
+          <button data-testid="rule-designer-save" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
+          <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
 
@@ -722,7 +722,6 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
               <input
                 type="text"
                 className="cap-rename-input"
-                data-testid="rename-input"
                 data-testid="rule-designer-rename-input"
                 value={renameInputDraft}
                 onChange={(e) => setRenameInputDraft(e.target.value)}

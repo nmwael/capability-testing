@@ -26,7 +26,7 @@ test.describe('alert.flow', () => {
     })
     await page.goto('/')
     await expect(page.getByTestId('alert-flow-network-error')).toBeVisible()
-    await expect(page.getByTestId('retry-button')).toBeVisible()
+    await expect(page.getByTestId('alert-flow-retry')).toBeVisible()
   })
 
   test('@bdd retry refetches after network error', async ({ page }) => {
@@ -39,7 +39,7 @@ test.describe('alert.flow', () => {
     })
     await page.goto('/')
     await expect(page.getByTestId('alert-flow-network-error')).toBeVisible()
-    await page.click('[data-testid="retry-button"]')
+    await page.click('[data-testid="alert-flow-retry"]')
     await expect(page.getByTestId('alert-flow-container')).toBeVisible()
   })
 })
