@@ -9,7 +9,7 @@
 # model is `backend/common/src/main/resources/cap-v1.2.xsd`, so "the schema's
 # enumeration" below means one specific artefact. Every scenario is `@todo` because
 # nothing implements the catalogue yet.
-
+#
 @bdd
 @cap:alert.cap-fields
 @frontend
@@ -36,7 +36,6 @@ Feature: CAP field catalogue
     Then it is shown as a date and time
     And it is not offered free-form numeric input
 
-  @todo
   Scenario: A field with no closed vocabulary is offered as free text
     Given the field catalogue is open
     When I inspect the headline field

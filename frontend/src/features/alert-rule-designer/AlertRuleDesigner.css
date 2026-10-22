@@ -1,3 +1,23 @@
+.cap-designer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cap-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 8px;
+  background: var(--cap-toolbar-bg);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--cap-border);
+}
+
 .cap-catalogue-panel {
   position: absolute;
   top: 70px;
@@ -10,4 +30,11 @@
   border-radius: 4px;
   padding: 8px;
   z-index: 10;
+}
+
+.cap-canvas {
+  flex: 1;
+  min-height: 50vh;
+  display: flex;
+  position: relative;
 }

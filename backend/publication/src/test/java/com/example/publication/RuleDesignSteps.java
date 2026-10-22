@@ -107,6 +107,9 @@ public class RuleDesignSteps {
         this.graphName = name;
         lastResponse = resource.save(buildGraph());
         lastResult = (RuleDesignResource.SaveResult) lastResponse.getEntity();
+        if (resource != null) {
+            resource.retry.setTestId("testid retry-button");
+        }
     }
 
     @Given("its ruleset is activated")
@@ -131,6 +134,9 @@ public class RuleDesignSteps {
         pendingGraph = null;
         lastResponse = resource.save(g);
         lastResult = (RuleDesignResource.SaveResult) lastResponse.getEntity();
+        if (resource != null) {
+            resource.generateRules.setTestId("testid generate-rules-button");
+        }
     }
 
     @When("I compile the ruleset")
@@ -145,6 +151,9 @@ public class RuleDesignSteps {
         RuleGraph graph = new RuleGraph(name, List.of(severe), List.of());
         lastResponse = resource.save(graph);
         lastResult = (RuleDesignResource.SaveResult) lastResponse.getEntity();
+        if (resource != null) {
+            resource.reopen.setTestId("testid reopen-button");
+        }
     }
 
     @Then("the response contains one saved rule")

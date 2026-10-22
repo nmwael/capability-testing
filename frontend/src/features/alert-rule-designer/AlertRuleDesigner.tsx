@@ -623,7 +623,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-undo" onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button data-testid="rule-designer-redo" onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button data-testid="rule-designer-fit-view" onClick={fitView}>Fit View</button>
-          <button data-testid="rule-designer-save" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
+          <button data-testid="rule-designer-save" data-testid="save-button" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
           <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
@@ -670,7 +670,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-add-action" onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
 
-        <div style={{ flex: 1, position: 'relative', width: 600, height: 400 }} onKeyDown={handleKeyDown} tabIndex={0} data-testid="canvas">
+        <div className="cap-canvas" onKeyDown={handleKeyDown} tabIndex={0} data-testid="canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -722,7 +722,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
               <input
                 type="text"
                 className="cap-rename-input"
-                data-testid="rule-designer-rename-input"
+                data-testid="rename-input"
                 value={renameInputDraft}
                 onChange={(e) => setRenameInputDraft(e.target.value)}
                 onBlur={applyRename}
