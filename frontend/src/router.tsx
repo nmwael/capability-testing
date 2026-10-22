@@ -1,4 +1,4 @@
-export function getQueryParams(): { alert?: string; endpoint?: string } {
+export function getQueryParams(): { alert?: string | null; endpoint?: string | null } {
   const url = new URL(window.location.href);
   const params = new URLSearchParams(url.search);
   return {

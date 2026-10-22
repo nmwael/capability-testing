@@ -24,10 +24,10 @@ function CapFieldCatalogue({ catalogue, className = 'cap-catalogue', maxColumns 
   }
 
   return (
-    <div className={className}>
-      <div className="cap-catalogue-header">
-        <h3>CAP Field Catalogue</h3>
-        <p>{Object.keys(catalogue).length} fields</p>
+    <div className={className} data-testid="cap-field-catalogue">
+      <div className="cap-catalogue-header" data-testid="cap-field-catalogue-header">
+        <h3 data-testid="cap-field-catalogue-title">CAP Field Catalogue</h3>
+        <p data-testid="cap-field-catalogue-field-count">{Object.keys(catalogue).length} fields</p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${maxColumns}, 1fr)`, gap: '1rem' }}>
         {entries.map(([name, entry], index) => {
@@ -37,6 +37,7 @@ function CapFieldCatalogue({ catalogue, className = 'cap-catalogue', maxColumns 
           return (
             <div
               key={name}
+              data-testid={`cap-field-catalogue-item-${name}`}
               style={{
                 gridColumn: `${position.col}`,
                 gridRow: `${position.row}`,
@@ -47,14 +48,14 @@ function CapFieldCatalogue({ catalogue, className = 'cap-catalogue', maxColumns 
               }}
             >
               <div className="cap-catalogue-item">
-                <div className="cap-catalogue-field">
-                  <span>{name}</span>
-                  <span className="cap-catalogue-type">{entry.type}</span>
+                <div className="cap-catalogue-field" data-testid="cap-field-catalogue-field">
+                  <span data-testid="cap-field-catalogue-field-name">{name}</span>
+                  <span className="cap-catalogue-type" data-testid="cap-field-catalogue-type">{entry.type}</span>
                 </div>
                 {hasValues && entry.values && (
-                  <div className="cap-catalogue-values">
+                  <div className="cap-catalogue-values" data-testid="cap-field-catalogue-values">
                     {entry.values.map((v, i) => (
-                      <span key={i} className="cap-catalogue-value">{v}</span>
+                      <span key={i} className="cap-catalogue-value" data-testid="cap-field-catalogue-value">{v}</span>
                     ))}
                   </div>
                 )}

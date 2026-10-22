@@ -617,12 +617,12 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
       <div className="cap-designer">
         {/* Sticky toolbar at top of viewport */}
         <div className="cap-toolbar">
-          <button onClick={() => setCatalogueOpen(!catalogueOpen)} disabled={catalogueOpen}>Toggle Catalogue</button>
-          <button onClick={undo} disabled={historyIndex <= 0}>Undo</button>
-          <button onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
-          <button onClick={fitView}>Fit View</button>
-          <button onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
-          <button onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
+          <button data-testid="rule-designer-toggle-catalogue" onClick={() => setCatalogueOpen(!catalogueOpen)} disabled={catalogueOpen}>Toggle Catalogue</button>
+          <button data-testid="rule-designer-undo" onClick={undo} disabled={historyIndex <= 0}>Undo</button>
+          <button data-testid="rule-designer-redo" onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
+          <button data-testid="rule-designer-fit-view" onClick={fitView}>Fit View</button>
+          <button data-testid="rule-designer-save" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
+          <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
 
@@ -632,11 +632,12 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
             </div>
           )}
 
-          <label className="cap-graph-name-label">
+          <label className="cap-graph-name-label" data-testid="rule-designer-graph-name-label">
             <span>Graph name</span>
             <input
               type="text"
               className="cap-graph-name-input"
+              data-testid="rule-designer-graph-name-input"
               value={graphNameDraft}
               onChange={(e) => { setGraphNameDraft(e.target.value); }}
               onBlur={() => {
@@ -663,8 +664,8 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
         </div>
 
         <div className="cap-palette">
-          <button onClick={() => { addConditionNode(); }}>Add Condition</button>
-          <button onClick={() => { addActionNode(); }}>Add Action</button>
+          <button data-testid="rule-designer-add-condition" onClick={() => { addConditionNode(); }}>Add Condition</button>
+          <button data-testid="rule-designer-add-action" onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
 
         <div style={{ flex: 1, position: 'relative' }} onKeyDown={handleKeyDown} tabIndex={0}>
@@ -694,19 +695,19 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           </ReactFlow>
 
           {showEmptyHint && nodes.length === 0 && sync.kind !== 'loading' && (
-            <div className="cap-empty-hint">
+            <div className="cap-empty-hint" data-testid="rule-designer-empty-hint">
               Start by adding nodes from the palette above
             </div>
           )}
 
           {sync.kind === 'loading' && (
-            <div role="status" className="cap-status-pill">
+            <div role="status" className="cap-status-pill" data-testid="rule-designer-loading-status">
               {sync.message}
             </div>
           )}
 
           {!showEmptyHint && nodes.length > 0 && sync.kind !== 'loading' && (
-            <div className="cap-graph-badge">
+            <div className="cap-graph-badge" data-testid="rule-designer-graph-badge">
               <span style={{ fontWeight: 'bold' }}>default</span>
               <span>tornado</span>
               <span>routing</span>
@@ -714,11 +715,12 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           )}
 
           {selectedNodeId && renameInput && (
-            <div className="cap-rename-panel">
+            <div className="cap-rename-panel" data-testid="rule-designer-rename-panel">
               <span className="cap-rename-label">Rename:</span>
               <input
                 type="text"
                 className="cap-rename-input"
+                data-testid="rule-designer-rename-input"
                 value={renameInputDraft}
                 onChange={(e) => setRenameInputDraft(e.target.value)}
                 onBlur={applyRename}
@@ -735,17 +737,17 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
         </div>
 
         <div className="cap-footer">
-          {dirty && <span className="cap-footer-unsaved">Unsaved changes</span>}
+          {dirty && <span className="cap-footer-unsaved" data-testid="rule-designer-unsaved">Unsaved changes</span>}
 
           {sync.kind !== 'idle' && sync.kind !== 'loading' && (
-            <span role="status" className={sync.kind === 'error' ? 'cap-footer-status-error' : 'cap-footer-status'}>
+            <span role="status" className={sync.kind === 'error' ? 'cap-footer-status-error' : 'cap-footer-status'} data-testid="rule-designer-status">
               {sync.message}
             </span>
           )}
 
           <div className="cap-footer-channels">
             <span>Channels:</span>
-            {CHANNELS.map(c => <span key={c} className="cap-footer-channel-badge">{c}</span>)}
+            {CHANNELS.map(c => <span key={c} className="cap-footer-channel-badge" data-testid={`rule-designer-channel-${c}`}>{c}</span>)}
           </div>
         </div>
       </div>

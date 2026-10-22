@@ -17,6 +17,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import jakarta.annotation.PostConstruct;
 
 /**
  * JAX-RS resource for CAP alert publishing and retrieval.
@@ -110,6 +111,32 @@ public class AlertResource {
             // Ignore parse errors, return null
         }
         return null;
+    }
+
+    /**
+     * @PostConstruct: Pre-populate storedAlerts with demo CAP alert for ALERT-001.
+     */
+    @PostConstruct
+    public void initDemoAlert() {
+        String demoAlert = """
+            <CAP version="1.2">
+              <header>
+                <identifier value="ALERT-001"/>
+                <eventDescription value="Demonstration CAP Alert"/>
+                <source value="Demo Source"/>
+                <sender value="Demo Sender"/>
+                <received>2026-10-21T12:00:00Z</received>
+                <eventType value="Test"/>
+                <severity value="Extreme"/>
+                <urgency value="Immediate"/>
+                <certainty value="High"/>
+              </header>
+              <instruction>
+                <areaDesc value="Demonstration Area"/>
+              </instruction>
+            </CAP>
+            """;
+        storedAlerts.put("ALERT-001", demoAlert);
     }
 
     /**

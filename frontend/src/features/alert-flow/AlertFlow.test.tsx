@@ -47,8 +47,7 @@ describe('alert-flow frontend spec', () => {
 
   it('allows zooming and panning the canvas', () => {
     render(<AlertFlow alertId="ALERT-001" endpoint="/mock" />)
-    const controls = document.querySelector('.react-flow__controls')
-    expect(controls || screen.getByText(/Loading/i)).toBeTruthy()
+    expect(document.querySelector('.react-flow__controls')).toBeTruthy()
   })
 
   it('supports keyboard navigation to channel nodes', () => {

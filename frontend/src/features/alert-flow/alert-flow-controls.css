@@ -1,0 +1,27 @@
+/* Force React Flow Controls to be visible */
+.react-flow__controls {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.react-flow__controls button {
+  opacity: 1 !important;
+}
+
+/* Force our wrapper div with Controls to be visible */
+[data-testid="alert-flow-controls"] {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+[data-testid="alert-flow-controls"] .react-flow__controls {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+[data-testid="alert-flow-controls"] .react-flow__controls button {
+  opacity: 1 !important;
+}
