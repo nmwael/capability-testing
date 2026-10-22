@@ -18,3 +18,8 @@ config.db-wal
 
 # Worktrees
 .worktrees/
+
+# Test artifacts
+Result.json
+frontend/playwright-report/
+frontend/test-results/
