@@ -20,6 +20,8 @@ The human may declare **Night Shift** by saying "night shift" in a message. Noth
 
 During the window exactly one rule changes:
 
+- **No questions.** During Night Shift, agents MUST NOT ask the human questions or seek clarification. They proceed autonomously on the approved plan. Ambiguities are resolved by the architect's best judgment and recorded in the tracker. If a blocker is truly unresolvable, the agent stops, reports with `path:line` references, and waits — it does not ask.
+
 - **Waived:** the HITL plan-approval step (`## Orchestration Flow` step 2). Agents may implement an architect's plan without the human approving it first.
 
 Everything else stays binding:
