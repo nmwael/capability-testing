@@ -10,7 +10,8 @@
 # where it is produced. The sibling capability alert.rule-design owns drawing a graph from
 # scratch and compiling it to Drools; this one owns changing one that already exists.
 
-@bdd @cap:alert.rule-edit
+@bdd
+@cap:alert.rule-edit
 @frontend
 Feature: Edit a saved routing rule graph
   As a warning officer

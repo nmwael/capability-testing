@@ -4,7 +4,8 @@
 # Capability: alert.rule-design. This is the authoring half; the backend contract it
 # feeds lives in features/publication/alert-rule-design.feature.
 
-@bdd @cap:alert.rule-design
+@bdd
+@cap:alert.rule-design
 @frontend
 Feature: Alert routing rule designer canvas
   As a warning officer

@@ -4,7 +4,8 @@
 # Capability: alert.flow. What a CAP alert looks like as a graph: the deliverable (info
 # block) fans out to the channels the routing ruleset chose.
 
-@bdd @cap:alert.flow
+@bdd
+@cap:alert.flow
 @frontend
 Feature: Alert distribution canvas
   As a dispatcher
