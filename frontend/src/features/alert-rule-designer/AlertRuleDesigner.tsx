@@ -45,9 +45,8 @@ function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeD
       <div className="cap-node-row">
         <span>field: </span>
         <select
-          aria-label="condition field"
+          aria-label="condition field" data-testid="field-dropdown"
           className="cap-node-select"
-          data-testid="field-dropdown"
           value={data.field}
           onChange={(e) => {
             const nextField = e.target.value as CapField
@@ -62,9 +61,8 @@ function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeD
       <div className="cap-node-row">
         <span>value: </span>
         <select
-          aria-label="condition value"
+          aria-label="condition value" data-testid="value-input"
           className="cap-node-select"
-          data-testid="value-input"
           value={data.value}
           onChange={(e) => {
             const nextValue = e.target.value
@@ -623,8 +621,8 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-undo" onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button data-testid="rule-designer-redo" onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button data-testid="rule-designer-fit-view" onClick={fitView}>Fit View</button>
-          <button data-testid="rule-designer-save" data-testid="save-button" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
-          <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
+          <button data-testid="save-button" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
+          <button data-testid="generate-rules-button" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
 
@@ -739,7 +737,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
         </div>
 
         <div className="cap-footer">
-          {dirty && <span className="cap-footer-unsaved" data-testid="rule-designer-unsaved">Unsaved changes</span>}
+          {dirty && <span className="cap-footer-unsaved" data-testid="unsaved-changes">Unsaved changes</span>}
 
           {sync.kind !== 'idle' && sync.kind !== 'loading' && (
             <span role="status" className={sync.kind === 'error' ? 'cap-footer-status-error' : 'cap-footer-status'} data-testid="rule-designer-status">
