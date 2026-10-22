@@ -1,34 +1,39 @@
-import { BaseEdge, EdgeTypes } from '@xyflow/react'
-import { getBezierPath } from '@xyflow/react'
+import { BaseEdge, getBezierPath } from '@xyflow/react'
+import type { Position } from '@xyflow/react'
 
 export interface AlertEdgeData {
   'data-testid'?: string
   style?: React.CSSProperties
-  sourceX?: number
-  sourceY?: number
-  targetX?: number
-  targetY?: number
 }
 
-export function EdgeComponent(props: { data: AlertEdgeData; selected?: boolean; selectable?: boolean; deletable?: boolean; animated?: boolean; }) {
-  const { data } = props
-  const [edge] = getBezierPath({
-    sourceX: data.sourceX || 0,
-    sourceY: data.sourceY || 0,
-    targetX: data.targetX || 0,
-    targetY: data.targetY || 0,
+export function EdgeComponent(props: {
+  sourceX: number
+  sourceY: number
+  targetX: number
+  targetY: number
+  sourcePosition?: Position
+  targetPosition?: Position
+  data?: AlertEdgeData
+}) {
+  const { sourceX, sourceY, targetX, targetY, sourcePosition = 'right' as Position, targetPosition = 'left' as Position, data } = props
+  const [edgePath] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
   })
 
   return (
     <BaseEdge
-      markerEnd="cap-arrow"
+      path={edgePath}
+      markerEnd={data?.markerEnd ?? 'cap-arrow'}
       data-testid="alert-flow-edge"
-      path={edge}
-      style={data.style}
+      data-testid="connection"
+      style={data?.style}
     />
   )
 }
 
-export const edgeTypes = {
-  alertFlowEdge: EdgeComponent,
-} satisfies EdgeTypes
+export const edgeTypes = {} satisfies EdgeTypes

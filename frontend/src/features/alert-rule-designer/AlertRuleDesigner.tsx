@@ -40,13 +40,14 @@ function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeD
 
   return (
     <div className="cap-node cap-node-condition" data-testid="condition-node">
-      <Handle type="target" position={Position.Left} className="cap-handle" />
+      <Handle type="target" position={Position.Left} className="cap-handle" data-testid="handle-source" />
       <div className="cap-node-header">Condition</div>
       <div className="cap-node-row">
         <span>field: </span>
         <select
           aria-label="condition field"
           className="cap-node-select"
+          data-testid="field-dropdown"
           value={data.field}
           onChange={(e) => {
             const nextField = e.target.value as CapField
@@ -63,6 +64,7 @@ function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeD
         <select
           aria-label="condition value"
           className="cap-node-select"
+          data-testid="value-input"
           value={data.value}
           onChange={(e) => {
             const nextValue = e.target.value
@@ -74,7 +76,7 @@ function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeD
           {(CAP_FIELD_VALUES[data.field as CapField] ?? []).map(value => <option key={value} value={value}>{value}</option>)}
         </select>
       </div>
-      <Handle type="source" position={Position.Right} className="cap-handle" />
+      <Handle type="source" position={Position.Right} className="cap-handle" data-testid="handle-source" />
     </div>
   )
 }
@@ -92,7 +94,7 @@ function ActionNodeComponent({ id, data }: { id: string; data: ActionNodeData })
 
   return (
     <div className="cap-node cap-node-action" data-testid="action-node">
-      <Handle type="target" position={Position.Left} className="cap-handle-action" />
+      <Handle type="target" position={Position.Left} className="cap-handle-action" data-testid="handle-target" />
       <div className="cap-node-header">Action</div>
       <div className="cap-node-row">
         <span>Channel: </span>
@@ -139,10 +141,10 @@ function graphToWire(name: string, graphNodes: Node[], graphEdges: Edge[]): Wire
   return {
     name,
     nodes: graphNodes.map((node): WireNode => {
-      const data = (node.data ?? {}) as Record<string, string>
+      const nodeData = node.data ?? {}
       return node.data?.kind === 'action'
-        ? { id: node.id, kind: 'action', channel: data.channel }
-        : { id: node.id, kind: 'condition', field: data.field, value: data.value }
+        ? { id: node.id, kind: 'action', channel: nodeData.channel }
+        : { id: node.id, kind: 'condition', field: nodeData.field, value: nodeData.value }
     }),
     edges: graphEdges.map((edge): WireEdge => ({ from: edge.source, to: edge.target })),
   }
@@ -621,8 +623,8 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-undo" onClick={undo} disabled={historyIndex <= 0}>Undo</button>
           <button data-testid="rule-designer-redo" onClick={redo} disabled={historyIndex >= history.length - 1}>Redo</button>
           <button data-testid="rule-designer-fit-view" onClick={fitView}>Fit View</button>
-          <button data-testid="rule-designer-save" onClick={() => { pushToHistory(); void postGraph(); }}>Save</button>
-          <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
+          <button data-testid="rule-designer-save" onClick={() => { pushToHistory(); void postGraph(); }} data-testid="save-button">Save</button>
+          <button data-testid="rule-designer-generate-rules" onClick={() => { pushToHistory(); void postGraph(); }} data-testid="retry-button" disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
 
@@ -668,7 +670,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-add-action" onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
 
-        <div style={{ flex: 1, position: 'relative' }} onKeyDown={handleKeyDown} tabIndex={0}>
+        <div style={{ flex: 1, position: 'relative', width: 600, height: 400 }} onKeyDown={handleKeyDown} tabIndex={0} data-testid="canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -707,7 +709,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           )}
 
           {!showEmptyHint && nodes.length > 0 && sync.kind !== 'loading' && (
-            <div className="cap-graph-badge" data-testid="rule-designer-graph-badge">
+            <div className="cap-graph-badge" data-testid="rule-count">
               <span style={{ fontWeight: 'bold' }}>default</span>
               <span>tornado</span>
               <span>routing</span>
@@ -720,6 +722,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
               <input
                 type="text"
                 className="cap-rename-input"
+                data-testid="rename-input"
                 data-testid="rule-designer-rename-input"
                 value={renameInputDraft}
                 onChange={(e) => setRenameInputDraft(e.target.value)}

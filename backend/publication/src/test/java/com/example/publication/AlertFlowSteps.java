@@ -44,10 +44,10 @@ public class AlertFlowSteps {
         sb.append("  <scope>Public</scope>\n");
         sb.append("  <info>\n");
         sb.append("    <event>Tornado Warning</event>\n");
-        if (severity != null) {
+        if (severity != null && !severity.isEmpty()) {
             sb.append("    <severity value=\"").append(severity).append("\"/>\n");
         }
-        if (urgency != null) {
+        if (urgency != null && !urgency.isEmpty()) {
             sb.append("    <urgency value=\"").append(urgency).append("\"/>\n");
         }
         sb.append("    <certainty value=\"Observed\"/>\n");
@@ -62,7 +62,7 @@ public class AlertFlowSteps {
 
     @Given("alert {string} has been published")
     public void alertPublished(String identifier) {
-        lastResponse = publishValid(identifier, "Minor", "Expected");
+        lastResponse = publishValid(identifier, null, null);
     }
 
     @Given("alert {string} has been published with severity {string} and urgency {string}")

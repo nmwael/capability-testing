@@ -23,6 +23,7 @@ export function AlertNodeComponent(props: { data: AlertNodeData; }) {
         type="source"
         position={Position.Top}
         className='cap-handle cap-handle-source'
+        data-testid="handle-source"
       />
       <div
         style={{
@@ -38,6 +39,7 @@ export function AlertNodeComponent(props: { data: AlertNodeData; }) {
         type="target"
         position={Position.Bottom}
         className='cap-handle cap-handle-target'
+        data-testid="handle-target"
       />
     </div>
   )

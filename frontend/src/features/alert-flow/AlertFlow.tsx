@@ -90,7 +90,11 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
   const edgeTypes: EdgeTypes = useMemo(() => ({ alertFlowEdge: EdgeComponent }), [])
 
   return (
-    <div ref={containerRef} data-testid="alert-flow-container" style={{ width: '100%', height: 600 }}>
+    <div ref={containerRef} data-testid="alert-flow-container" style={{
+      width: '100%',
+      minWidth: 600,
+      height: 400,
+    }}>
       <h2 data-testid="alert-flow-title">Alert flow</h2>
       {status === 'loading' && <div data-testid="alert-flow-loading">Loading…</div>}
       {status === 'notfound' && <div data-testid="alert-flow-notfound">Alert {alertId} not found.</div>}

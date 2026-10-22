@@ -10,7 +10,7 @@
 # enumeration" below means one specific artefact. Every scenario is `@todo` because
 # nothing implements the catalogue yet.
 
-@cap:alert.cap-fields
+@bdd @cap:alert.cap-fields
 @frontend
 Feature: CAP field catalogue
   As a warning officer

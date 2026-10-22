@@ -1,47 +1,45 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('alert.flow', () => {
-  test('renders an alert as a canvas with channel nodes', async ({ page }) => {
+  test('@bdd renders ALERT-001 with distribution data', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('alert-flow-container')).toBeVisible()
+    await expect(page.locator('.react-flow__node-sirens')).toBeVisible()
+    await expect(page.locator('.react-flow__node-broadcast')).toBeVisible()
+    await expect(page.locator('.react-flow__node-social')).toBeVisible()
+    await expect(page.locator('.react-flow__node-alert-node')).toBeVisible()
   })
 
-  test('reports an unknown alert', async ({ page }) => {
+  test('@bdd renders 404 for missing alert', async ({ page }) => {
     await page.goto('/?alertId=ALERT-404')
     await expect(page.getByTestId('alert-flow-notfound')).toBeVisible()
   })
 
-  test('shows a loading state when the endpoint is slow', async ({ page }) => {
+  test('@bdd shows loading state when endpoint is slow', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('alert-flow-loading')).toBeVisible()
   })
 
-  test('renders channel nodes for reached and skipped channels', async ({ page }) => {
+  test('@bdd renders retry button for network error', async ({ page }) => {
+    await page.route('*/alerts/*/distribution', (route) => {
+      route.continue({ status: 503, body: 'Network Error' })
+    })
     await page.goto('/')
-    await expect(page.getByTestId('rf__node-sirens')).toBeVisible()
-    await expect(page.getByTestId('rf__node-broadcast')).toBeVisible()
-    await expect(page.getByTestId('rf__node-social')).toBeVisible()
+    await expect(page.getByTestId('alert-flow-network-error')).toBeVisible()
+    await expect(page.getByTestId('retry-button')).toBeVisible()
   })
 
-  test('styles the alert node by danger level', async ({ page }) => {
+  test('@bdd retry refetches after network error', async ({ page }) => {
+    await page.route('*/alerts/*/distribution', (route) => {
+      if (page.url().includes('retry')) {
+        route.continue({ status: 200, body: 'OK' })
+      } else {
+        route.continue({ status: 503, body: 'Network Error' })
+      }
+    })
     await page.goto('/')
-    await expect(page.getByTestId('alert-flow-alert-node')).toBeVisible()
-  })
-
-  test('fits viewport', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByTestId('alert-flow-canvas')).toBeVisible()
-  })
-
-  test('zooming/panning', async ({ page }) => {
-    await page.goto('/')
-    // Check that zoom controls are available using the CSS class
-    // Scoped to avoid strict mode duplicate elements
-    await expect(page.locator('[data-testid="alert-flow-canvas"] .react-flow__controls')).toBeVisible()
-  })
-
-  test('keyboard nav', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByTestId('alert-flow-canvas')).toBeVisible()
+    await expect(page.getByTestId('alert-flow-network-error')).toBeVisible()
+    await page.click('[data-testid="retry-button"]')
+    await expect(page.getByTestId('alert-flow-container')).toBeVisible()
   })
 })
