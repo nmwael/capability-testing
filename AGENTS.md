@@ -6,6 +6,10 @@ This repo uses a Human-in-the-Loop (HITL) approval workflow. Specialist subagent
 
 **You MUST NOT create, edit, or modify any code files until the human has explicitly approved an architect's plan.** Operational tasks (starting services, running commands, reading files) are exempt. Everything else requires: architect plans -> fact-checker verifies -> human approves -> developer implements. A plan MUST NOT be put to the human for approval without a `fact-checker` `Result` attached — see `## Orchestration Flow` step 2 (Gate backstop).
 
+## 📋 Planning Convention: Architect-First
+
+**All planning, decomposition, and delegation of work MUST go through the `architect` agent.** The `build` agent (default orchestrator) MUST NOT plan, decompose, or delegate implementation work itself — it routes every task that requires planning to the `architect`, which then produces a plan, obtains human approval (or waives it under Night Shift), and delegates atomic subtasks to specialists. No specialist may plan or delegate on behalf of the architect. This convention is binding for all sessions, including Night Shift.
+
 See `stack.json` (`/usr/local/share/llm-lab/stack.json`, written by the `models` feature) and `.devcontainer/llm-lab-models.json` for full project stack and model specifications.
 
 Exception: during a human-declared Night Shift the plan-approval step is waived — see `## 🌙 Night Shift`.
