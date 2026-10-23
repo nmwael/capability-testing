@@ -445,7 +445,7 @@ function AlertRuleEdit({ endpoint = '/rules', graphName = 'tornado-routing' }: A
         </div>
 
         {/* Canvas area */}
-        <div style={{ flex: 1, position: 'relative', width: 600, height: 400 }} onKeyDown={handleKeyDown} tabIndex={0}>
+        <div style={{ flex: 1, position: 'relative', width: 600, height: 400 }} onKeyDown={handleKeyDown} tabIndex={0} data-testid="canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}

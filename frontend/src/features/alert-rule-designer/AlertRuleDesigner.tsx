@@ -625,6 +625,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="generate-rules-button" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
+          <button data-testid="rule-designer-reopen-button" onClick={() => { pushToHistory(); void load(); }}>Reopen</button>
 
           {catalogueOpen && (
             <div className="cap-catalogue-panel">
@@ -672,6 +673,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <ReactFlow
             nodes={nodes}
             edges={edges}
+            data-testid="connection"
             onConnect={onConnect}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
