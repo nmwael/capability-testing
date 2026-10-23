@@ -103,8 +103,8 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
 
   return (
     <div ref={containerRef} data-testid="alert-flow-container" style={{
-      width: 600,
-      height: 400,
+      width: '100%',
+      height: '100%',
     }}>
       <h2 data-testid="alert-flow-title">Alert flow</h2>
       {status === 'loading' && <div data-testid="alert-flow-loading">Loading…</div>}

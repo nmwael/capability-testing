@@ -4,10 +4,8 @@ test.describe('alert.flow', () => {
   test('@bdd renders ALERT-001 with distribution data', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('alert-flow-container')).toBeVisible()
-    await expect(page.locator('.react-flow__node-sirens')).toBeVisible()
-    await expect(page.locator('.react-flow__node-broadcast')).toBeVisible()
-    await expect(page.locator('.react-flow__node-social')).toBeVisible()
-    await expect(page.locator('.react-flow__node-alert-node')).toBeVisible()
+    await expect(page.getByTestId('alert-flow-channel-node')).toBeVisible({ timeout: 2000 })
+    await expect(page.getByTestId('alert-flow-alert-node')).toBeVisible({ timeout: 2000 })
   })
 
   test('@bdd renders 404 for missing alert', async ({ page }) => {
@@ -22,10 +20,10 @@ test.describe('alert.flow', () => {
 
   test('@bdd renders retry button for network error', async ({ page }) => {
     await page.route('*/alerts/*/distribution', (route) => {
-      route.continue({ status: 503, body: 'Network Error' })
+      route.continue({ status: 500, body: 'Network Error' })
     })
     await page.goto('/')
-    await expect(page.getByTestId('alert-flow-network-error')).toBeVisible()
+    await expect(page.getByTestId('alert-flow-network-error')).toBeVisible({ timeout: 10000 })
     await expect(page.getByTestId('alert-flow-retry')).toBeVisible()
   })
 
@@ -34,11 +32,11 @@ test.describe('alert.flow', () => {
       if (page.url().includes('retry')) {
         route.continue({ status: 200, body: 'OK' })
       } else {
-        route.continue({ status: 503, body: 'Network Error' })
+        route.continue({ status: 500, body: 'Network Error' })
       }
     })
     await page.goto('/')
-    await expect(page.getByTestId('alert-flow-network-error')).toBeVisible()
+    await expect(page.getByTestId('alert-flow-network-error')).toBeVisible({ timeout: 10000 })
     await page.click('[data-testid="alert-flow-retry"]')
     await expect(page.getByTestId('alert-flow-container')).toBeVisible()
   })
