@@ -49,6 +49,23 @@ jobs:
           check_name: 'Backend tests'
           report_paths: 'backend/**/target/surefire-reports/TEST-*.xml'
 
+  mention-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for @-mentions in PR title/body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh pr view "$PR_NUMBER" --json title,body --jq '.title + "\n" + .body' > /tmp/pr.txt
+          if grep -En '@[A-Za-z0-9_-]+' /tmp/pr.txt; then
+            echo "::error::PR title or body contains an @-mention. Remove @-mentions from GitHub posts (see AGENTS.md GitHub Tracker Discipline)."
+            exit 1
+          fi
+          echo "No @-mentions found in PR title/body."
+
   frontend:
     runs-on: ubuntu-latest
     steps:

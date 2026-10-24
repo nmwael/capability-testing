@@ -142,8 +142,7 @@ Pure informational queries are answered directly (`@architect` protocol 7). Ever
 4. **specialist → `architect`: one JSON `Result` envelope.** The specialist's final message is its structured result; it performs no further delegation of any kind.
 5. **`architect` reviews → synthesizes → re-delegates if needed.** Verify the result against the file system (own `read`/`git status`); when refinement is needed, issue a new `Directive` (same `task_id`, `iteration` incremented) back to the **same** specialist. All iteration flows through the architect — specialists NEVER delegate to other specialists (Rules → ⚠️ RECURSION PREVENTION, "Architect-Bridge Only").
 6. **Depth is a hard backstop.** Delegation depth never exceeds `experimental.subagent_depth` (currently 2, `opencode.json`); every extra level must still round-trip through the architect, and the architect-bridge plus no-self-delegation rules hold even where depth would still allow a delegation.
-7. **Mandatory reviewer gate.** No code task is complete until the `reviewer` returns a passing `Result` (`status: done`); only then may the architect report completion — see `## Workflow`.
-
+7. **Mandatory reviewer gate.** No code task is complete until the `reviewer` returns a passing `Result` (`status: done`); only then may the architect report completion — see `## Workflow`. The reviewer must also verify that no text posted to GitHub (issue/PR/comment/commit message) contains an `@handle` mention, per the GitHub Tracker Discipline rules.
 Anti-stall mechanics for this loop (atomic delegations, plateau detection, verify-before-report) live in `AGENTS_LIFECYCLE.md` and are binding here.
 
 ## Delegation JSON envelope
