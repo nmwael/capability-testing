@@ -52,3 +52,10 @@ capabilities:
     since: 1.0.0
     verified_by:
       - "features/frontend/cap-field-catalogue.feature"    # field catalogue + XSD drift guard (vitest)
+
+  - id: docs.onboarding
+    intent: "Create entrypoint README.md, optional ONBOARDING.md, inline mermaid diagrams, consolidate stale docs, remove generated Playwright artifacts"
+    owner: docs
+    status: draft
+    since: 1.1.0
+    verified_by: "features/docs/onboarding.feature"

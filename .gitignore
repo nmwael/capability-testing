@@ -23,3 +23,5 @@ config.db-wal
 Result.json
 frontend/playwright-report/
 frontend/test-results/
+frontend/.playwright/
+frontend/snapshots/
