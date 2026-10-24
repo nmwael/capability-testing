@@ -49,6 +49,13 @@ jobs:
         with:
           check_name: 'Backend tests'
           report_paths: 'backend/**/target/surefire-reports/TEST-*.xml'
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/*/target/site/jacoco/index.html backend/*/target/site/jacoco/jacoco.xml
+          retention-days: 14
 
   mention-check:
     if: github.event_name == 'pull_request'
@@ -91,3 +98,30 @@ jobs:
         with:
           check_name: 'Frontend tests'
           report_paths: 'frontend/reports/junit.xml'
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/index.html frontend/coverage/coverage-final.json
+          retention-days: 14
+
+  playwright-e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - working-directory: frontend
+        run: npm ci
+      - name: Playwright E2E tests
+        working-directory: frontend
+        run: npx playwright test
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
