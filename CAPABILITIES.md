@@ -157,6 +157,14 @@ The repository uses `CODEOWNERS` and protected branch rules to enforce this gove
 - Prevent self-approval where required by organizational policy.
 - Ensure changes to validation scripts and workflows receive appropriate review.
 
+### Governance Gap
+
+A tracking gap exists between `.github/CODEOWNERS` and the capability registry:
+- `.github/CODEOWNERS` now exists with defined ownership rules for protected files.
+- No capability entry in `capabilities.yml` explicitly maps to the CODEOWNERS governance scope.
+- This is not a missing product capability, but a documentation gap: the registry should reference that CODEOWNERS enforces the governance model for the files it covers.
+- Future capability additions should note their governance enforcement via CODEOWNERS when applicable.
+
 ## Continuous Verification
 
 The CI pipeline provides automated checks and reporting to ensure the contract is not just a document, but a living state.
