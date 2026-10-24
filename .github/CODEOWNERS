@@ -1,0 +1,4 @@
+/capabilities/capabilities.yml       @org/architects @org/product-owners @org/test-managers
+/scripts/verify-capabilities.js      @org/architects @org/test-managers
+/scripts/capability-report.js        @org/architects
+/.github/workflows/capability.yml    @org/architects @org/test-managers
