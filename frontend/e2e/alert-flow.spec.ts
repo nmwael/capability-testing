@@ -37,5 +37,4 @@ test.describe('alert.flow', () => {
     await expect(page.getByTestId('alert-flow-channel-node')).toHaveCount(3)
   })
 
-  })
 })
