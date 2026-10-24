@@ -25,3 +25,4 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/.playwright/
 frontend/snapshots/
+// Test commit to trigger fresh workflow run
