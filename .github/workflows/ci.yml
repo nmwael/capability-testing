@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: 24
       - run: node scripts/verify-capabilities.js
+      - run: node scripts/check-docs.js
       # Capability matrix + progress in the job summary. Test failures are left to
       # mikepenz/action-junit-report in each lane — this reports the specs.
       - name: Capability report
