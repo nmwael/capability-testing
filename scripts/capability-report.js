@@ -4,13 +4,15 @@
 //
 //   node scripts/capability-report.js                  # matrix to stdout
 //   node scripts/capability-report.js --summary FILE   # append to a job summary
+//   node scripts/capability-report.js --surefire FILE  # include surefire XML
+//   node scripts/capability-report.js --vitest FILE   # include vitest JUnit XML
 //
 // Progress is measured from the specs: a scenario counts as *implemented* once
 // its @todo tag is gone. @todo at Feature level covers every scenario in that
 // file; @todo directly above a Scenario covers just that one.
 //
-// Test failures are deliberately NOT collected here — each CI lane reports its
-// own via mikepenz/action-junit-report, which already knows JUnit XML.
+// Test failures from Surefire and vitest JUnit XML are collected and shown in
+// the unified matrix.
 
 const fs = require('fs');
 const path = require('path');
@@ -83,6 +85,119 @@ function readFeature(file) {
   return { cap: capTag ? capTag.slice('@cap:'.length) : null, scenarios, todo };
 }
 
+// --- parse test results ----------------------------------------------------
+
+function parseJUnitXML(xmlPath) {
+  if (!fs.existsSync(xmlPath)) return null;
+  const text = fs.readFileSync(xmlPath, 'utf8');
+  return parseJUnitText(text);
+}
+
+function parseSurefire(xmlPath) {
+  if (!fs.existsSync(xmlPath)) return {};
+  const text = fs.readFileSync(xmlPath, 'utf8');
+  return parseJUnitText(text);
+}
+
+function parseJUnitText(text) {
+  // Extract test names and failure counts from JUnit XML
+  const results = new Map();
+  const lines = text.split('\n');
+  let inTests = false;
+  let inFailure = false;
+  let currentTest = null;
+  let currentFailures = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes('<testsuites') || line.includes('<testsuite')) {
+      inTests = true;
+      continue;
+    }
+    if (inTests) {
+      if (line.includes('</testsuites>') || line.includes('</testsuite>')) {
+        inTests = false;
+        continue;
+      }
+      if (line.includes('<testcase')) {
+        const nameMatch = line.match(/name="([^"]+)"/);
+        if (nameMatch) {
+          currentTest = nameMatch[1];
+          currentFailures = 0;
+        }
+      }
+      if (inFailure && line.includes('</failure>')) {
+        currentFailures++;
+        inFailure = false;
+      }
+      if (line.includes('<failure')) {
+        inFailure = true;
+      }
+      if (line.includes('<testcase')) {
+        if (currentTest) {
+          // Extract capability from test name (e.g., "features.publication.User.feature")
+          const parts = currentTest.split('.');
+          const featureFile = parts[0];
+          const capability = parts[1];
+          if (capability) {
+            const capKey = `surefire:${capability}`;
+            const failures = currentFailures;
+            if (!results.has(capKey)) {
+              results.set(capKey, { failures: 0, files: [] });
+            }
+            results.get(capKey).failures += failures;
+            if (!results.get(capKey).files.includes(featureFile)) {
+              results.get(capKey).files.push(featureFile);
+            }
+          }
+        }
+        currentTest = null;
+        currentFailures = 0;
+        inFailure = false;
+      }
+    }
+  }
+  
+  return { perCap: new Map(), capFiles: new Map() };
+}
+
+function parseTestResults(surefirePath, vitestPath) {
+  const perCap = new Map();
+  const capFiles = new Map();
+
+  // Parse surefire reports
+  if (fs.existsSync(surefirePath)) {
+    const surefireDir = path.join(ROOT, surefirePath);
+    if (fs.existsSync(surefireDir) && fs.statSync(surefireDir).isDirectory()) {
+      for (const file of fs.readdirSync(surefireDir).filter(f => f.startsWith('TEST-'))) {
+        const fileStats = fs.statSync(path.join(surefireDir, file));
+        if (!fileStats.isFile()) continue;
+        
+        const text = fs.readFileSync(path.join(surefireDir, file), 'utf8');
+        const result = parseJUnitText(text);
+        
+        for (const [key, data] of Object.entries(result)) {
+          perCap.set(key, (perCap.get(key) || 0) + data.failures);
+          capFiles.set(key, [...(capFiles.get(key) || []), file]);
+        }
+      }
+    }
+  }
+
+  // Parse vitest JUnit XML
+  if (fs.existsSync(vitestPath)) {
+    const text = fs.readFileSync(vitestPath, 'utf8');
+    const result = parseJUnitText(text);
+    
+    for (const [key, data] of Object.entries(result)) {
+      perCap.set(key, (perCap.get(key) || 0) + data.failures);
+      capFiles.set(key, [...(capFiles.get(key) || []), file]);
+    }
+  }
+
+  return { perCap, capFiles };
+}
+
 function scanSpecs(featuresDir) {
   const found = [];
   if (!fs.existsSync(featuresDir)) return found;
@@ -102,7 +217,7 @@ function scanSpecs(featuresDir) {
 
 const dash = n => (n ? String(n) : '–');
 
-function render(caps, specs) {
+function render(caps, specs, testResults) {
   const per = new Map(caps.map(c => [c.id, { sc: {}, total: 0, todoTotal: 0 }]));
   for (const s of specs) {
     const a = per.get(s.cap);
@@ -110,6 +225,17 @@ function render(caps, specs) {
     a.sc[s.lane] = (a.sc[s.lane] || 0) + s.scenarios;
     a.total += s.scenarios;
     a.todoTotal += s.todo;
+  }
+
+  // Add test failure counts
+  if (testResults && testResults.perCap) {
+    for (const [key, failures] of testResults.perCap) {
+      const capId = key.split(':')[1];
+      const a = per.get(capId);
+      if (a) {
+        a.testFailures = (a.testFailures || 0) + failures;
+      }
+    }
   }
 
   let total = 0;
@@ -123,15 +249,17 @@ function render(caps, specs) {
   L.push(`**${caps.length} capabilities** · **${total} scenarios** · `
     + `**${total - todoTotal} implemented** · **${todoTotal} to do** · **${pct}%**`);
   L.push('');
-  L.push('| Capability | Intent | Owner | Status | Frontend | Publication | Alerting | To do | Scenarios |');
-  L.push('| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |');
+  L.push('| Capability | Intent | Owner | Status | Frontend | Publication | Alerting | To do | Scenarios | Test |');
+  L.push('| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const c of caps) {
     const a = per.get(c.id);
     const lane = l => (a.sc[l] ? String(a.sc[l]) : '–');
+    const test = a.testFailures ? String(a.testFailures) : '–';
     L.push(`| ${c.id} | ${(c.intent || '–').replace(/\|/g, '\\|')} `
       + `| ${c.owner || '–'} | ${c.status || '–'} `
       + `| ${lane('frontend')} | ${lane('publication')} | ${lane('alerting')} `
-      + `| ${dash(a.todoTotal)} | ${dash(a.total)} |`);
+      + `| ${dash(a.todoTotal)} | ${dash(a.total)} |`
+      + `| ${test} |`);
   }
 
   const remaining = caps.filter(c => per.get(c.id).todoTotal > 0);
@@ -164,6 +292,10 @@ function render(caps, specs) {
 function main() {
   const summary = process.argv.includes('--summary')
     ? process.argv[process.argv.indexOf('--summary') + 1] : null;
+  const surefire = process.argv.includes('--surefire')
+    ? process.argv[process.argv.indexOf('--surefire') + 1] : null;
+  const vitest = process.argv.includes('--vitest')
+    ? process.argv[process.argv.indexOf('--vitest') + 1] : null;
 
   const registryPath = path.join(ROOT, 'capabilities', 'capabilities.yml');
   if (!fs.existsSync(registryPath)) {
@@ -171,7 +303,13 @@ function main() {
     process.exit(1);
   }
 
-  const text = render(readRegistry(registryPath), scanSpecs(path.join(ROOT, 'features')));
+  const specs = scanSpecs(path.join(ROOT, 'features'));
+  let testResults = null;
+  if (surefire || vitest) {
+    testResults = parseTestResults(surefire, vitest);
+  }
+
+  const text = render(readRegistry(registryPath), specs, testResults);
 
   if (summary) {
     fs.appendFileSync(summary, text, 'utf8');

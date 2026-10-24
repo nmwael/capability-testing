@@ -28,6 +28,11 @@ jobs:
       - name: Capability report
         if: always()
         run: node scripts/capability-report.js --summary "$GITHUB_STEP_SUMMARY"
+      # Unified capability report: combine capability specs with test results and
+      # @todo counts from feature files.
+      - name: Unified capability report
+        if: always()
+        run: node scripts/capability-report.js --surefire "backend/**/target/surefire-reports/TEST-*.xml" --vitest "frontend/reports/junit.xml" --summary "$GITHUB_STEP_SUMMARY"
 
   backend:
     runs-on: ubuntu-24.04
