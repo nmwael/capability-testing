@@ -50,5 +50,32 @@ flowchart TD
 
 **README.md Entrypoint Role:** This file serves as the primary documentation entrypoint, providing an overview of the architecture, structure, and current state of the project. It references the `docs/` directory for detailed feature documentation and workflow diagrams.
 
+## 🧪 Capability Testing & Traceability
+
+This project implements CAP v1.2 capability testing with traceability from schema to implementation.
+
+### Schema Traceability
+
+- **CAP v1.2 Schema** (`backend/common/src/main/resources/cap-v1.2.xsd`) defines the rule and flow schemas that the Drools rules engine enforces.
+- **Traceability** from CAP schema to implementation:
+  - Rule Schema → Alert Routing & Alert Publishing Drools rules
+  - Flow Schema → State Transitions & Alert State Machine
+- Every capability must be pinned by a spec under `features/` first before implementation.
+
+### Capability Registry
+
+The capability registry (`capabilities/capabilities.yml`) tracks:
+- 7 capabilities with 96 scenarios
+- 91 scenarios implemented, 5 to do (95% coverage)
+- Each capability lists its verified_by implementations (Playwright, backend tests, etc.)
+- The registry is verified by `node scripts/verify-capabilities.js`
+
+### Playwright Traceability
+
+- Playwright e2e tests are tagged with `@bdd` and capability tags (`@cap:alert_routing`, etc.)
+- Tests run against the live backend/frontend servers
+- Traceability ensures every scenario is covered by at least one Playwright test
+
 ## 🚧 Current State
-The project entrypoint is the README.md. Next: docs onboarding (ONBOARDING.md, mermaid diagrams, stale doc consolidation, Playwright artifact cleanup). Then: backend/frontend implementation.
+
+The project entrypoint is the README.md. Next: backend/frontend implementation.
