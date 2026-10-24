@@ -40,6 +40,7 @@
         "setCacheKey": false
       }
     }
+
   },
   "agents": {
     "architect": {
@@ -127,6 +128,11 @@
     {
       "action": "provider.use",
       "resource": "opencode",
+      "effect": "allow"
+    },
+    {
+      "action": "provider.use",
+      "resource": "nvidia",
       "effect": "allow"
     }
   ],
