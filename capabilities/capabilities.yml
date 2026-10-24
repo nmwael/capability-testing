@@ -60,3 +60,5 @@ capabilities:
     since: 1.1.0
     verified_by:
       - "features/docs/onboarding.feature"
+    plans:
+      - "186: GitHub Tracker Integration + Doc Freeze"

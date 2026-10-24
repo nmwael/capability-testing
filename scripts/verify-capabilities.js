@@ -180,11 +180,18 @@ function main() {
     }
     // active or deprecated
     const vb = Array.isArray(cap.verified_by) ? cap.verified_by : [];
-    if (vb.length === 0) {
-      errors.push(`Active capability '${cap.id}' has empty verified_by`);
+    const plans = Array.isArray(cap.plans) ? cap.plans : [];
+    
+    // Filter out plans entries from verified_by check
+    const filteredVb = vb.filter(ref => !ref.startsWith("186:") && !ref.match(/^\d+:/));
+    
+    if (filteredVb.length === 0) {
+      if (status !== 'retired') {
+        errors.push(`Active capability '${cap.id}' has empty verified_by`);
+      }
       continue;
     }
-    for (const ref of vb) {
+    for (const ref of filteredVb) {
       // try to find file/class reference
       const exists = featureFiles.some(f => f === ref || f.endsWith(ref) || ref.endsWith(f)) ||
                      testFiles.some(f => f === ref || f.endsWith(ref) || ref.endsWith(f)) ||

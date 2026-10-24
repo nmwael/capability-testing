@@ -39,6 +39,16 @@ The window:
 
 **Night Shift waives HITL approval:** the architect's plan does not need human approval during the window. The fact-checker posts the plan as a **COMMENT** on the work-item issue (the issue being implemented) instead of publishing a plan issue; missing `I am waiting for approval` is a WARN, not a finding.
 
+## Documentation Freeze
+
+During Night Shift, feature documentation for **active capabilities** is frozen and cannot be modified. This means:
+
+- Do not update or change documentation for capabilities that are currently being developed or implemented.
+- The `@todo` tags remain on draft capabilities and are not modified during Night Shift.
+- Only new documentation may be added for capabilities that were not yet active before Night Shift began.
+
+This freeze ensures stable, predictable documentation during unattended windows.
+
 ### GitHub Tracker Discipline
 
 - **Issue lifecycle** - every issue opened gets at least one `role:/kind:` label and a milestone; keep work-in-progress issues open; **CLOSE** an issue only after the change is committed AND the mandatory reviewer gate has passed, using `Closes #NN` or `Fixes #NN` in the commit message so GitHub auto-closes it.
