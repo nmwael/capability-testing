@@ -48,6 +48,7 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
   const [status, setStatus] = useState<'loading' | 'ok' | 'error' | 'notfound'>('loading')
   const [error, setError] = useState('')
   const [networkError, setNetworkError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -79,7 +80,9 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
         setStatus('ok')
       } catch (e) {
         if (!cancelled) {
-          if (e instanceof TypeError) {
+          // Check if it's a fetch timeout or 'failed'/'aborted' status
+          const isTimeoutOrSpecial = (e as Error).message?.includes('timeout')
+          if (!isTimeoutOrSpecial) {
             setNetworkError(true)
             setStatus('error')
             setError('Network error: unable to fetch alert data')
@@ -92,7 +95,7 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
     }
     load()
     return () => { cancelled = true }
-  }, [alertId, endpoint])
+  }, [alertId, endpoint, reloadKey])
 
   function onConnect(conn: Connection) {
     setEdges(eds => addEdge(conn, eds))
@@ -116,7 +119,7 @@ export function AlertFlow({ alertId = 'ALERT-001', endpoint = '/alerts' }: Alert
         <div data-testid="alert-flow-error">Failed to load: {error}</div>
       )}
       {(status === 'error' || networkError) && (
-        <button data-testid="alert-flow-retry" onClick={() => { setStatus('loading'); setError(''); setNetworkError(false) }}>Retry</button>
+        <button data-testid="alert-flow-retry" onClick={() => { setStatus('loading'); setError(''); setNetworkError(true); setNetworkError(false); setReloadKey(k => k + 1) }}>Retry</button>
       )}
       <ReactFlow data-testid="alert-flow-canvas" nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} fitView nodeTypes={nodeTypes} edgeTypes={edgeTypes}>
         <Controls data-testid="alert-flow-controls" />

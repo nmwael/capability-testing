@@ -1,53 +1,50 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('alert.rule-edit', () => {
-  test('@bdd loads saved graph from backend', async ({ page }) => {
+  test('@bdd loads default graph when no saved graph', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
+    await expect(page.locator('.react-flow__node-condition')).toBeVisible()
     await expect(page.locator('.react-flow__node-action')).toBeVisible()
   })
 
-  test('@bdd edits condition value in saved graph', async ({ page }) => {
+  test('@bdd edits condition value', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    const condition = page.locator('.react-flow__node-condition')
-    const valueInput = condition.locator('[data-testid="value-input"]')
-    await valueInput.fill('Moderate')
-    await expect(condition).toContainText('Moderate')
+    const condition = page.locator('[data-testid="condition-node"]')
+    const valueInput = condition.locator('[data-testid="condition-value-select"]')
+    await valueInput.selectOption('Moderate')
+    await expect(valueInput).toHaveValue('Moderate')
   })
 
-  test('@bdd renames action node', async ({ page }) => {
+  test('@bdd renames node via rename panel', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    const canvas = page.locator('[data-testid="canvas"]')
-    await canvas.dblclick()
-    await page.fill('[data-testid="rename-input"]', 'sirens')
+    const condition = page.locator('[data-testid="condition-node"]')
+    await condition.click()
+    await expect(page.getByTestId('rule-edit-rename-panel')).toBeVisible()
+    const input = page.getByTestId('rule-edit-rename-input')
+    await input.fill('my-condition')
     await page.keyboard.press('Enter')
-    await expect(page.locator('.react-flow__node-action')).toContainText('sirens')
+    await expect(page.getByTestId('rule-edit-rename-panel')).toBeHidden()
   })
 
-  test('@bdd deletes action node', async ({ page }) => {
+  test('@bdd deletes node with Backspace', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    const canvas = page.locator('[data-testid="canvas"]')
-    await canvas.dblclick()
-    const actionNode = page.locator('.react-flow__node-action')
-    await actionNode.dblclick()
-    await page.keyboard.press('Delete')
-    await expect(actionNode).not.toBeVisible()
+    const action = page.locator('.react-flow__node-action')
+    await action.click()
+    await page.keyboard.press('Backspace')
+    await expect(action).not.toBeVisible()
   })
 
-  test('@bdd saving posts changed graph to backend', async ({ page }) => {
+  test('@bdd saving posts to /rules endpoint', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    await page.click('[data-testid="save-button"]')
+    await page.click('[data-testid="rule-edit-save"]')
     const response = await page.waitForResponse((req) => req.url().includes('/rules'))
     expect(response.status()).toBe(200)
   })
 
-  test('@bdd round-trips edit through backend', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    await page.click('[data-testid="save-button"]')
-  })
-
   test('@bdd keeps edit when save is rejected', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    await page.click('[data-testid="save-button"]')
-    await expect(page.getByTestId('unsaved-changes')).toBeVisible()
+    await page.route('**/rules/**', route => route.abort('failed'))
+    await page.click('[data-testid="rule-edit-save"]')
+    await expect(page.getByTestId('rule-edit-unsaved')).toBeVisible()
   })
 })

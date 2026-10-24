@@ -40,7 +40,7 @@ function ConditionNodeComponent({ id, data }: { id: string; data: ConditionNodeD
 
   return (
     <div className="cap-node cap-node-condition" data-testid="condition-node">
-      <Handle type="target" position={Position.Left} className="cap-handle" data-testid="handle-source" />
+      <Handle type="target" position={Position.Left} className="cap-handle" data-testid="handle-target" />
       <div className="cap-node-header">Condition</div>
       <div className="cap-node-row">
         <span>field: </span>
@@ -196,6 +196,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
   const [history, setHistory] = useState<any[]>([])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [dirty, setDirty] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
   const onSelectionChange = useCallback(({ nodes: selected }: { nodes: Node[] }) => {
     setSelectedNodeId(selected.length > 0 ? selected[selected.length - 1].id : null)
   }, [])
@@ -297,7 +298,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
     return () => { cancelled = true }
     // Runs once when the designer opens: graphNameLocal is the name in effect
     // at that point, and renaming it must not re-fetch over the officer's work.
-  }, [endpoint])
+  }, [endpoint, reloadKey])
 
   // Memoized graph validity check with O(V+E) cycle detection
   const isGraphInvalid = useMemo(() => {
@@ -383,6 +384,9 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
       addActionNode()
       return
     }
+    if (e.key === 'u' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); undo(); return }
+    if (e.key === 'r' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); redo(); return }
+    if (e.key === 'Delete') { e.preventDefault(); if (selectedNodeId) { setNodes(nodes => nodes.filter(n => n.id !== selectedNodeId)); setSelectedNodeId(null); setDirty(true) } return }
     if (e.key === 'Backspace') {
       e.preventDefault()
       if (selectedNodeId) {
@@ -625,7 +629,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="generate-rules-button" onClick={() => { pushToHistory(); void postGraph(); }} disabled={isGraphInvalid} title={isGraphInvalid ? 'Add a complete connected graph before generating' : 'Generate rules from the drawn graph'}>
             Generate Rules
           </button>
-          <button data-testid="rule-designer-reopen-button" onClick={() => { pushToHistory(); void load(); }}>Reopen</button>
+          <button data-testid="rule-designer-reopen-button" onClick={() => { pushToHistory(); setReloadKey(k => k + 1) }}>Reopen</button>
 
           {catalogueOpen && (
             <div className="cap-catalogue-panel">
@@ -669,7 +673,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-add-action" onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
 
-        <div className="cap-canvas" onKeyDown={handleKeyDown} tabIndex={0} data-testid="canvas">
+        <div className="cap-canvas" onKeyDown={handleKeyDown} tabIndex={0} autoFocus data-testid="canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
