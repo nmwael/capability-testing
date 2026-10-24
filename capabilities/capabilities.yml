@@ -58,4 +58,5 @@ capabilities:
     owner: docs
     status: draft
     since: 1.1.0
-    verified_by: "features/docs/onboarding.feature"
+    verified_by:
+      - "features/docs/onboarding.feature"

@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = process.cwd();
-const LANES = ['frontend', 'publication', 'alerting'];
+const LANES = ['frontend', 'publication', 'alerting', 'docs'];
 
 function unquote(s) {
   return s.replace(/^['"]|['"]$/g, '');

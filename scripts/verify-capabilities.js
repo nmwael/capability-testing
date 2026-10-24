@@ -108,7 +108,7 @@ function checkQuarterPast(qstr) {
 }
 
 // A feature file states its side as a tag, and the tag must agree with its directory.
-const LANE_TAGS = { publication: '@backend', alerting: '@backend', frontend: '@frontend' };
+const LANE_TAGS = { publication: '@backend', alerting: '@backend', frontend: '@frontend', docs: '@docs' };
 
 function readTagsBeforeFeature(text) {
   // Tags are the @-lines above `Feature:`. Splitting there keeps a later @-word in a
@@ -141,7 +141,7 @@ function checkLaneTags(repoRoot, errors) {
         errors.push(`${rel}: expected exactly one @cap: tag, found ${capTags.length}`);
       }
 
-      const laneTags = tags.filter(t => t === '@frontend' || t === '@backend');
+      const laneTags = tags.filter(t => t === '@frontend' || t === '@backend' || t === '@docs');
       if (!expected) {
         errors.push(`${rel}: no lane mapping for 'features/${lane}/' (add it to LANE_TAGS)`);
       } else if (laneTags.length === 0) {
