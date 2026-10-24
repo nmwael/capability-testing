@@ -1,20 +1,16 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  grep: /@bdd/,
   fullyParallel: true,
-  retries: 1,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: 1,
+  reporter: [['html'], ['json']],
   use: {
-    baseURL: 'http://localhost:5174',
-    trace: 'on-first-retry',
-  },
-  webServer: {
-    command: 'npx vite --port 5174',
-    url: 'http://localhost:5174',
-    reuseExistingServer: true,
-    timeout: 60000,
+    baseURL: 'http://127.0.0.1:3000',
+    screenshot: 'on',
+    trace: 'on'
   },
   projects: [
     {
@@ -22,4 +18,4 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-})
+});
