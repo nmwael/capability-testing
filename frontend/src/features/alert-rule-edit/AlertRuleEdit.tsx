@@ -456,12 +456,11 @@ function AlertRuleEdit({ endpoint = '/rules', graphName = 'tornado-routing' }: A
             onNodeDragStop={onNodeDragStop}
             fitView
             nodeTypes={nodeTypes}
-            onlyRenderVisibleElements
             defaultEdgeOptions={{ animated: true }}
             snapToGrid
             snapGrid={[10, 10]}
             nodeOrigin={[0.5, 0]}
-            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance }}
+            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance; instance.fitView() }}
           >
             <Background gap={16} />
             <MiniMap

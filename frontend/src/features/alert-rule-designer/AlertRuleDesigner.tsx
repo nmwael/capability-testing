@@ -673,7 +673,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-add-action" onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
 
-        <div className="cap-canvas" onKeyDown={handleKeyDown} tabIndex={0} autoFocus data-testid="canvas">
+        <div className="cap-canvas" style={{ width: 600, height: 400 }} onKeyDown={handleKeyDown} tabIndex={0} autoFocus data-testid="canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -686,12 +686,11 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
             fitView
             deleteKeyCode={undefined}
             nodeTypes={nodeTypes}
-            onlyRenderVisibleElements
             defaultEdgeOptions={{ animated: true }}
             snapToGrid
             snapGrid={[10, 10]}
             nodeOrigin={[0.5, 0]}
-            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance }}
+            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance; instance.fitView() }}
           >
             <Background gap={16} />
             <MiniMap

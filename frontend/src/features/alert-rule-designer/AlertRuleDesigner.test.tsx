@@ -185,8 +185,8 @@ describe('AlertRuleDesigner behaviour', () => {
     await waitFor(() => expect(screen.queryByText(/Unsaved changes/i)).toBeNull())
   })
 
-  it('draws only the nodes in view', () => {
+  it('does not set onlyRenderVisibleElements (CI compatibility)', () => {
     render(<AlertRuleDesigner />)
-    expect(h.props.onlyRenderVisibleElements).toBe(true)
+    expect(h.props.onlyRenderVisibleElements).toBeUndefined()
   })
 })
