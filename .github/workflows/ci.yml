@@ -118,10 +118,49 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
       - working-directory: frontend
         run: npm ci
-      - name: Playwright E2E tests
-        working-directory: frontend
+      - working-directory: frontend
+        run: npm run build
+      - working-directory: backend
+        run: mvn -B -q package -DskipTests
+      - working-directory: backend
+        run: java -jar publication/target/quarkus-app/quarkus-run.jar &
+      - name: Wait for backend readiness
+        run: |
+          for i in {1..60}; do
+            if curl -sf http://127.0.0.1:8080/ >/dev/null 2>&1; then
+              echo "Backend is ready."
+              break
+            fi
+            echo "Waiting for backend... ($i/60)"
+            sleep 1
+          done
+          if ! curl -sf http://127.0.0.1:8080/ >/dev/null 2>&1; then
+            echo "Backend failed to start within 60s"
+            exit 1
+          fi
+      - working-directory: frontend
+        run: npx vite preview --port 3000 &
+      - name: Wait for frontend readiness
+        run: |
+          for i in {1..60}; do
+            if curl -sf http://127.0.0.1:3000/ >/dev/null 2>&1; then
+              echo "Frontend is ready."
+              break
+            fi
+            echo "Waiting for frontend... ($i/60)"
+            sleep 1
+          done
+          if ! curl -sf http://127.0.0.1:3000/ >/dev/null 2>&1; then
+            echo "Frontend failed to start within 60s"
+            exit 1
+          fi
+      - working-directory: frontend
         run: npx playwright test
       - name: Upload Playwright report
         if: always()
