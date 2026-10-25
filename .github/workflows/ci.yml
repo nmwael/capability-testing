@@ -42,6 +42,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'maven'
       # Surefire already writes backend/*/target/surefire-reports/TEST-*.xml;
       # the action reads that and posts counts + failures to the job summary and
       # a check run. No reporting code of our own.
@@ -86,11 +87,13 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: 'npm'
       - working-directory: frontend
-        run: |
-          npm ci
-          npm run typecheck
-          npx depcruise src --config .depcruiser.js
+        run: npm ci
+      - working-directory: frontend
+        run: npm run typecheck
+      - working-directory: frontend
+        run: npx depcruise src --config .depcruiser.js
       # vitest's built-in junit reporter emits the same schema as Surefire, so the
       # one action covers both lanes. This also puts the unit tests into CI, which
       # the frontend lane did not run before.
@@ -118,10 +121,12 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: 'npm'
       - uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'maven'
       - working-directory: frontend
         run: npm ci
       - working-directory: frontend
@@ -160,8 +165,13 @@ jobs:
             echo "Frontend failed to start within 60s"
             exit 1
           fi
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('frontend/package-lock.json') }}
       - working-directory: frontend
-        run: npx playwright install chromium
+        run: npx playwright install chromium --with-deps
       - working-directory: frontend
         run: npx playwright test
       - name: Upload Playwright report
