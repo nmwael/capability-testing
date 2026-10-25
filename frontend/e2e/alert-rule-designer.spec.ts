@@ -96,6 +96,7 @@ test.describe('alert.rule-designer', () => {
     await page.goto('/')
     await page.click('[data-testid="save-button"]')
     await page.click('[data-testid="rule-designer-reopen-button"]')
+    await page.waitForSelector('[data-testid="canvas"]', { state: 'visible' })
     await expect(page.locator('[data-testid="canvas"]')).toBeVisible()
     await expect(page.locator('.react-flow__node-condition')).toBeVisible()
     await expect(page.locator('.react-flow__node-action')).toBeVisible()

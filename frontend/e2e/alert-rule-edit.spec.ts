@@ -9,6 +9,7 @@ test.describe('alert.rule-edit', () => {
 
   test('@bdd edits condition value', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
+    await page.waitForSelector('[data-testid="condition-value-select"]', { state: 'visible' })
     const condition = page.locator('[data-testid="condition-node"]')
     const valueInput = condition.locator('[data-testid="condition-value-select"]')
     await valueInput.selectOption('Moderate')
@@ -36,6 +37,7 @@ test.describe('alert.rule-edit', () => {
 
   test('@bdd saving posts to /rules endpoint', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
+    await page.waitForSelector('[data-testid="rule-edit-save"]', { state: 'visible' })
     await page.click('[data-testid="rule-edit-save"]')
     const response = await page.waitForResponse((req) => req.url().includes('/rules'))
     expect(response.status()).toBe(200)
@@ -43,6 +45,7 @@ test.describe('alert.rule-edit', () => {
 
   test('@bdd keeps edit when save is rejected', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
+    await page.waitForSelector('[data-testid="rule-edit-save"]', { state: 'visible' })
     await page.route('**/rules/**', route => route.abort('failed'))
     await page.click('[data-testid="rule-edit-save"]')
     await expect(page.getByTestId('rule-edit-unsaved')).toBeVisible()
