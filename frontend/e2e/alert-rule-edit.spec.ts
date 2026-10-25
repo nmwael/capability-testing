@@ -3,13 +3,14 @@ import { test, expect } from '@playwright/test'
 test.describe('alert.rule-edit', () => {
   test('@bdd loads default graph when no saved graph', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    await expect(page.locator('.react-flow__node-condition')).toBeVisible()
-    await expect(page.locator('.react-flow__node-action')).toBeVisible()
+    await page.locator('[data-testid="condition-node"]').waitFor({ state: 'visible' })
+    await expect(page.locator('[data-testid="condition-node"]')).toBeVisible()
+    await expect(page.locator('[data-testid="action-node"]')).toBeVisible()
   })
 
   test('@bdd edits condition value', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    await page.waitForSelector('[data-testid="condition-value-select"]', { state: 'visible' })
+    await page.locator('[data-testid="condition-value-select"]').waitFor({ state: 'visible' })
     const condition = page.locator('[data-testid="condition-node"]')
     const valueInput = condition.locator('[data-testid="condition-value-select"]')
     await valueInput.selectOption('Moderate')
@@ -29,7 +30,7 @@ test.describe('alert.rule-edit', () => {
 
   test('@bdd deletes node with Backspace', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
-    const action = page.locator('.react-flow__node-action')
+    const action = page.locator('[data-testid="action-node"]')
     await action.click()
     await page.keyboard.press('Backspace')
     await expect(action).not.toBeVisible()
