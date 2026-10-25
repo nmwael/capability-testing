@@ -145,7 +145,7 @@ jobs:
             exit 1
           fi
       - working-directory: frontend
-        run: npx vite preview --port 3000 &
+        run: npx vite preview --port 3000 --host &
       - name: Wait for frontend readiness
         run: |
           for i in {1..60}; do
