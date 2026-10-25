@@ -161,6 +161,8 @@ jobs:
             exit 1
           fi
       - working-directory: frontend
+        run: npx playwright install chromium
+      - working-directory: frontend
         run: npx playwright test
       - name: Upload Playwright report
         if: always()
