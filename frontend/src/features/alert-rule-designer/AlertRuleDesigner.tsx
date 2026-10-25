@@ -681,7 +681,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
           <button data-testid="rule-designer-add-action" onClick={() => { addActionNode(); }}>Add Action</button>
         </div>
 
-        <div className="cap-canvas" style={{ width: 600, height: 400 }} onKeyDown={handleKeyDown} tabIndex={0} autoFocus data-testid="canvas">
+        <div className="cap-canvas" style={{ width: 600, height: 400, position: 'relative' }} onKeyDown={handleKeyDown} tabIndex={0} autoFocus data-testid="canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
