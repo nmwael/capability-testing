@@ -1,7 +1,3 @@
-Here is the complete, professional document in copy-pastable Markdown. I have optimized the Mermaid syntax specifically for GitHub's rendering engine.
-
-***
-
 # Governed Capability Contract
 
 ## Purpose
