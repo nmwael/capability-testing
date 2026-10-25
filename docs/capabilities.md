@@ -37,5 +37,5 @@ The following capabilities are marked as draft and require implementation:
 
 ## See Also
 
-- [CI & Reports](/reports) - Detailed CI job coverage and BDD tracking
-- [Governance](/governance) - Governance roles and approval policies
+- [CI & Reports](/capability-testing/reports) - Detailed CI job coverage and BDD tracking
+- [Governance](/capability-testing/governance) - Governance roles and approval policies

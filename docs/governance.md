@@ -48,5 +48,5 @@ The governance process currently lacks automated approval workflows for capabili
 
 ## See Also
 
-- [Capabilities](/capabilities) - Capability table and status
-- [CI & Reports](/reports) - CI jobs and coverage reports
+- [Capabilities](/capability-testing/capabilities) - Capability table and status
+- [CI & Reports](/capability-testing/reports) - CI jobs and coverage reports

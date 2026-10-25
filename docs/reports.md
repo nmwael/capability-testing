@@ -63,5 +63,5 @@ The BDD framework tracks scenarios with `@todo` annotations:
 
 ## See Also
 
-- [Capabilities](/capabilities) - Full capability table
-- [Governance](/governance) - Governance roles and policies
+- [Capabilities](/capability-testing/capabilities) - Full capability table
+- [Governance](/capability-testing/governance) - Governance roles and policies

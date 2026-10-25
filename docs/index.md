@@ -25,6 +25,6 @@ This project protects capabilities through explicit declaration, accountable own
 
 ## Quick Links
 
-- [Capabilities](/capabilities) - Full capability table with owners and status
-- [CI & Reports](/reports) - CI jobs, coverage reports, and BDD tracking
-- [Governance](/governance) - Roles, separation of duties, and approval policies
+- [Capabilities](/capability-testing/capabilities) - Full capability table with owners and status
+- [CI & Reports](/capability-testing/reports) - CI jobs, coverage reports, and BDD tracking
+- [Governance](/capability-testing/governance) - Roles, separation of duties, and approval policies
