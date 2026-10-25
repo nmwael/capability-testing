@@ -400,6 +400,13 @@ function AlertRuleEdit({ endpoint = '/rules', graphName = 'tornado-routing' }: A
     }
   }, [showEmptyHint])
 
+  // Fit view when nodes are added so they render in the viewport
+  useEffect(() => {
+    if (nodes.length > 0 && reactFlowInstance.current) {
+      try { reactFlowInstance.current.fitView() } catch {}
+    }
+  }, [nodes.length, reactFlowInstance.current])
+
   // Create dirty context provider
   const DirtyContextValue = useMemo(() => ({ setDirty: () => setDirty(true) }), [setDirty])
 
