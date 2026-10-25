@@ -690,7 +690,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
             snapToGrid
             snapGrid={[10, 10]}
             nodeOrigin={[0.5, 0]}
-            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance; instance.fitView() }}
+            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance }}
           >
             <Background gap={16} />
             <MiniMap
