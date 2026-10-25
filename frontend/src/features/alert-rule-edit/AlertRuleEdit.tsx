@@ -460,7 +460,10 @@ function AlertRuleEdit({ endpoint = '/rules', graphName = 'tornado-routing' }: A
             snapToGrid
             snapGrid={[10, 10]}
             nodeOrigin={[0.5, 0]}
-            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance }}
+            onInit={(instance) => {
+              reactFlowInstance.current = instance as ReactFlowInstance
+              try { instance.fitView() } catch { /* safe in jsdom/teardown */ }
+            }}
           >
             <Background gap={16} />
             <MiniMap
