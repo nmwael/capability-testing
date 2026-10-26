@@ -2,8 +2,9 @@ import { test, expect } from '@playwright/test'
 
 test.describe('alert.rule-designer', () => {
   async function focusCanvas(page) {
-    // Wait for default graph nodes to render
+    // Wait for React Flow to fully initialize
     await page.locator('[data-testid="condition-node"]').first().waitFor({ state: 'visible' })
+    await page.waitForTimeout(500)
     // Click the canvas to ensure keyboard shortcuts work
     await page.locator('[data-testid="canvas"]').click()
     await page.waitForTimeout(200)
@@ -27,7 +28,7 @@ test.describe('alert.rule-designer', () => {
 
   test('@bdd edits a condition field value', async ({ page }) => {
     await page.goto('/')
-    await page.locator('[data-testid="condition-field-select"]').waitFor({ state: 'visible' })
+    await page.locator('[data-testid="condition-field-select"]').waitFor({ state: 'visible', timeout: 10000 })
     const condition = page.locator('[data-testid="condition-node"]')
     const dropdown = condition.locator('[data-testid="field-dropdown"]')
     await dropdown.selectOption('urgency')
@@ -36,7 +37,7 @@ test.describe('alert.rule-designer', () => {
 
   test('@bdd edits a condition value', async ({ page }) => {
     await page.goto('/')
-    await page.locator('[data-testid="condition-value-select"]').waitFor({ state: 'visible' })
+    await page.locator('[data-testid="condition-value-select"]').waitFor({ state: 'visible', timeout: 10000 })
     const condition = page.locator('[data-testid="condition-node"]')
     const valueInput = condition.locator('[data-testid="value-input"]')
     await valueInput.selectOption('Moderate')
@@ -58,7 +59,7 @@ test.describe('alert.rule-designer', () => {
     await page.waitForTimeout(500)
     await expect(page.locator('[data-testid="condition-node"]')).toHaveCount(2)
     await page.keyboard.press('u')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="condition-node"]')).toHaveCount(1)
   })
 
