@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# Publishing a check run needs checks: write. Naming contents: read explicitly
-# matters because setting explicit permissions block replaces the implicit defaults
-# and actions/checkout needs contents: read.
 permissions:
   contents: read
   checks: write
@@ -23,13 +20,9 @@ jobs:
           node-version: 24
       - run: node scripts/verify-capabilities.js
       - run: node scripts/check-docs.js
-      # Capability matrix + progress in the job summary. Test failures are left to
-      # mikepenz/action-junit-report in each lane — this reports the specs.
       - name: Capability report
         if: always()
         run: node scripts/capability-report.js --summary "$GITHUB_STEP_SUMMARY"
-      # Unified capability report: combine capability specs with test results and
-      # @todo counts from feature files.
       - name: Unified capability report
         if: always()
         run: node scripts/capability-report.js --surefire "backend/**/target/surefire-reports/TEST-*.xml" --vitest "frontend/reports/junit.xml" --summary "$GITHUB_STEP_SUMMARY"
@@ -43,9 +36,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      # Surefire already writes backend/*/target/surefire-reports/TEST-*.xml;
-      # the action reads that and posts counts + failures to the job summary and
-      # a check run. No reporting code of our own.
       - name: Maven test
         working-directory: backend
         run: mvn -B -q test
@@ -94,9 +84,6 @@ jobs:
         run: npm run typecheck
       - working-directory: frontend
         run: npx depcruise src --config .depcruiser.js
-      # vitest's built-in junit reporter emits the same schema as Surefire, so the
-      # one action covers both lanes. This also puts the unit tests into CI, which
-      # the frontend lane did not run before.
       - name: Frontend tests
         working-directory: frontend
         run: mkdir -p reports && npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
@@ -114,103 +101,31 @@ jobs:
           path: frontend/coverage/index.html frontend/coverage/coverage-final.json
           retention-days: 14
 
-  # playwright-e2e:
-  #   runs-on: ubuntu-24.04
-  #   steps:
-  #     - uses: actions/checkout@v5
-  #     - uses: actions/setup-node@v5
-  #       with:
-  #         node-version: 24
-  #           cache: 'npm'
-  #     - uses: actions/setup-java@v5
-  #       with:
-  #         java-version: '17'
-  #         distribution: 'temurin'
-  #           cache: 'maven'
-  #     - working-directory: frontend
-  #       run: npm ci
-  #     - working-directory: frontend
-  #       run: npm run build
-  #     - working-directory: backend
-  #       run: mvn -B -q package -DskipTests
-  #     - working-directory: backend
-  #       run: java -jar publication/target/quarkus-app/quarkus-run.jar &
-  #     - name: Wait for backend readiness
-  #       run: |
-  #         for i in {1..60}; do
-  #           if curl -s -o /dev/null http://127.0.0.1:8080/ >/dev/null 2>&1; then
-  #             echo "Backend is ready."
-  #             break
-  #           fi
-  #           echo "Waiting for backend... ($i/60)"
-  #           sleep 1
-  #         done
-  #         if ! curl -s -o /dev/null http://127.0.0.1:8080/ >/dev/null 2>&1; then
-  #           echo "Backend failed to start within 60s"
-  #           exit 1
-  #         fi
-  #     - working-directory: frontend
-  #       run: npx vite preview --port 3000 --host &
-  #     - name: Wait for frontend readiness
-  #       run: |
-  #         for i in {1..60}; do
-  #           if curl -s -o /dev/null http://127.0.0.1:3000/ >/dev/null 2>&1; then
-  #             echo "Frontend is ready."
-  #             break
-  #           fi
-  #           echo "Waiting for frontend... ($i/60)"
-  #           sleep 1
-  #         done
-  #         if ! curl -s -o /dev/null http://127.0.0.1:3000/ >/dev/null 2>&1; then
-  #           echo "Frontend failed to start within 60s"
-  #           exit 1
-  #         fi
-  #     - name: Cache Playwright browsers
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: ~/.cache/ms-playwright
-  #         key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('frontend/package-lock.json') }}
-  #     - working-directory: frontend
-  #       run: npx playwright install chromium --with-deps
-  #     - working-directory: frontend
-  #       run: npx playwright test
-  #     - name: Upload Playwright report
-  #       if: always()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: playwright-report
-  #         path: frontend/playwright-report/
-  #         retention-days: 14
-  #
-  #   # NOTE: Playwright E2E tests are disabled in CI because React Flow
-  #   # renders nodes as SVG <foreignObject> elements which headless Chrome
-  #   # cannot render. E2E tests pass locally with headed Chrome but fail
-  #   # in headless CI. Run locally with: npx playwright test
-
   coverage-report:
     runs-on: ubuntu-24.04
-    needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - name: Download backend coverage artifact
-        uses: actions/download-artifact@v4
+          cache: 'npm'
+      - uses: actions/setup-java@v5
         with:
-          name: backend-coverage
-          path: backend-coverage-artifacts
-      - name: Download frontend coverage artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-coverage
-          path: frontend-coverage-artifacts
-      - name: Generate capability + coverage report
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Backend tests + coverage
+        working-directory: backend
+        run: mvn -B -q test
+      - name: Frontend tests + coverage
+        working-directory: frontend
+        run: mkdir -p reports && npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
+      - name: Generate capability coverage report
         run: |
           node scripts/capability-report.js \
             --capabilities capabilities/capabilities.yml \
-            --backend-coverage backend-coverage-artifacts/index.html \
-            --frontend-coverage frontend-coverage-artifacts/index.html \
+            --backend-coverage backend/target/site/jacoco/jacoco.xml \
+            --frontend-coverage frontend/coverage/coverage-final.json \
             --surefire "backend/**/target/surefire-reports/TEST-*.xml" \
             --vitest "frontend/reports/junit.xml" \
             --out coverage-report
@@ -231,9 +146,8 @@ jobs:
         with:
           name: coverage-report
           path: coverage-report
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: coverage-report
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          folder: coverage-report
