@@ -27,4 +27,9 @@ frontend/test-results/
 frontend/.playwright/
 frontend/snapshots/
 frontend/coverage/
+
+# Coverage and docs coverage
+coverage/
+docs/coverage/
+
 // Test commit to trigger fresh workflow run
