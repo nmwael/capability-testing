@@ -105,13 +105,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - name: Checkout coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage-report
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          folder: coverage-report
+          folder: docs
