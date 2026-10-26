@@ -25,4 +25,5 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/.playwright/
 frontend/snapshots/
+frontend/coverage/
 // Test commit to trigger fresh workflow run
