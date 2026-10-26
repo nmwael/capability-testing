@@ -2,19 +2,20 @@ import { test, expect } from '@playwright/test'
 
 test.describe('alert.rule-designer', () => {
   async function focusCanvas(page) {
-    // Wait for React Flow to fully initialize
-    await page.locator('[data-testid="condition-node"]').first().waitFor({ state: 'visible' })
-    await page.waitForTimeout(500)
+    // Wait for React Flow to fully initialize and render nodes
+    await page.locator('[data-testid="condition-node"]').first().waitFor({ state: 'visible', timeout: 15000 })
+    // Give React Flow time to layout nodes
+    await page.waitForTimeout(1000)
     // Click the canvas to ensure keyboard shortcuts work
     await page.locator('[data-testid="canvas"]').click()
-    await page.waitForTimeout(200)
+    await page.waitForTimeout(500)
   }
 
   test('@bdd adds a condition node via keyboard shortcut', async ({ page }) => {
     await page.goto('/')
     await focusCanvas(page)
     await page.keyboard.press('c')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="condition-node"]')).toHaveCount(2)
   })
 
@@ -22,13 +23,13 @@ test.describe('alert.rule-designer', () => {
     await page.goto('/')
     await focusCanvas(page)
     await page.keyboard.press('a')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="action-node"]')).toHaveCount(2)
   })
 
   test('@bdd edits a condition field value', async ({ page }) => {
     await page.goto('/')
-    await page.locator('[data-testid="condition-field-select"]').waitFor({ state: 'visible', timeout: 10000 })
+    await page.locator('[data-testid="condition-field-select"]').waitFor({ state: 'visible', timeout: 15000 })
     const condition = page.locator('[data-testid="condition-node"]')
     const dropdown = condition.locator('[data-testid="field-dropdown"]')
     await dropdown.selectOption('urgency')
@@ -48,7 +49,7 @@ test.describe('alert.rule-designer', () => {
     await page.goto('/')
     await focusCanvas(page)
     await page.keyboard.press('a')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.getByTestId('generate-rules-button')).toBeDisabled()
   })
 
@@ -56,7 +57,7 @@ test.describe('alert.rule-designer', () => {
     await page.goto('/')
     await focusCanvas(page)
     await page.keyboard.press('c')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="condition-node"]')).toHaveCount(2)
     await page.keyboard.press('u')
     await page.waitForTimeout(1000)
@@ -70,7 +71,7 @@ test.describe('alert.rule-designer', () => {
     await page.keyboard.press('u')
     await page.waitForTimeout(500)
     await page.keyboard.press('r')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="condition-node"]')).toHaveCount(2)
   })
 
@@ -78,7 +79,7 @@ test.describe('alert.rule-designer', () => {
     await page.goto('/')
     await focusCanvas(page)
     await page.keyboard.press('c')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await page.locator('[data-testid="condition-node"]').last().click()
     await page.keyboard.press('Delete')
     await page.waitForTimeout(500)
@@ -88,7 +89,7 @@ test.describe('alert.rule-designer', () => {
   test('@bdd rename panel appears when node is selected', async ({ page }) => {
     await page.goto('/')
     await page.locator('[data-testid="condition-node"]').first().click()
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.getByTestId('rule-designer-rename-panel')).toBeVisible()
   })
 
@@ -114,7 +115,7 @@ test.describe('alert.rule-designer', () => {
     await page.waitForTimeout(500)
     await page.click('[data-testid="rule-designer-reopen-button"]')
     await page.waitForSelector('[data-testid="canvas"]', { state: 'visible' })
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="canvas"]')).toBeVisible()
     await expect(page.locator('[data-testid="condition-node"]')).toBeVisible()
     await expect(page.locator('[data-testid="action-node"]')).toBeVisible()

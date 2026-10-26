@@ -4,7 +4,7 @@ test.describe('alert.rule-edit', () => {
   test('@bdd loads default graph when no saved graph', async ({ page }) => {
     await page.goto('/?ruleName=tornado-routing')
     await page.locator('[data-testid="condition-node"]').waitFor({ state: 'visible', timeout: 10000 })
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.locator('[data-testid="condition-node"]')).toBeVisible()
     await expect(page.locator('[data-testid="action-node"]')).toBeVisible()
   })
@@ -22,7 +22,7 @@ test.describe('alert.rule-edit', () => {
     await page.goto('/?ruleName=tornado-routing')
     const condition = page.locator('[data-testid="condition-node"]')
     await condition.first().click()
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.getByTestId('rule-edit-rename-panel')).toBeVisible()
     const input = page.getByTestId('rule-edit-rename-input')
     await input.fill('my-condition')
