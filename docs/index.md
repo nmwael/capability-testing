@@ -28,4 +28,5 @@ This project protects capabilities through explicit declaration, accountable own
 - [Capabilities](/capability-testing/capabilities) - Full capability table with owners and status
 - [CI & Reports](/capability-testing/reports) - CI jobs, coverage reports, and BDD tracking
 - [Test Reports](/capability-testing/reports#test-reports) - Latest CI test results and report links
+- [Coverage](/coverage/) - Coverage report and verification status
 - [Governance](/capability-testing/governance) - Roles, separation of duties, and approval policies
