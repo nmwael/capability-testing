@@ -22,7 +22,7 @@ export default defineConfig({
             '--no-zygote',
             '--disable-gpu',
             '--disable-software-rasterizer',
-            '--disable-features=VizDisplayCompositor',
+            '--disable-features=VizDisplayCompositor,BlinkGenPropertyTrees,SkiaRenderer',
           ],
         }
       : {},
