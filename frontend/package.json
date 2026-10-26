@@ -10,7 +10,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:unit": "vitest run --pool=forks",
+    "test:unit": "vitest run",
     "coverage": "vitest --coverage",
     "cruise": "depcruise src --config .depcruiser.js"
   },

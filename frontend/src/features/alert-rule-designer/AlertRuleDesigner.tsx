@@ -604,14 +604,6 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
     }
   }, [nodes.length, edges.length, history.length])
 
-  // Fit view when nodes are added so they render in the viewport (important
-  // for headless CI where React Flow may not auto-layout nodes)
-  useEffect(() => {
-    if (nodes.length > 0 && reactFlowInstance.current) {
-      try { reactFlowInstance.current.fitView() } catch {}
-    }
-  }, [nodes.length, reactFlowInstance.current])
-
   // Mark as not first render after initialization
   useEffect(() => {
     if (!isFirstRender) {
@@ -698,10 +690,7 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
             snapToGrid
             snapGrid={[10, 10]}
             nodeOrigin={[0.5, 0]}
-            onInit={(instance) => {
-              reactFlowInstance.current = instance as ReactFlowInstance
-              try { instance.fitView() } catch { /* safe in jsdom/teardown */ }
-            }}
+            onInit={(instance) => { reactFlowInstance.current = instance as ReactFlowInstance }}
           >
             <Background gap={16} />
             <MiniMap
