@@ -83,23 +83,6 @@ function check() {
       `gitignoreExists=${gitignoreExists} hasPlaywrightIgnore=${hasPlaywrightIgnore} hasSnapshotsIgnore=${hasSnapshotsIgnore}`
   });
 
-  // 6) .devcontainer/devcontainer.json has LANE_TAGS and LANES with docs lane
-  const devcontainerFile = path.join(ROOT, '.devcontainer', 'devcontainer.json');
-  const devcontainerExists = fs.existsSync(devcontainerFile);
-  let hasLaneTags = false;
-  let hasLanesWithDocs = false;
-  if (devcontainerExists) {
-    const text = fs.readFileSync(devcontainerFile, 'utf8');
-    hasLaneTags = /"LANE_TAGS":/.test(text);
-    hasLanesWithDocs = /docs: docs/.test(text);
-  }
-  checks.push({
-    name: '.devcontainer/devcontainer.json has LANE_TAGS and LANES with docs lane',
-    pass: devcontainerExists && hasLaneTags && hasLanesWithDocs,
-    detail: devcontainerExists && hasLaneTags && hasLanesWithDocs ? 'OK' :
-      `devcontainerExists=${devcontainerExists} hasLaneTags=${hasLaneTags} hasLanesWithDocs=${hasLanesWithDocs}`
-  });
-
   // Determine overall result
   const allPass = checks.every(c => c.pass);
   if (!allPass) {

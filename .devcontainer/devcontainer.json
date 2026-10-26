@@ -85,8 +85,6 @@
       ]
     }
   },
-  "LANE_TAGS": "alerting, publication, frontend, docs",
-  "LANES": "alerting: alerting, publication: publication, frontend: frontend, docs: docs",
   "containerEnv": {
     "LD_LIBRARY_PATH": "/usr/lib/wsl/lib:/opt/llama-server:/usr/local/cuda/compat:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
     "TS_AUTHKEY": "${localEnv:TS_AUTHKEY}",
