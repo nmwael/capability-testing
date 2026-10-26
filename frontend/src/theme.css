@@ -269,6 +269,19 @@ body {
   z-index: 1;
 }
 
+.react-flow__node,
+.react-flow__node-group,
+.react-flow__node-base {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.react-flow__edge-path,
+.react-flow__edge-text-bg {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
 .cap-status-pill {
   position: absolute;
   top: 8px;
