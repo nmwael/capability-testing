@@ -404,7 +404,8 @@ function AlertRuleEdit({ endpoint = '/rules', graphName = 'tornado-routing' }: A
   useEffect(() => {
     if (nodes.length > 0 && reactFlowInstance.current) {
       try {
-        setTimeout(() => reactFlowInstance.current.fitView(), 100)
+        const instance = reactFlowInstance.current
+        setTimeout(() => instance.fitView(), 100)
       } catch {}
     }
   }, [nodes.length, reactFlowInstance.current])
