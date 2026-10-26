@@ -403,7 +403,9 @@ function AlertRuleEdit({ endpoint = '/rules', graphName = 'tornado-routing' }: A
   // Fit view when nodes are added so they render in the viewport
   useEffect(() => {
     if (nodes.length > 0 && reactFlowInstance.current) {
-      try { reactFlowInstance.current.fitView() } catch {}
+      try {
+        setTimeout(() => reactFlowInstance.current.fitView(), 100)
+      } catch {}
     }
   }, [nodes.length, reactFlowInstance.current])
 

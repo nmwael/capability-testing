@@ -608,7 +608,9 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
   // Called after nodes exist (not just on mount) so headless CI renders them.
   useEffect(() => {
     if (nodes.length > 0 && reactFlowInstance.current) {
-      try { reactFlowInstance.current.fitView() } catch {}
+      try {
+        setTimeout(() => reactFlowInstance.current.fitView(), 100)
+      } catch {}
     }
   }, [nodes.length, reactFlowInstance.current])
 
