@@ -169,23 +169,49 @@ body {
   transition: box-shadow 0.2s ease, opacity 0.2s ease;
   position: relative;
   z-index: 10;
+  visibility: visible;
+  opacity: 1;
 }
 
 .cap-node-condition {
   background: var(--cap-node-condition-bg);
   border: 2px solid var(--cap-accent);
   color: var(--cap-text);
+  visibility: visible;
+  opacity: 1;
 }
 
 .cap-node-action {
   background: var(--cap-node-action-bg);
   border: 2px solid var(--cap-accent-action);
   color: var(--cap-text);
+  visibility: visible;
+  opacity: 1;
 }
 
-.cap-node:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  z-index: 20;
+.cap-handle {
+  background: var(--cap-accent);
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--cap-bg);
+  border-radius: 50%;
+  visibility: visible;
+  opacity: 1;
+}
+
+.cap-handle-action {
+  background: var(--cap-accent-action);
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--cap-bg);
+  border-radius: 50%;
+  visibility: visible;
+  opacity: 1;
+}
+
+.cap-handle:hover {
+  background: var(--cap-text);
+  border-color: var(--cap-text);
 }
 
 .cap-node-header {
@@ -193,6 +219,8 @@ body {
   margin-bottom: 4px;
   color: var(--cap-text);
   font-size: 12px;
+  visibility: visible;
+  opacity: 1;
 }
 
 .cap-node-row {
@@ -201,6 +229,8 @@ body {
   gap: 4px;
   font-size: 11px;
   color: var(--cap-text);
+  visibility: visible;
+  opacity: 1;
 }
 
 .cap-node-row span {
@@ -215,22 +245,8 @@ body {
   border: 1px solid var(--cap-input-border);
   border-radius: 4px;
   font-size: 11px;
-}
-
-.cap-handle {
-  background: var(--cap-accent);
-  width: 8px;
-  height: 8px;
-  border: 2px solid var(--cap-bg);
-  border-radius: 50%;
-}
-
-.cap-handle-action {
-  background: var(--cap-accent-action);
-  width: 8px;
-  height: 8px;
-  border: 2px solid var(--cap-bg);
-  border-radius: 50%;
+  visibility: visible;
+  opacity: 1;
 }
 
 .cap-handle:hover {
