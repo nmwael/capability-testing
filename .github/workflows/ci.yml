@@ -101,47 +101,11 @@ jobs:
           path: frontend/coverage/index.html frontend/coverage/coverage-final.json
           retention-days: 14
 
-  coverage-report:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: 'npm'
-      - uses: actions/setup-java@v5
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'maven'
-      - name: Backend tests + coverage
-        working-directory: backend
-        run: mvn -B -q test
-      - name: Frontend tests + coverage
-        working-directory: frontend
-        run: mkdir -p reports && npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
-      - name: Generate capability coverage report
-        run: |
-          node scripts/capability-report.js \
-            --capabilities capabilities/capabilities.yml \
-            --backend-coverage backend/target/site/jacoco/jacoco.xml \
-            --frontend-coverage frontend/coverage/coverage-final.json \
-            --surefire "backend/**/target/surefire-reports/TEST-*.xml" \
-            --vitest "frontend/reports/junit.xml" \
-            --out coverage-report
-      - name: Upload coverage report artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage-report/
-          retention-days: 30
-
   pages:
     runs-on: ubuntu-24.04
-    needs: [coverage-report]
     steps:
       - uses: actions/checkout@v5
-      - name: Download coverage report
+      - name: Checkout coverage report
         uses: actions/download-artifact@v4
         with:
           name: coverage-report
@@ -151,4 +115,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           folder: coverage-report
-# Rebuild CI workflow
