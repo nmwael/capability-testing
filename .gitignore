@@ -18,6 +18,7 @@ config.db-wal
 
 # Worktrees
 .worktrees/
+workspaces/
 
 # Test artifacts
 Result.json
