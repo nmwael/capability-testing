@@ -604,6 +604,14 @@ function AlertRuleDesigner({ endpoint = '/rules' }: { endpoint?: string } = {}) 
     }
   }, [nodes.length, edges.length, history.length])
 
+  // Fit view when nodes are added so they render in the viewport.
+  // Called after nodes exist (not just on mount) so headless CI renders them.
+  useEffect(() => {
+    if (nodes.length > 0 && reactFlowInstance.current) {
+      try { reactFlowInstance.current.fitView() } catch {}
+    }
+  }, [nodes.length, reactFlowInstance.current])
+
   // Mark as not first render after initialization
   useEffect(() => {
     if (!isFirstRender) {
