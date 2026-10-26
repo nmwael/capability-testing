@@ -10,7 +10,21 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:3000',
     screenshot: process.env.CI ? 'off' : 'off',
-    trace: process.env.CI ? 'off' : 'off'
+    trace: process.env.CI ? 'off' : 'off',
+    launchOptions: process.env.CI
+      ? {
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+          ],
+        }
+      : {},
   },
   projects: [
     {
