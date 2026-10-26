@@ -14,7 +14,7 @@ jobs:
   traceability:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -30,7 +30,7 @@ jobs:
   backend:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
         with:
           java-version: '17'
@@ -57,7 +57,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - name: Check for @-mentions in PR title/body
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,7 +73,7 @@ jobs:
   frontend:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -101,12 +101,53 @@ jobs:
           path: frontend/coverage/index.html frontend/coverage/coverage-final.json
           retention-days: 14
 
-  pages:
+  coverage-report:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Backend tests + coverage
+        working-directory: backend
+        run: mvn -B -q test
+      - name: Frontend tests + coverage
+        working-directory: frontend
+        run: mkdir -p reports && npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
+      - name: Generate capability coverage report
+        run: |
+          node scripts/capability-report.js \
+            --capabilities capabilities/capabilities.yml \
+            --backend-coverage backend/target/site/jacoco/jacoco.xml \
+            --frontend-coverage frontend/coverage/coverage-final.json \
+            --surefire "backend/**/target/surefire-reports/TEST-*.xml" \
+            --vitest "frontend/reports/junit.xml" \
+            --out coverage-report
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report/
+          retention-days: 30
+
+  pages:
+    runs-on: ubuntu-24.04
+    needs: [coverage-report]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          folder: docs
+          folder: coverage-report
