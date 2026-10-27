@@ -37,12 +37,17 @@ jobs:
         run: mvn -B -q test
       - name: Frontend tests
         working-directory: frontend
-        run: mkdir -p reports && npm ci && npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
+        run: >-
+          mkdir -p reports && npm ci &&
+          npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
+          --coverage --coverage.reporter=json-summary --coverage.reporter=text
       - name: Capability to test coverage report
         run: >-
           node scripts/coverage-report.js
           --surefire 'backend/**/target/surefire-reports/TEST-*.xml'
           --vitest frontend/reports/junit.xml
+          --jacoco 'backend/**/target/site/jacoco/jacoco.xml'
+          --frontend-coverage frontend/coverage/coverage-summary.json
           --out docs/coverage
       - name: Upload capability report
         uses: actions/upload-artifact@v4

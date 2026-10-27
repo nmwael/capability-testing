@@ -24,14 +24,23 @@ const DEFAULT_CAPABILITIES = 'capabilities/capabilities.yml';
 const DEFAULT_OUT = 'docs/coverage';
 
 function parseArgs(args) {
-  const opts = { capabilities: DEFAULT_CAPABILITIES, surefire: null, vitest: null, out: DEFAULT_OUT, summary: null };
+  const opts = {
+    capabilities: DEFAULT_CAPABILITIES,
+    surefire: null,
+    vitest: null,
+    jacoco: null,
+    frontendCoverage: null,
+    out: DEFAULT_OUT,
+    summary: null,
+  };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (!arg.startsWith('--')) continue;
 
     const eq = arg.indexOf('=');
-    const key = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
+    const rawKey = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
+    const key = rawKey.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
     let value = eq === -1 ? null : arg.slice(eq + 1);
 
     if (value === null) {
@@ -56,6 +65,27 @@ function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// JUnit attributes are XML, so a test name such as `suite > case` is already
+// written as `suite &gt; case`. Decode once on the way in; escapeHtml then
+// escapes it a single time on the way out. Without this the page shows the
+// literal entity text (`&gt;`) because the ampersand gets escaped twice.
+function decodeXmlEntities(text) {
+  return String(text)
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => {
+      const code = parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+    })
+    .replace(/&#(\d+);/g, (m, dec) => {
+      const code = parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+    })
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
 }
 
 function stripComment(value) {
@@ -146,7 +176,7 @@ function testcaseStatus(xml) {
 
 function attr(xml, name) {
   const match = xml.match(new RegExp('\\b' + name + '\\s*=\\s*"([^"]*)"'));
-  return match ? match[1] : '';
+  return match ? decodeXmlEntities(match[1]) : '';
 }
 
 // Handles both shapes seen in practice:
@@ -270,6 +300,78 @@ function readTests(spec) {
   return tests;
 }
 
+// --- Code coverage ---------------------------------------------------------
+// JaCoCo emits one <report> per Maven module. Its report-level counters are the
+// direct children that follow the last </package>; summing every nested counter
+// instead would count each class several times.
+function parseJacocoXml(xmlContent) {
+  const lastPackage = xmlContent.lastIndexOf('</package>');
+  const tail = lastPackage === -1 ? xmlContent : xmlContent.slice(lastPackage);
+
+  const counter = type => {
+    const match = tail.match(new RegExp('<counter type="' + type + '" missed="(\\d+)" covered="(\\d+)"'));
+    if (!match) return null;
+    return { covered: Number(match[2]), total: Number(match[1]) + Number(match[2]) };
+  };
+
+  return { line: counter('LINE'), branch: counter('BRANCH') };
+}
+
+function addMetric(target, source) {
+  if (!source) return target;
+  if (!target) return { covered: source.covered, total: source.total };
+  return { covered: target.covered + source.covered, total: target.total + source.total };
+}
+
+function readBackendCoverage(spec) {
+  if (!spec) return null;
+
+  let totals = null;
+  let reports = 0;
+
+  for (const file of expandSurefire(spec)) {
+    let parsed;
+    try {
+      parsed = parseJacocoXml(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+      console.error(`coverage-report: cannot parse ${file}: ${e.message}`);
+      continue;
+    }
+    reports++;
+    totals = {
+      line: addMetric(totals && totals.line, parsed.line),
+      branch: addMetric(totals && totals.branch, parsed.branch),
+    };
+  }
+
+  return reports ? totals : null;
+}
+
+// vitest's json-summary reporter writes istanbul's shape: { total: { lines:
+// { total, covered, pct }, branches: {...} } }.
+function readFrontendCoverage(file) {
+  if (!file) return null;
+
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    console.error(`coverage-report: cannot read ${file}: ${e.message}`);
+    return null;
+  }
+
+  const total = data.total || data;
+  const metric = key => {
+    const entry = total[key];
+    if (!entry || typeof entry.total !== 'number') return null;
+    return { covered: Number(entry.covered) || 0, total: Number(entry.total) };
+  };
+
+  const lines = metric('lines');
+  const branches = metric('branches');
+  return lines || branches ? { line: lines, branch: branches } : null;
+}
+
 function normalise(text) {
   return String(text || '').toLowerCase();
 }
@@ -338,7 +440,43 @@ function buildReport(capabilities, surefireTests, vitestTests) {
   return { rows, matchedCount, unmatchedCount, failureCount, testCount };
 }
 
-function renderHtml(report, generatedAt) {
+function formatPercent(metric) {
+  if (!metric || !metric.total) return 'n/a';
+  return ((metric.covered / metric.total) * 100).toFixed(1) + '%';
+}
+
+function coverageCell(metric) {
+  if (!metric || !metric.total) return '<span class="meta">n/a</span>';
+  const pct = (metric.covered / metric.total) * 100;
+  const cls = pct >= 80 ? 'pass' : pct >= 50 ? 'skipped' : 'failure';
+  return `<span class="${cls}">${pct.toFixed(1)}%</span> <span class="meta">(${metric.covered}/${metric.total})</span>`;
+}
+
+function renderCoverage(coverage) {
+  const suites = [
+    ['Backend (JaCoCo)', coverage && coverage.backend],
+    ['Frontend (vitest, v8)', coverage && coverage.frontend],
+  ].filter(([, data]) => data && (data.line || data.branch));
+
+  if (!suites.length) return [];
+
+  const parts = [];
+  parts.push('<h2>Code coverage</h2>');
+  parts.push('<table class="coverage">');
+  parts.push('<thead><tr><th>suite</th><th>lines</th><th>branches</th></tr></thead>');
+  parts.push('<tbody>');
+  for (const [label, data] of suites) {
+    parts.push(
+      `<tr><td>${escapeHtml(label)}</td>` +
+      `<td>${coverageCell(data.line)}</td>` +
+      `<td>${coverageCell(data.branch)}</td></tr>`
+    );
+  }
+  parts.push('</tbody></table>');
+  return parts;
+}
+
+function renderHtml(report, generatedAt, coverage) {
   const { rows, matchedCount, unmatchedCount, failureCount, testCount } = report;
 
   const parts = [];
@@ -378,6 +516,8 @@ function renderHtml(report, generatedAt) {
   parts.push(`<div><strong>${failureCount}</strong>failing tests</div>`);
   parts.push('</div>');
 
+  for (const line of renderCoverage(coverage)) parts.push(line);
+
   for (const row of rows) {
     const cap = row.capability;
     parts.push('<table>');
@@ -411,7 +551,7 @@ function renderHtml(report, generatedAt) {
   return parts.join('\n') + '\n';
 }
 
-function renderSummary(report) {
+function renderSummary(report, coverage) {
   const lines = [];
   lines.push('## Capability to test coverage');
   lines.push('');
@@ -420,6 +560,11 @@ function renderSummary(report) {
   lines.push(`- verified_by entries with no matching test: ${report.unmatchedCount}`);
   lines.push(`- individual tests: ${report.testCount}`);
   lines.push(`- failing tests: ${report.failureCount}`);
+  if (coverage) {
+    const fmt = data => (data ? `${formatPercent(data.line)} lines, ${formatPercent(data.branch)} branches` : 'n/a');
+    lines.push(`- backend coverage: ${fmt(coverage.backend)}`);
+    lines.push(`- frontend coverage: ${fmt(coverage.frontend)}`);
+  }
   lines.push('');
   for (const row of report.rows) {
     lines.push(`### ${row.capability.id}`);
@@ -448,8 +593,13 @@ function main() {
   const surefireTests = readTests(opts.surefire);
   const vitestTests = readTests(opts.vitest);
 
+  const coverage = {
+    backend: readBackendCoverage(opts.jacoco),
+    frontend: readFrontendCoverage(opts.frontendCoverage),
+  };
+
   const report = buildReport(capabilities, surefireTests, vitestTests);
-  const html = renderHtml(report, new Date().toISOString());
+  const html = renderHtml(report, new Date().toISOString(), coverage);
 
   fs.mkdirSync(opts.out, { recursive: true });
   const outputPath = path.join(opts.out, 'index.html');
@@ -457,7 +607,7 @@ function main() {
 
   if (opts.summary) {
     try {
-      fs.writeFileSync(opts.summary, renderSummary(report));
+      fs.writeFileSync(opts.summary, renderSummary(report, coverage));
     } catch (e) {
       console.error(`coverage-report: cannot write summary ${opts.summary}: ${e.message}`);
     }
@@ -469,10 +619,25 @@ function main() {
   console.log(`Unmatched entries: ${report.unmatchedCount}`);
   console.log(`Individual tests: ${report.testCount}`);
   console.log(`Failing tests: ${report.failureCount}`);
+  if (coverage.backend || coverage.frontend) {
+    console.log(`Backend coverage: ${coverage.backend ? formatPercent(coverage.backend.line) : 'n/a'} lines`);
+    console.log(`Frontend coverage: ${coverage.frontend ? formatPercent(coverage.frontend.line) : 'n/a'} lines`);
+  }
 }
 
 if (require.main === module) {
   main();
 }
 
-module.exports = { parseArgs, parseCapabilitiesYml, parseJunitXml, classifyEntry, matchEntry, buildReport, renderHtml };
+module.exports = {
+  parseArgs,
+  parseCapabilitiesYml,
+  parseJunitXml,
+  parseJacocoXml,
+  readBackendCoverage,
+  readFrontendCoverage,
+  classifyEntry,
+  matchEntry,
+  buildReport,
+  renderHtml,
+};
