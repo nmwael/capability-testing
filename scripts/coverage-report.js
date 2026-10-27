@@ -1,398 +1,478 @@
 #!/usr/bin/env node
 
+// Capability -> test coverage report.
+//
+// Reads the capability registry, resolves every `verified_by` entry against real
+// JUnit/Surefire XML and vitest junit XML, and writes a static HTML page that lets
+// a reader drill from a capability down to the individual test that proves it.
+// Entries that resolve to nothing are never dropped: they render the literal
+// text "no matching test found" so a gap is visible rather than silent.
+//
+// Dependency free: Node builtins only, so it runs in CI with no install step.
+//
+// Usage:
+//   node scripts/coverage-report.js [--capabilities <file>] [--surefire <glob>]
+//                                   [--vitest <file[,file]>] [--out <dir>]
+//                                   [--summary <file>]
+//
+// `--out` is a DIRECTORY: the report is written to <dir>/index.html.
+
 const fs = require('fs');
 const path = require('path');
 
-// Parse command line arguments
+const DEFAULT_CAPABILITIES = 'capabilities/capabilities.yml';
+const DEFAULT_OUT = 'docs/coverage';
+
 function parseArgs(args) {
-  const result = {
-    capabilities: null,
-    surefire: null,
-    vitest: null,
-    out: null,
-    summary: null
-  };
-  
+  const opts = { capabilities: DEFAULT_CAPABILITIES, surefire: null, vitest: null, out: DEFAULT_OUT, summary: null };
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg.startsWith('--')) {
-      const eq = arg.indexOf('=');
-      const key = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
-      const value = eq === -1 ? (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : null) : arg.slice(eq + 1);
-      
-      if (key === 'capabilities') result.capabilities = value;
-      else if (key === 'surefire') result.surefire = value;
-      else if (key === 'vitest') result.vitest = value;
-      else if (key === 'out') result.out = value;
-      else if (key === 'summary') result.summary = value;
-      else i++;
+    if (!arg.startsWith('--')) continue;
+
+    const eq = arg.indexOf('=');
+    const key = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
+    let value = eq === -1 ? null : arg.slice(eq + 1);
+
+    if (value === null) {
+      const next = args[i + 1];
+      if (next !== undefined && !next.startsWith('--')) {
+        value = next;
+        i++;
+      }
+    }
+
+    if (key in opts && value !== null) {
+      opts[key] = value;
     }
   }
-  
-  return result;
+
+  return opts;
 }
 
-// Simple YAML parser for capabilities.yml format
-function parseCapabilitiesYml(content) {
-  const capList = [];
-  const lines = content.split('\n');
-  let inCapability = false;
-  let currentCapability = null;
+function escapeHtml(text) {
+  return String(text === undefined || text === null ? '' : text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    if (line === 'verified_by:') {
-      inCapability = true;
+function stripComment(value) {
+  // The registry annotates many entries with a trailing `# ...` comment and
+  // quotes every list item. Handle both so the entry text is clean.
+  let out = value.trim();
+  if (out.startsWith('"')) {
+    const end = out.indexOf('"', 1);
+    out = end === -1 ? out.slice(1) : out.slice(1, end);
+  } else {
+    const hash = out.indexOf(' #');
+    if (hash !== -1) out = out.slice(0, hash);
+  }
+  return out.trim();
+}
+
+// Minimal reader for the registry's fixed shape:
+//   capabilities:
+//     - id: alert.publish
+//       intent: "..."
+//       owner: publication
+//       status: active
+//       since: 1.0.0
+//       verified_by:
+//         - "AlertPublishIT"
+//         - "features/publication/alert-publish.feature"
+function parseCapabilitiesYml(content) {
+  const capabilities = [];
+  let current = null;
+  let inVerifiedBy = false;
+
+  const lines = content.split('\n');
+
+  for (const raw of lines) {
+    const line = raw.replace(/\r$/, '');
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (trimmed === 'capabilities:') continue;
+
+    const idMatch = trimmed.match(/^-\s+id:\s*(.+)$/);
+    if (idMatch) {
+      current = { id: stripComment(idMatch[1]), intent: '', owner: '', status: '', since: '', verifiedBy: [] };
+      capabilities.push(current);
+      inVerifiedBy = false;
       continue;
     }
-    
-    if (inCapability) {
-      if (line.startsWith('- ')) {
-        const entry = line.substring(2);
-        if (currentCapability) {
-          let type;
-          if (entry.endsWith('.feature')) {
-            type = 'feature';
-          } else if (path.extname(entry) === '.ts' || path.extname(entry) === '.tsx') {
-            type = 'file';
-          } else {
-            type = 'java';
-          }
-          currentCapability.verifiedBy.push({ type, entry });
-        }
-      } else if (line === '' || line.startsWith('   -')) {
-        continue;
-      } else if (line && !line.startsWith('- ')) {
-        if (currentCapability) {
-          capList.push(currentCapability);
-        }
-        currentCapability = null;
-        inCapability = false;
+
+    if (!current) continue;
+
+    if (/^verified_by:\s*$/.test(trimmed)) {
+      inVerifiedBy = true;
+      continue;
+    }
+
+    const fieldMatch = trimmed.match(/^([A-Za-z_][\w]*):\s*(.*)$/);
+    if (fieldMatch) {
+      inVerifiedBy = false;
+      const key = fieldMatch[1];
+      const value = stripComment(fieldMatch[2]);
+      if (key === 'intent' || key === 'owner' || key === 'status' || key === 'since') {
+        current[key] = value;
       }
-    } else if (line.startsWith('- id:')) {
-      if (currentCapability) {
-        capList.push(currentCapability);
-      }
-      currentCapability = {
-        id: line.match(/id:\s*(\S+)/)?.[1],
-        intent: '',
-        owner: '',
-        status: '',
-        since: '',
-        verifiedBy: []
-      };
-      i += 6;
+      continue;
+    }
+
+    if (inVerifiedBy && trimmed.startsWith('-')) {
+      const entry = stripComment(trimmed.slice(1));
+      if (entry) current.verifiedBy.push(entry);
     }
   }
-  
-  if (currentCapability) {
-    capList.push(currentCapability);
-  }
-  
-  return capList;
+
+  return capabilities;
 }
 
-// Parse Surefire XML test results
-function parseSurefireXML(xmlContent) {
+function classifyEntry(entry) {
+  if (entry.endsWith('.feature')) return 'feature';
+  if (/\.(tsx?|jsx?|mjs|cjs)$/.test(entry)) return 'file';
+  return 'java';
+}
+
+function testcaseStatus(xml) {
+  if (/<failure[\s>]/.test(xml) || /<error[\s>]/.test(xml)) return 'failure';
+  if (/<skipped[\s>]/.test(xml)) return 'skipped';
+  return 'pass';
+}
+
+function attr(xml, name) {
+  const match = xml.match(new RegExp('\\b' + name + '\\s*=\\s*"([^"]*)"'));
+  return match ? match[1] : '';
+}
+
+// Handles both shapes seen in practice:
+//   <test-suite><testcase classname="..." name="..."/>...
+//   <test-files><test-case file="..."><testcase classname="..." name="..."/>
+function parseJunitXml(xmlContent) {
   const tests = [];
   let pos = 0;
-  
+
   while (true) {
     const start = xmlContent.indexOf('<testcase', pos);
     if (start === -1) break;
-    const end = xmlContent.indexOf('</testcase>', start);
-    if (end === -1) break;
-    
-    const testcase = xmlContent.substring(start, end + 12);
-    const testNameMatch = testcase.match(/name\s*=\s*"([^"]*)"/);
-    const classnameMatch = testcase.match(/classname\s*=\s*"([^"]*)"/);
-    const timeMatch = testcase.match(/time\s*=\s*"([^"]*)"/);
-    
-    const testName = testNameMatch ? testNameMatch[1] : '';
-    const classname = classnameMatch ? classnameMatch[1] : '';
-    const time = timeMatch ? parseFloat(timeMatch[1]) : 0;
-    
-    let status = 'pass';
-    if (testcase.match(/<failure[^>]*>/) || testcase.match(/<error[^>]*>/)) {
-      status = 'failure';
-    } else if (testcase.match(/<skipped[^>]*>/)) {
-      status = 'skipped';
-    }
-    
-    tests.push({ classname, name: testName, status, time });
-    pos = end + 1;
-  }
-  
-  return tests;
-}
 
-// Parse Vitest XML test results
-function parseVitestXML(xmlContent) {
-  const tests = [];
-  
-  const filesStart = xmlContent.indexOf('<test-files>');
-  if (filesStart !== -1) {
-    const filesEnd = xmlContent.indexOf('</test-files>');
-    if (filesEnd !== -1) {
-      const filesSection = xmlContent.substring(filesStart, filesEnd);
-      const testMatches = filesSection.match(/<test-case[^>]*\sname\s*=\s*"([^"]*)"[^>]*\sclassname\s*=\s*"([^"]*)"[^>]*>([\s\S]*?)<\/test-case>/g) || [];
-      
-      testMatches.forEach(test => {
-        const nameMatch = test.match(/name\s*=\s*"([^"]*)"/);
-        const classMatch = test.match(/classname\s*=\s*"([^"]*)"/);
-        
-        if (nameMatch && classMatch) {
-          tests.push({
-            classname: classMatch[1],
-            name: nameMatch[1],
-            status: 'pass',
-            time: 0
-          });
-        }
+    const openEnd = xmlContent.indexOf('>', start);
+    if (openEnd === -1) break;
+
+    const selfClosing = xmlContent[openEnd - 1] === '/';
+    let chunk;
+    let next;
+    if (selfClosing) {
+      chunk = xmlContent.slice(start, openEnd + 1);
+      next = openEnd + 1;
+    } else {
+      const close = xmlContent.indexOf('</testcase>', openEnd);
+      if (close === -1) break;
+      chunk = xmlContent.slice(start, close + '</testcase>'.length);
+      next = close + 1;
+    }
+
+    const name = attr(chunk, 'name');
+    const classname = attr(chunk, 'classname') || attr(chunk, 'file');
+    if (name || classname) {
+      tests.push({
+        name,
+        classname,
+        status: testcaseStatus(chunk),
+        time: parseFloat(attr(chunk, 'time')) || 0,
       });
     }
+
+    pos = next;
   }
-  
-  if (tests.length === 0) {
-    let pos = 0;
-    while (true) {
-      const start = xmlContent.indexOf('<testcase', pos);
-      if (start === -1) break;
-      const end = xmlContent.indexOf('</testcase>', start);
-      if (end === -1) break;
-      
-      const testcase = xmlContent.substring(start, end + 12);
-      const testNameMatch = testcase.match(/name\s*=\s*"([^"]*)"/);
-      const classnameMatch = testcase.match(/classname\s*=\s*"([^"]*)"/);
-      
-      if (testNameMatch && classnameMatch) {
-        tests.push({
-          classname: classnameMatch[1],
-          name: testNameMatch[1],
-          status: 'pass',
-          time: 0
-        });
-      }
-      pos = end + 1;
-    }
-  }
-  
+
   return tests;
 }
 
-// Match feature path to test file by dirname
-function matchFeaturePathToTestFile(featurePath, vitestTests) {
-  const dirName = path.dirname(featurePath);
-  
-  for (const test of vitestTests) {
-    const testClass = path.basename(test.classname.replace('.test.tsx', ''));
-    if (testClass === dirName) {
-      return test;
+function expandSurefire(spec) {
+  if (!spec) return [];
+
+  const files = [];
+  const walk = (dir, relPath, pattern) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir);
+    } catch (e) {
+      return;
     }
+
+    for (const entry of entries.sort()) {
+      const full = path.join(dir, entry);
+      const rel = relPath ? relPath + '/' + entry : entry;
+      let stat;
+      try {
+        stat = fs.statSync(full);
+      } catch (e) {
+        continue;
+      }
+      if (stat.isDirectory()) {
+        walk(full, rel, pattern);
+      } else if (pattern.test(rel)) {
+        files.push(full);
+      }
+    }
+  };
+
+  for (const raw of spec.split(',').map(part => part.trim()).filter(Boolean)) {
+    if (!raw.includes('*')) {
+      if (fs.existsSync(raw)) files.push(raw);
+      continue;
+    }
+
+    // Split the pattern at the first wildcard segment: everything before it is a
+    // real directory to walk from, everything after is matched per relative path.
+    // Supports both `*` (within one segment) and `**` (across segments), so
+    // `backend/**/target/surefire-reports/TEST-*.xml` works.
+    const segments = raw.split('/');
+    const fixed = [];
+    for (const segment of segments) {
+      if (segment.includes('*')) break;
+      fixed.push(segment);
+    }
+
+    const baseDir = fixed.length ? fixed.join('/') : '.';
+    const rest = segments.slice(fixed.length).join('/');
+    const segmentRegex = segment => segment
+      .split(/(\*\*|\*)/)
+      .map(part => (part === '**' ? '.*' : part === '*' ? '[^/]*' : escapeRegExp(part)))
+      .join('');
+    const pattern = new RegExp('^' + rest.split('/').map(segmentRegex).join('/') + '$');
+
+    walk(baseDir, '', pattern);
   }
-  
-  return null;
+
+  return files;
 }
 
-// Generate coverage report HTML
-function generateCoverageHTML(caps, surefireTests, vitestTests, outputDir) {
-  const unmatched = [];
-  const matched = {};
-  
-  for (const cap of caps) {
-    const verifiedBy = cap.verifiedBy || [];
-    
-    for (const entry of verifiedBy) {
-      let match = null;
-      
-      if (entry.type === 'java') {
-        for (const test of surefireTests) {
-          const suffix = test.classname.split('/').pop();
-          const entrySuffix = entry.entry.split('/').pop().replace('.java', '');
-          if (suffix === entrySuffix) {
-            match = test;
-            break;
-          }
-        }
-      } else if (entry.type === 'file' || entry.type === 'feature') {
-        match = matchFeaturePathToTestFile(entry.entry, vitestTests);
-      }
-      
-      if (match) {
-        matched[entry.entry] = match;
-      } else {
-        unmatched.push({ entry, type: entry.type });
-      }
-    }
-  }
-  
-  let html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>CAP Coverage Report</title>
-  <style>
-    body { font-family: sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    h2 { color: #555; margin-top: 20px; }
-    .capability { margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px; }
-    .capability-header { font-weight: bold; }
-    .match { color: green; }
-    .unmatch { color: red; }
-  </style>
-</head>
-<body>
-  <h1>CAP Coverage Report</h1>
-`;
-  
-  for (const cap of caps) {
-    html += `
-  <h2>Capability: ${cap.id}</h2>
-  <div class="capability">
-    <div class="capability-header">${cap.id}</div>
-    <p>Intent: ${cap.intent}</p>
-    <p>Owner: ${cap.owner}</p>
-    <p>Status: ${cap.status}</p>
-  </div>`;
-    
-    const verifiedBy = cap.verifiedBy || [];
-    
-    for (const entry of verifiedBy) {
-      let match = matched[entry.entry];
-      let status = 'unmatch';
-      let msg = 'no matching test found';
-      
-      if (match) {
-        status = 'match';
-        msg = `${match.name} (${match.classname})`;
-      }
-      
-      html += `
-    <div class="${status}">
-      <strong>${entry.entry}</strong>: ${msg}
-      ${entry.type === 'java' ? ' (java)' : ''}
-      ${entry.type === 'file' || entry.type === 'feature' ? ' (file)' : ''}
-    </div>`;
-    }
-    
-    html += '  </div>\n';
-  }
-  
-  if (unmatched.length > 0) {
-    html += '<h2>Unmatched Verified By Entries</h2>\n';
-    
-    for (const u of unmatched) {
-      html += `
-    <div class="unmatch">
-      <strong>${u.entry}</strong>: ${u.type === 'java' ? ' (java)' : ' (file)'} - no matching test found
-    </div>`;
-    }
-  }
-  
-  html += `
-</body>
-</html>`;
-  
-  // Write to output directory
-  fs.mkdirSync(outputDir, { recursive: true });
-  
-  const outputPath = path.join(outputDir, 'index.html');
-  fs.writeFileSync(outputPath, html);
-  
-  return outputPath;
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Parse Surefire glob pattern
-function parseSurefireGlob(pattern, globPath) {
+function readTests(spec) {
   const tests = [];
-  
-  if (!pattern || pattern === '*') return tests;
-  
-  const fileName = path.basename(globPath);
-  
-  if (pattern.includes('*')) {
-    // Glob pattern - search directory
-    const globDir = path.dirname(globPath);
+  for (const file of expandSurefire(spec)) {
     try {
-      const files = fs.readdirSync(globDir);
-      for (const file of files) {
-        const filePath = path.join(globDir, file);
-        if (file.startsWith(pattern.split('*')[0]) && file.endsWith(pattern.split('*')[1])) {
-          const content = fs.readFileSync(filePath, 'utf8');
-          const testCases = parseSurefireXML(content);
-          testCases.forEach(t => (t.file = filePath));
-          tests.push(...testCases);
-        }
-      }
+      const parsed = parseJunitXml(fs.readFileSync(file, 'utf8'));
+      parsed.forEach(test => tests.push({ ...test, file }));
     } catch (e) {
-      console.error(`Error reading directory ${globDir}: ${e.message}`);
-    }
-  } else if (path.extname(fileName) === 'xml') {
-    // Specific XML file - parse it
-    try {
-      const content = fs.readFileSync(globPath, 'utf8');
-      const testCases = parseSurefireXML(content);
-      testCases.forEach(t => (t.file = globPath));
-      tests.push(...testCases);
-    } catch (e) {
-      console.error(`Error reading surefire file: ${e.message}`);
+      console.error(`coverage-report: cannot parse ${file}: ${e.message}`);
     }
   }
-  
   return tests;
 }
 
-// Main function
+function normalise(text) {
+  return String(text || '').toLowerCase();
+}
+
+// Returns EVERY test case in the matched test class, not just the first one, so a
+// capability whose backing class holds several cases drills down to all of them.
+function matchEntry(entry, kind, surefireTests, vitestTests) {
+  const pool = surefireTests.concat(vitestTests);
+
+  const allInClass = classname => pool.filter(test => String(test.classname || '') === String(classname || ''));
+
+  if (kind === 'java') {
+    const wanted = entry.split('.').pop();
+    const matches = pool.filter(test => {
+      const cls = String(test.classname || '');
+      return cls === wanted || cls.endsWith('.' + wanted) || cls.endsWith('/' + wanted);
+    });
+    if (matches.length) return allInClass(matches[0].classname);
+    return [];
+  }
+
+  // Feature path: features/<lane>/<slug>.feature. Match the slug against the test
+  // class/file name. Two passes so a hyphenated hit beats a looser stripped hit.
+  const slug = path.basename(entry).replace(/\.feature$/, '');
+  const slugLower = normalise(slug);
+  const slugStripped = slugLower.replace(/[-_.]/g, '');
+
+  const exact = pool.find(test => {
+    const cls = normalise(test.classname);
+    const base = path.basename(cls).replace(/\.(test|spec)\.[a-z]+$/, '');
+    return cls.includes(slugLower) || base === slugLower;
+  });
+  if (exact) return allInClass(exact.classname);
+
+  const loose = pool.find(test => {
+    const haystack = (normalise(test.classname) + ' ' + normalise(test.name)).replace(/[-_.\/]/g, '');
+    return haystack.includes(slugStripped);
+  });
+  return loose ? allInClass(loose.classname) : [];
+}
+
+function buildReport(capabilities, surefireTests, vitestTests) {
+  const rows = [];
+  let matchedCount = 0;
+  let unmatchedCount = 0;
+  let failureCount = 0;
+  let testCount = 0;
+
+  for (const capability of capabilities) {
+    const entries = capability.verifiedBy.map(entry => {
+      const kind = classifyEntry(entry);
+      const tests = matchEntry(entry, kind, surefireTests, vitestTests);
+      if (tests.length) {
+        matchedCount++;
+        testCount += tests.length;
+        failureCount += tests.filter(test => test.status === 'failure').length;
+      } else {
+        unmatchedCount++;
+      }
+      return { entry, kind, tests };
+    });
+
+    rows.push({ capability, entries });
+  }
+
+  return { rows, matchedCount, unmatchedCount, failureCount, testCount };
+}
+
+function renderHtml(report, generatedAt) {
+  const { rows, matchedCount, unmatchedCount, failureCount, testCount } = report;
+
+  const parts = [];
+  parts.push('<!DOCTYPE html>');
+  parts.push('<html lang="en">');
+  parts.push('<head>');
+  parts.push('<meta charset="utf-8">');
+  parts.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
+  parts.push('<title>Capability to test coverage</title>');
+  parts.push('<style>');
+  parts.push('body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:2rem auto;max-width:72rem;padding:0 1rem;color:#1b1f23;line-height:1.5}');
+  parts.push('h1{margin-bottom:.25rem}');
+  parts.push('.meta{color:#57606a;font-size:.9rem;margin-top:0}');
+  parts.push('.summary{display:flex;gap:1.5rem;margin:1.5rem 0;flex-wrap:wrap}');
+  parts.push('.summary div{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:.75rem 1rem}');
+  parts.push('.summary strong{display:block;font-size:1.4rem}');
+  parts.push('table{width:100%;border-collapse:collapse;margin:.5rem 0 2rem}');
+  parts.push('caption{text-align:left;font-weight:600;padding:.5rem 0;font-size:1.1rem}');
+  parts.push('th,td{border:1px solid #d0d7de;padding:.4rem .6rem;text-align:left;vertical-align:top;font-size:.92rem}');
+  parts.push('th{background:#f6f8fa}');
+  parts.push('code{background:#f6f8fa;padding:.1rem .3rem;border-radius:3px;font-size:.88em}');
+  parts.push('.pass{color:#116329;font-weight:600}');
+  parts.push('.failure{color:#b42318;font-weight:600}');
+  parts.push('.skipped{color:#9a6700;font-weight:600}');
+  parts.push('.none{color:#b42318;font-style:italic}');
+  parts.push('.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}');
+  parts.push('</style>');
+  parts.push('</head>');
+  parts.push('<body>');
+  parts.push('<h1>Capability to test coverage</h1>');
+  parts.push(`<p class="meta">Generated ${escapeHtml(generatedAt)} from <code>capabilities/capabilities.yml</code></p>`);
+  parts.push('<div class="summary">');
+  parts.push(`<div><strong>${rows.length}</strong>capabilities</div>`);
+  parts.push(`<div><strong>${matchedCount}</strong>verified_by entries with a test</div>`);
+  parts.push(`<div><strong>${unmatchedCount}</strong>entries with no matching test</div>`);
+  parts.push(`<div><strong>${testCount}</strong>individual tests</div>`);
+  parts.push(`<div><strong>${failureCount}</strong>failing tests</div>`);
+  parts.push('</div>');
+
+  for (const row of rows) {
+    const cap = row.capability;
+    parts.push('<table>');
+    parts.push(`<caption><span class="cap-id">${escapeHtml(cap.id)}</span> &mdash; ${escapeHtml(cap.intent)}</caption>`);
+    parts.push('<thead><tr><th>verified_by</th><th>kind</th><th>test</th><th>status</th></tr></thead>');
+    parts.push('<tbody>');
+    for (const item of row.entries) {
+      const label = escapeHtml(item.entry);
+      if (!item.tests.length) {
+        parts.push(`<tr><td><code>${label}</code></td><td>${item.kind}</td><td class="none" colspan="2">no matching test found</td></tr>`);
+        continue;
+      }
+      item.tests.forEach((test, index) => {
+        const status = test.status || 'pass';
+        const lead = index === 0
+          ? `<td rowspan="${item.tests.length}"><code>${label}</code></td><td rowspan="${item.tests.length}">${item.kind}</td>`
+          : '';
+        parts.push(
+          `<tr>${lead}` +
+          `<td><code>${escapeHtml(test.name)}</code><br><span class="meta">${escapeHtml(test.classname)}</span></td>` +
+          `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
+        );
+      });
+    }
+    parts.push('</tbody></table>');
+  }
+
+  parts.push('</body>');
+  parts.push('</html>');
+
+  return parts.join('\n') + '\n';
+}
+
+function renderSummary(report) {
+  const lines = [];
+  lines.push('## Capability to test coverage');
+  lines.push('');
+  lines.push(`- capabilities: ${report.rows.length}`);
+  lines.push(`- verified_by entries with a test: ${report.matchedCount}`);
+  lines.push(`- verified_by entries with no matching test: ${report.unmatchedCount}`);
+  lines.push(`- individual tests: ${report.testCount}`);
+  lines.push(`- failing tests: ${report.failureCount}`);
+  lines.push('');
+  for (const row of report.rows) {
+    lines.push(`### ${row.capability.id}`);
+    for (const item of row.entries) {
+      const outcome = item.tests.length
+        ? item.tests.map(test => `${test.name} (${test.status})`).join(', ')
+        : 'no matching test found';
+      lines.push(`- ${item.entry} -> ${outcome}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n') + '\n';
+}
+
 function main() {
-  const args = process.argv.slice(2);
-  const { capabilities: caps, surefire, vitest, out, summary } = parseArgs(args);
-  
-  if (!caps) {
-    console.error('Error: --capabilities is required');
+  const opts = parseArgs(process.argv.slice(2));
+
+  let capabilities;
+  try {
+    capabilities = parseCapabilitiesYml(fs.readFileSync(opts.capabilities, 'utf8'));
+  } catch (e) {
+    console.error(`coverage-report: cannot read ${opts.capabilities}: ${e.message}`);
     process.exit(1);
   }
-  
-  const capabilitiesYml = fs.readFileSync(caps, 'utf8');
-  const capList = parseCapabilitiesYml(capabilitiesYml);
-  
-  let surefireTests = [];
-  if (surefire) {
-    const globPath = surefire;
-    const tests = parseSurefireGlob(surefire, globPath);
-    surefireTests = surefireTests.concat(tests);
-  }
-  
-  let vitestTests = [];
-  if (vitest) {
-    const vitestPaths = vitest.split(' ');
-    for (const p of vitestPaths) {
-      if (fs.existsSync(p)) {
-        const content = fs.readFileSync(p, 'utf8');
-        const tests = parseVitestXML(content);
-        vitestTests = vitestTests.concat(tests);
-      }
+
+  const surefireTests = readTests(opts.surefire);
+  const vitestTests = readTests(opts.vitest);
+
+  const report = buildReport(capabilities, surefireTests, vitestTests);
+  const html = renderHtml(report, new Date().toISOString());
+
+  fs.mkdirSync(opts.out, { recursive: true });
+  const outputPath = path.join(opts.out, 'index.html');
+  fs.writeFileSync(outputPath, html);
+
+  if (opts.summary) {
+    try {
+      fs.writeFileSync(opts.summary, renderSummary(report));
+    } catch (e) {
+      console.error(`coverage-report: cannot write summary ${opts.summary}: ${e.message}`);
     }
   }
-  
-  if (out) {
-    const outputPath = generateCoverageHTML(caps, surefireTests, vitestTests, out);
-    console.log(`Coverage report generated: ${outputPath}`);
-  }
-  
-  if (summary) {
-    const summaryPath = summary;
-    fs.writeFileSync(summaryPath, 'CAP Coverage Summary\n');
-    console.log(`Summary written to: ${summaryPath}`);
-  }
-  
-  const matchedCount = Object.keys(matched).length;
-  const unmatchedCount = unmatched.length;
-  
-  console.log('Capabilities with matched tests:', matchedCount);
-  console.log('Capabilities with unmatched entries:', unmatchedCount);
-  
-  process.exit(0);
+
+  console.log(`Coverage report: ${outputPath}`);
+  console.log(`Capabilities: ${report.rows.length}`);
+  console.log(`Matched entries: ${report.matchedCount}`);
+  console.log(`Unmatched entries: ${report.unmatchedCount}`);
+  console.log(`Individual tests: ${report.testCount}`);
+  console.log(`Failing tests: ${report.failureCount}`);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { parseArgs, parseCapabilitiesYml, parseJunitXml, classifyEntry, matchEntry, buildReport, renderHtml };
