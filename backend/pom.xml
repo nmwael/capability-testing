@@ -69,6 +69,13 @@
                  not implemented yet. Those scenarios stay out of the default run —
                  implementing one means deleting the tag, never editing this filter. -->
             <cucumber.filter.tags>not @todo</cucumber.filter.tags>
+            <!-- quarkus-cucumber drives Cucumber's core runtime directly and bridges
+                 it to JUnit with parameteriser-named dynamic tests, so there is no
+                 JUnit Platform engine to honour a naming strategy. The extension
+                 does read system properties, so ask Cucumber itself for a JUnit XML:
+                 its formatter writes the real Scenario names, which surefire's getTests()
+                 identifiers cannot carry. -->
+            <cucumber.plugin>junit:target/cucumber-junit.xml</cucumber.plugin>
           </systemPropertyVariables>
         </configuration>
       </plugin>

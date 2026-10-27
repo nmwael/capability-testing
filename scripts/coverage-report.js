@@ -29,6 +29,7 @@ function parseArgs(args) {
     capabilities: DEFAULT_CAPABILITIES,
     surefire: null,
     vitest: null,
+    cucumber: null,
     jacoco: null,
     frontendCoverage: null,
     features: DEFAULT_FEATURES,
@@ -74,7 +75,12 @@ function escapeHtml(text) {
 // escapes it a single time on the way out. Without this the page shows the
 // literal entity text (`&gt;`) because the ampersand gets escaped twice.
 function decodeXmlEntities(text) {
+  // Surefire's XML double-escapes what Cucumber already escaped, so the ANSI
+  // reset that greps the scenario heading arrives as `&amp#27;` rather than
+  // `&#27;`. Undo that first, or the escape never becomes a control character
+  // and cannot be stripped.
   return String(text)
+    .replace(/&amp#(?=(?:x?[0-9a-fA-F]+);)/g, '&#')
     .replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => {
       const code = parseInt(hex, 16);
       return Number.isFinite(code) ? String.fromCodePoint(code) : m;
@@ -184,6 +190,29 @@ function attr(xml, name) {
 // Handles both shapes seen in practice:
 //   <test-suite><testcase classname="..." name="..."/>...
 //   <test-files><test-case file="..."><testcase classname="..." name="..."/>
+// Cucumber's console output is captured verbatim into each testcase's
+// <system-out>, and it names the scenario the case actually ran:
+//   Scenario: The distribution names every channel ... # alert-flow.feature:16
+// Surefire meanwhile names the case after the parameteriser
+// (getTests()[3][2]). Prefer the scenario name so the report reads like a
+// human wrote it; the parameterised name stays as the fallback.
+const SCENARIO_HEADING = /^Scenario(?:\s+Outline)?:\s*(.+)$/;
+// The Gherkin source location the console appends. Anchored to a feature file
+// path so a scenario that legitimately ends in a number keeps its name.
+const SCENARIO_LOCATION = /\s+#\s+\S+\.feature(:\d+)?\s*$/i;
+
+function cdataText(chunk) {
+  const blocks = [];
+  const re = /<!\[CDATA\[([\s\S]*?)\]\]>/g;
+  let m;
+  while ((m = re.exec(chunk)) !== null) blocks.push(m[1]);
+  return decodeXmlEntities(blocks.join('\n'));
+}
+
+function stripAnsi(text) {
+  return text.replace(/\u001b\[[0-9;]*m/g, '');
+}
+
 function parseJunitXml(xmlContent) {
   const tests = [];
   let pos = 0;
@@ -210,9 +239,34 @@ function parseJunitXml(xmlContent) {
 
     const name = attr(chunk, 'name');
     const classname = attr(chunk, 'classname') || attr(chunk, 'file');
+
+    // The scenario name governs when the surefire name is a parameteriser
+    // artefact, otherwise the plain name is what the reader wants.
+    const stdout = stripAnsi(cdataText(chunk));
+    let displayName = name;
+    let scenario = null;
+
+    const scenarioLine = SCENARIO_HEADING.exec(name) || null;
+    if (/^getTests\(\)/.test(name) || scenarioLine) {
+      const heading = stdout.split('\n').map(l => l.trim()).find(l => /^Scenario(:|\s)/.test(l));
+      if (heading) {
+        const match = SCENARIO_HEADING.exec(stripAnsi(heading));
+        if (match) {
+          scenario = match[1].replace(SCENARIO_LOCATION, '').trim();
+          if (scenario) displayName = scenario + '  [' + name + ']';
+        }
+      }
+      if (!scenario && scenarioLine) {
+        scenario = scenarioLine[1].replace(SCENARIO_LOCATION, '').trim();
+        if (scenario) displayName = scenario + '  [' + name + ']';
+      }
+    }
+
     if (name || classname) {
       tests.push({
-        name,
+        name: displayName,
+        rawName: name,
+        scenario,
         classname,
         status: testcaseStatus(chunk),
         time: parseFloat(attr(chunk, 'time')) || 0,
@@ -356,14 +410,21 @@ function parseFeatureFile(file, content) {
 // scenario's own feature must be named by that test. Gherkin and vitest names
 // in this repo are paraphrases of each other, so a miss is reported as a miss
 // rather than guessed at.
-function scenarioTests(scenario, tests) {
+function scenarioTests(scenario, tests, cucumberTests) {
   const want = normalise(scenario).replace(/[^a-z0-9]+/g, '');
-  const all = tests.filter(test => {
-    const name = normalise(test.name).replace(/[^a-z0-9]+/g, '');
-    const tail = normalise(test.name.split('>').pop() || '').replace(/[^a-z0-9]+/g, '');
+  const keyed = pool => pool.filter(test => {
+    const key = test.scenario || test.name;
+    const name = normalise(key).replace(/[^a-z0-9]+/g, '');
+    const tail = normalise(String(key).split('>').pop() || '').replace(/[^a-z0-9]+/g, '');
     return name === want || tail === want;
   });
-  return all;
+
+  // Cucumber's own report is the authoritative source for a scenario's name and
+  // status, so it wins when a name is recovered from surefire's output too and
+  // the same execution is never listed twice.
+  const cucumber = keyed(cucumberTests || []);
+  if (cucumber.length) return cucumber;
+  return keyed(tests);
 }
 
 function readFeatures(spec) {
@@ -492,7 +553,7 @@ function matchEntry(entry, kind, surefireTests, vitestTests) {
   return loose ? allInClass(loose.classname) : [];
 }
 
-function buildReport(capabilities, surefireTests, vitestTests, features) {
+function buildReport(capabilities, surefireTests, vitestTests, features, cucumberTests) {
   const rows = [];
   let matchedCount = 0;
   let unmatchedCount = 0;
@@ -530,11 +591,18 @@ function buildReport(capabilities, surefireTests, vitestTests, features) {
           // stated, so a reader can never mistake class coverage for a
           // scenario-level one.
           const scenarios = feature.scenarios.map(name => {
-            const named = scenarioTests(name, surefireTests.concat(vitestTests));
+            const named = scenarioTests(name, surefireTests.concat(vitestTests), cucumberTests);
             const classLevel = named.length ? [] : tests;
             scenarioCount++;
             const has = named.length > 0 || classLevel.length > 0;
             if (has) scenarioMatched++;
+            if (named.length) {
+              // A scenario proved by a named case is a test case in its own
+              // right, so it counts in the totals rather than being invisible
+              // inside the feature block.
+              testCount += named.length;
+              named.forEach(test => { if (test.status === 'failure') failureCount++; });
+            }
             const status = named.length
               ? named.some(test => test.status === 'failure') ? 'failure' : 'pass'
               : classLevel.some(test => test.status === 'failure') ? 'failure' : 'pass';
@@ -768,13 +836,20 @@ function main() {
   const surefireTests = readTests(opts.surefire);
   const vitestTests = readTests(opts.vitest);
   const features = readFeatures(opts.features);
+  // Cucumber's own JUnit report names each scenario. When it is supplied it
+  // supersedes surefire's parameterised cases for the same run, so those are
+  // dropped rather than listed twice.
+  const cucumberTests = readTests(opts.cucumber);
+  const surefireKept = cucumberTests.length
+    ? surefireTests.filter(test => !/^getTests\(\)/.test(test.rawName || ''))
+    : surefireTests;
 
   const coverage = {
     backend: readBackendCoverage(opts.jacoco),
     frontend: readFrontendCoverage(opts.frontendCoverage),
   };
 
-  const report = buildReport(capabilities, surefireTests, vitestTests, features);
+  const report = buildReport(capabilities, surefireKept, vitestTests, features, cucumberTests);
   const html = renderHtml(report, new Date().toISOString(), coverage);
 
   fs.mkdirSync(opts.out, { recursive: true });

@@ -46,6 +46,7 @@ jobs:
           node scripts/coverage-report.js
           --surefire 'backend/**/target/surefire-reports/TEST-*.xml'
           --vitest frontend/reports/junit.xml
+          --cucumber 'backend/**/cucumber-junit.xml'
           --jacoco 'backend/**/target/site/jacoco/jacoco.xml'
           --frontend-coverage frontend/coverage/coverage-summary.json
           --out docs/coverage
