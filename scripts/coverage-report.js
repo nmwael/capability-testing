@@ -22,6 +22,7 @@ const path = require('path');
 
 const DEFAULT_CAPABILITIES = 'capabilities/capabilities.yml';
 const DEFAULT_OUT = 'docs/coverage';
+const DEFAULT_FEATURES = 'features/**/*.feature';
 
 function parseArgs(args) {
   const opts = {
@@ -30,6 +31,7 @@ function parseArgs(args) {
     vitest: null,
     jacoco: null,
     frontendCoverage: null,
+    features: DEFAULT_FEATURES,
     out: DEFAULT_OUT,
     summary: null,
   };
@@ -300,6 +302,83 @@ function readTests(spec) {
   return tests;
 }
 
+// --- Gherkin features ------------------------------------------------------
+// The drilldown the reader wants is capability -> feature -> scenario -> test.
+// A feature file carries that chain: an `@cap:<capability id>` tag, a `Feature:`
+// title and one `Scenario:` per row. Scenario Outline rows are counted with
+// the outline, since each Examples row becomes one scenario at runtime.
+function parseFeatureFile(file, content) {
+  const scenarios = [];
+  const tags = [];
+  let title = '';
+  let inDocString = false;
+  let docMarker = '';
+
+  for (const raw of content.split('\n')) {
+    const line = raw.replace(/\r$/, '');
+    const trimmed = line.trim();
+
+    // A triple-quoted doc string swallows any "Scenario:" inside it.
+    const docMatch = trimmed.match(/^("""|```)/);
+    if (inDocString) {
+      if (trimmed === docMarker) { inDocString = false; docMarker = ''; }
+      continue;
+    }
+    if (docMatch) {
+      inDocString = true;
+      docMarker = docMatch[1];
+      continue;
+    }
+
+    if (!trimmed) continue;
+    if (/^(#|\/\/)/.test(trimmed)) continue;
+    if (trimmed.startsWith('@')) { tags.push(trimmed); continue; }
+
+    const feature = trimmed.match(/^Feature:\s*(.+)$/);
+    if (feature) { title = stripComment(feature[1]); continue; }
+
+    const scenario = trimmed.match(/^Scenario(?:\s+Outline)?:\s*(.+)$/);
+    if (scenario) scenarios.push(stripComment(scenario[1]));
+  }
+
+  const cap = tags.find(tag => tag.replace(/^@+/, '').startsWith('cap:'));
+
+  return {
+    file,
+    title,
+    scenarios,
+    cap: cap ? cap.replace(/^@+cap:/, '') : null,
+  };
+}
+
+// Joins a scenario to the test cases that prove it. Deterministic only: the
+// test name must equal the scenario name (ignoring case/punctuation), or the
+// scenario's own feature must be named by that test. Gherkin and vitest names
+// in this repo are paraphrases of each other, so a miss is reported as a miss
+// rather than guessed at.
+function scenarioTests(scenario, tests) {
+  const want = normalise(scenario).replace(/[^a-z0-9]+/g, '');
+  const all = tests.filter(test => {
+    const name = normalise(test.name).replace(/[^a-z0-9]+/g, '');
+    const tail = normalise(test.name.split('>').pop() || '').replace(/[^a-z0-9]+/g, '');
+    return name === want || tail === want;
+  });
+  return all;
+}
+
+function readFeatures(spec) {
+  if (!spec) return [];
+  const features = [];
+  for (const file of expandSurefire(spec)) {
+    try {
+      features.push(parseFeatureFile(file, fs.readFileSync(file, 'utf8')));
+    } catch (e) {
+      console.error(`coverage-report: cannot read ${file}: ${e.message}`);
+    }
+  }
+  return features;
+}
+
 // --- Code coverage ---------------------------------------------------------
 // JaCoCo emits one <report> per Maven module. Its report-level counters are the
 // direct children that follow the last </package>; summing every nested counter
@@ -413,12 +492,20 @@ function matchEntry(entry, kind, surefireTests, vitestTests) {
   return loose ? allInClass(loose.classname) : [];
 }
 
-function buildReport(capabilities, surefireTests, vitestTests) {
+function buildReport(capabilities, surefireTests, vitestTests, features) {
   const rows = [];
   let matchedCount = 0;
   let unmatchedCount = 0;
   let failureCount = 0;
   let testCount = 0;
+  let scenarioCount = 0;
+  let scenarioMatched = 0;
+  let scenarioFailure = 0;
+
+  const featureFor = entry => {
+    const slug = path.basename(entry).replace(/\.feature$/, '');
+    return features.find(f => f.file.endsWith(entry) || path.basename(f.file) === slug + '.feature') || null;
+  };
 
   for (const capability of capabilities) {
     const entries = capability.verifiedBy.map(entry => {
@@ -431,13 +518,50 @@ function buildReport(capabilities, surefireTests, vitestTests) {
       } else {
         unmatchedCount++;
       }
-      return { entry, kind, tests };
+
+      const item = { entry, kind, tests };
+
+      if (kind === 'feature') {
+        const feature = featureFor(entry);
+        if (feature) {
+          // A scenario is covered either by a test case that names it, or -
+          // when the runner emits parameterised names the scenario cannot be
+          // keyed on - by the feature's backing class running at all. Both are
+          // stated, so a reader can never mistake class coverage for a
+          // scenario-level one.
+          const scenarios = feature.scenarios.map(name => {
+            const named = scenarioTests(name, surefireTests.concat(vitestTests));
+            const classLevel = named.length ? [] : tests;
+            scenarioCount++;
+            const has = named.length > 0 || classLevel.length > 0;
+            if (has) scenarioMatched++;
+            const status = named.length
+              ? named.some(test => test.status === 'failure') ? 'failure' : 'pass'
+              : classLevel.some(test => test.status === 'failure') ? 'failure' : 'pass';
+            if (status === 'failure') scenarioFailure++;
+            return { name, named, classLevel, status };
+          });
+          item.feature = feature;
+          item.scenarios = scenarios;
+        }
+      }
+
+      return item;
     });
 
     rows.push({ capability, entries });
   }
 
-  return { rows, matchedCount, unmatchedCount, failureCount, testCount };
+  return {
+    rows,
+    matchedCount,
+    unmatchedCount,
+    failureCount,
+    testCount,
+    scenarioCount,
+    scenarioMatched,
+    scenarioFailure,
+  };
 }
 
 function formatPercent(metric) {
@@ -474,6 +598,21 @@ function renderCoverage(coverage) {
   }
   parts.push('</tbody></table>');
   return parts;
+}
+
+function scenarioCell(scenario) {
+  if (scenario.named.length) {
+    return scenario.named
+      .map(test => `<code>${escapeHtml(test.name)}</code> <span class="meta">${escapeHtml(test.classname)}</span>`)
+      .join('<br>');
+  }
+  if (scenario.classLevel.length) {
+    // The whole class ran; individual scenario names are not emitted.
+    const cls = scenario.classLevel[0].classname;
+    return `<span class="meta">covered by class</span> <code>${escapeHtml(cls)}</code>` +
+      `<span class="meta">(${scenario.classLevel.length} cases, runner emits no scenario name)</span>`;
+  }
+  return '<span class="none">no matching test found.</span>';
 }
 
 function renderHtml(report, generatedAt, coverage) {
@@ -514,6 +653,10 @@ function renderHtml(report, generatedAt, coverage) {
   parts.push(`<div><strong>${unmatchedCount}</strong>entries with no matching test</div>`);
   parts.push(`<div><strong>${testCount}</strong>individual tests</div>`);
   parts.push(`<div><strong>${failureCount}</strong>failing tests</div>`);
+  if (report.scenarioCount) {
+    parts.push(`<div><strong>${report.scenarioCount}</strong>scenarios</div>`);
+    parts.push(`<div><strong>${report.scenarioMatched}</strong>scenarios with a test</div>`);
+  }
   parts.push('</div>');
 
   for (const line of renderCoverage(coverage)) parts.push(line);
@@ -541,6 +684,23 @@ function renderHtml(report, generatedAt, coverage) {
           `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
         );
       });
+
+      // Feature entries keep their class rows, then break out one row per
+      // scenario so the chain reads capability -> feature -> scenario -> test.
+      if (item.feature) {
+        const title = escapeHtml(item.feature.title || path.basename(item.feature.file));
+        item.scenarios.forEach((scenario, index) => {
+          const lead = index === 0
+            ? `<td rowspan="${item.scenarios.length}"><code>${label}</code></td>` +
+              `<td rowspan="${item.scenarios.length}">scenario</td>`
+            : '';
+          parts.push(
+            `<tr>${lead}` +
+            `<td><em>${escapeHtml(scenario.name)}</em><br>${scenarioCell(scenario)}</td>` +
+            `<td class="${escapeHtml(scenario.status)}">${escapeHtml(scenario.status)}</td></tr>`
+          );
+        });
+      }
     }
     parts.push('</tbody></table>');
   }
@@ -560,6 +720,10 @@ function renderSummary(report, coverage) {
   lines.push(`- verified_by entries with no matching test: ${report.unmatchedCount}`);
   lines.push(`- individual tests: ${report.testCount}`);
   lines.push(`- failing tests: ${report.failureCount}`);
+  if (report.scenarioCount) {
+    lines.push(`- scenarios: ${report.scenarioCount}`);
+    lines.push(`- scenarios with a test: ${report.scenarioMatched}`);
+  }
   if (coverage) {
     const fmt = data => (data ? `${formatPercent(data.line)} lines, ${formatPercent(data.branch)} branches` : 'n/a');
     lines.push(`- backend coverage: ${fmt(coverage.backend)}`);
@@ -573,6 +737,17 @@ function renderSummary(report, coverage) {
         ? item.tests.map(test => `${test.name} (${test.status})`).join(', ')
         : 'no matching test found';
       lines.push(`- ${item.entry} -> ${outcome}`);
+      if (item.feature) {
+        lines.push(`  - feature: ${item.feature.title || path.basename(item.feature.file)} (${item.scenarios.length} scenarios)`);
+        for (const scenario of item.scenarios) {
+          const proof = scenario.named.length
+            ? scenario.named.map(test => `${test.name} [${test.status}]`).join(', ')
+            : scenario.classLevel.length
+              ? `class-level only: ${scenario.classLevel[0].classname} (${scenario.classLevel.length} cases)`
+              : 'no matching test found';
+          lines.push(`    - ${scenario.name} -> ${proof}`);
+        }
+      }
     }
     lines.push('');
   }
@@ -592,13 +767,14 @@ function main() {
 
   const surefireTests = readTests(opts.surefire);
   const vitestTests = readTests(opts.vitest);
+  const features = readFeatures(opts.features);
 
   const coverage = {
     backend: readBackendCoverage(opts.jacoco),
     frontend: readFrontendCoverage(opts.frontendCoverage),
   };
 
-  const report = buildReport(capabilities, surefireTests, vitestTests);
+  const report = buildReport(capabilities, surefireTests, vitestTests, features);
   const html = renderHtml(report, new Date().toISOString(), coverage);
 
   fs.mkdirSync(opts.out, { recursive: true });
@@ -619,6 +795,10 @@ function main() {
   console.log(`Unmatched entries: ${report.unmatchedCount}`);
   console.log(`Individual tests: ${report.testCount}`);
   console.log(`Failing tests: ${report.failureCount}`);
+  if (report.scenarioCount) {
+    console.log(`Scenarios: ${report.scenarioCount}`);
+    console.log(`Scenarios with a test: ${report.scenarioMatched}`);
+  }
   if (coverage.backend || coverage.frontend) {
     console.log(`Backend coverage: ${coverage.backend ? formatPercent(coverage.backend.line) : 'n/a'} lines`);
     console.log(`Frontend coverage: ${coverage.frontend ? formatPercent(coverage.frontend.line) : 'n/a'} lines`);
