@@ -367,44 +367,57 @@ function parseFeatureFile(file, content) {
   const scenarios = [];
   const tags = [];
   let title = '';
+  let titleLine = 0;
   let inDocString = false;
   let docMarker = '';
+  const lines = content.split('\n');
 
-  for (const raw of content.split('\n')) {
+  lines.forEach((raw, lineIndex) => {
     const line = raw.replace(/\r$/, '');
     const trimmed = line.trim();
+    const lineNo = lineIndex + 1;
 
     // A triple-quoted doc string swallows any "Scenario:" inside it.
     const docMatch = trimmed.match(/^("""|```)/);
     if (inDocString) {
       if (trimmed === docMarker) { inDocString = false; docMarker = ''; }
-      continue;
+      return;
     }
     if (docMatch) {
       inDocString = true;
       docMarker = docMatch[1];
-      continue;
+      return;
     }
 
-    if (!trimmed) continue;
-    if (/^(#|\/\/)/.test(trimmed)) continue;
-    if (trimmed.startsWith('@')) { tags.push(trimmed); continue; }
+    if (!trimmed) return;
+    if (/^(#|\/\/)/.test(trimmed)) return;
+    if (trimmed.startsWith('@')) { tags.push(trimmed); return; }
 
     const feature = trimmed.match(/^Feature:\s*(.+)$/);
-    if (feature) { title = stripComment(feature[1]); continue; }
+    if (feature) { title = stripComment(feature[1]); titleLine = lineNo; return; }
 
     const scenario = trimmed.match(/^Scenario(?:\s+Outline)?:\s*(.+)$/);
-    if (scenario) scenarios.push(stripComment(scenario[1]));
-  }
+    if (scenario) scenarios.push({ name: stripComment(scenario[1]), line: lineNo });
+  });
 
   const cap = tags.find(tag => tag.replace(/^@+/, '').startsWith('cap:'));
 
   return {
     file,
     title,
+    titleLine,
     scenarios,
     cap: cap ? cap.replace(/^@+cap:/, '') : null,
   };
+}
+
+// GitHub source links so every domain element is clickable back to its source.
+// Blob URLs use line anchors where known (feature scenarios); otherwise they
+// point at the file.
+const GITHUB_BLOB = 'https://github.com/nmwael/capability-testing/blob/main';
+
+function githubLink(path, line) {
+  return line ? `${GITHUB_BLOB}/${path}#L${line}` : `${GITHUB_BLOB}/${path}`;
 }
 
 // Joins a scenario to the test cases that prove it. Deterministic only: the
@@ -413,7 +426,7 @@ function parseFeatureFile(file, content) {
 // in this repo are paraphrases of each other, so a miss is reported as a miss
 // rather than guessed at.
 function scenarioTests(scenario, tests, cucumberTests) {
-  const want = normalise(scenario).replace(/[^a-z0-9]+/g, '');
+  const want = normalise(scenario.name).replace(/[^a-z0-9]+/g, '');
   const keyed = pool => pool.filter(test => {
     const key = test.scenario || test.name;
     const name = normalise(key).replace(/[^a-z0-9]+/g, '');
@@ -701,16 +714,25 @@ function buildReport(capabilities, surefireTests, vitestTests, features, cucumbe
         unmatchedCount++;
       }
 
-      const item = { entry, kind, tests };
+      // A feature entry is a domain label, not a test list: its tests live on
+      // its scenarios. Count only non-feature entries at the entry level so a
+      // test is never counted twice - once on the feature row and once on a
+      // scenario row.
+      if (kind === 'feature') {
+        matchedCount++; // the feature entry itself resolves to a feature file
+      } else if (tests.length) {
+        matchedCount++;
+        testCount += tests.length;
+        failureCount += tests.filter(test => test.status === 'failure').length;
+      } else {
+        unmatchedCount++;
+      }
+
+      const item = { entry, kind, tests: kind === 'feature' ? [] : tests };
 
       if (kind === 'feature') {
         const feature = featureFor(entry);
         if (feature) {
-          // A scenario is covered either by a test case that names it, or -
-          // when the runner emits parameterised names the scenario cannot be
-          // keyed on - by the feature's backing class running at all. Both are
-          // stated, so a reader can never mistake class coverage for a
-          // scenario-level one.
           const scenarios = feature.scenarios.map(name => {
             const named = scenarioTests(name, surefireTests.concat(vitestTests), cucumberTests);
             const classLevel = named.length ? [] : tests;
@@ -718,9 +740,6 @@ function buildReport(capabilities, surefireTests, vitestTests, features, cucumbe
             const has = named.length > 0 || classLevel.length > 0;
             if (has) scenarioMatched++;
             if (named.length) {
-              // A scenario proved by a named case is a test case in its own
-              // right, so it counts in the totals rather than being invisible
-              // inside the feature block.
               testCount += named.length;
               named.forEach(test => { if (test.status === 'failure') failureCount++; });
             }
@@ -728,7 +747,7 @@ function buildReport(capabilities, surefireTests, vitestTests, features, cucumbe
               ? named.some(test => test.status === 'failure') ? 'failure' : 'pass'
               : classLevel.some(test => test.status === 'failure') ? 'failure' : 'pass';
             if (status === 'failure') scenarioFailure++;
-            return { name, named, classLevel, status };
+            return { name: name.name, line: name.line, named, classLevel, status };
           });
           item.feature = feature;
           item.scenarios = scenarios;
@@ -792,7 +811,7 @@ function renderCoverage(coverage) {
 function scenarioCell(scenario) {
   if (scenario.named.length) {
     return scenario.named
-      .map(test => `<code>${escapeHtml(test.name)}</code> <span class="meta">${escapeHtml(test.classname)}</span>`)
+      .map(test => `<a href="${githubLink(test.file)}"><code>${escapeHtml(test.name)}</code></a> <span class="meta">${escapeHtml(test.classname)}</span>`)
       .join('<br>');
   }
   if (scenario.classLevel.length) {
@@ -804,8 +823,75 @@ function scenarioCell(scenario) {
   return '<span class="none">no matching test found.</span>';
 }
 
+// Sort capabilities by "interestingness" so a reader sees what needs attention
+// first: failures, then unmatched entries, then mutation survivors, then low
+// scenario/test coverage, then everything else alphabetically.
+function sortByInterestingness(rows) {
+  const pitById = new Map();
+  return rows.slice().sort((a, b) => {
+    const aFail = (a.entries ?? []).some(i => (i.tests ?? []).some(t => t.status === 'failure'));
+    const bFail = (b.entries ?? []).some(i => (i.tests ?? []).some(t => t.status === 'failure'));
+    if (aFail && !bFail) return -1;
+    if (bFail && !aFail) return 1;
+
+    const aUnmatched = (a.entries ?? []).some(i => (i.tests ?? []).length === 0);
+    const bUnmatched = (b.entries ?? []).some(i => (i.tests ?? []).length === 0);
+    if (aUnmatched && !bUnmatched) return -1;
+    if (bUnmatched && !aUnmatched) return 1;
+
+    const aMut = (a.mutationKilled ?? 0) / (a.mutationTotal ?? 1);
+    const bMut = (b.mutationKilled ?? 0) / (b.mutationTotal ?? 1);
+    if (aMut !== bMut) return aMut - bMut; // lower kill rate first
+
+    const aScen = (a.scenarioMatched ?? 0) / (a.scenarioCount ?? 1);
+    const bScen = (b.scenarioMatched ?? 0) / (b.scenarioCount ?? 1);
+    if (aScen !== bScen) return aScen - bScen; // lower match rate first
+
+    return a.capability.id.localeCompare(b.capability.id);
+  });
+}
+
+// Top navigation: quick links to every capability plus the overview sections.
+function renderNav(rows) {
+  const parts = [];
+  parts.push('<nav class="topnav">');
+  parts.push('<a href="#overview">Overview</a>');
+  parts.push('<a href="#coverage">Code coverage</a>');
+  parts.push('<a href="#mutation">Mutation testing</a>');
+  for (const row of rows) {
+    parts.push(`<a href="#cap-${escapeHtml(row.capability.id)}">${escapeHtml(row.capability.id)}</a>`);
+  }
+  parts.push('</nav>');
+  return parts;
+}
+
 function renderHtml(report, generatedAt, coverage, pit) {
   const { rows, matchedCount, unmatchedCount, failureCount, testCount } = report;
+
+  // Attach per-capability mutation stats for sorting.
+  const pitById = new Map();
+  if (pit) {
+    for (const [className, counts] of pit.classes.entries()) {
+      const owners = rows
+        .map(row => row.capability)
+        .filter(cap => cap.verifiedBy.some(entry => {
+          if (classifyEntry(entry) !== 'java') return false;
+          const wanted = entry.split('.').pop();
+          return wanted === className.split('.').pop();
+        }));
+      for (const cap of owners) {
+        const existing = pitById.get(cap.id) || { killed: 0, total: 0 };
+        pitById.set(cap.id, { killed: existing.killed + counts.killed, total: existing.total + counts.total });
+      }
+    }
+  }
+  for (const row of rows) {
+    const s = pitById.get(row.capability.id) || { killed: 0, total: 0 };
+    row.mutationKilled = s.killed;
+    row.mutationTotal = s.total;
+  }
+
+  const sortedRows = sortByInterestingness(rows);
 
   const parts = [];
   parts.push('<!DOCTYPE html>');
@@ -815,10 +901,15 @@ function renderHtml(report, generatedAt, coverage, pit) {
   parts.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
   parts.push('<title>Capability to test coverage</title>');
   parts.push('<style>');
-  parts.push('body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:2rem auto;max-width:72rem;padding:0 1rem;color:#1b1f23;line-height:1.5}');
-  parts.push('h1{margin-bottom:.25rem}');
+  parts.push('body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;padding:0;color:#1b1f23;line-height:1.5}');
+  parts.push('.topnav{position:sticky;top:0;z-index:100;background:#1b1f23;padding:.6rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem}');
+  parts.push('.topnav a{color:#c9d1da;text-decoration:none;padding:.2rem .6rem;border-radius:4px;font-size:.88rem}');
+  parts.push('.topnav a:hover,.topnav a:focus{background:#30363d;color:#fff}');
+  parts.push('.topnav a.active{background:#238636;color:#fff}');
+  parts.push('main{max-width:72rem;padding:1.5rem}');
+  parts.push('h1{margin:.5rem 0 .5rem 0}');
   parts.push('.meta{color:#57606a;font-size:.9rem;margin-top:0}');
-  parts.push('.summary{display:flex;gap:1.5rem;margin:1.5rem 0;flex-wrap:wrap}');
+  parts.push('.summary{display:flex;gap:1.5rem;margin:1rem 0;flex-wrap:wrap}');
   parts.push('.summary div{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:.75rem 1rem}');
   parts.push('.summary strong{display:block;font-size:1.4rem}');
   parts.push('table{width:100%;border-collapse:collapse;margin:.5rem 0 2rem}');
@@ -832,10 +923,15 @@ function renderHtml(report, generatedAt, coverage, pit) {
   parts.push('.none{color:#b42318;font-style:italic}');
   parts.push('.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}');
   parts.push('table.mutation td:nth-child(2){max-width:14rem}');
+  parts.push('.card{border:1px solid #d0d7de;border-radius:6px;padding:1rem;margin:1rem 0;background:#fff}');
+  parts.push('.card h2{margin-top:0}');
+  parts.push('.card .meta{font-size:.85rem}');
   parts.push('</style>');
   parts.push('</head>');
   parts.push('<body>');
-  parts.push('<h1>Capability to test coverage</h1>');
+  for (const line of renderNav(sortedRows)) parts.push(line);
+  parts.push('<main>');
+  parts.push('<h1 id="overview">Capability to test coverage</h1>');
   parts.push(`<p class="meta">Generated ${escapeHtml(generatedAt)} from <code>capabilities/capabilities.yml</code></p>`);
   parts.push('<div class="summary">');
   parts.push(`<div><strong>${rows.length}</strong>capabilities</div>`);
@@ -849,57 +945,100 @@ function renderHtml(report, generatedAt, coverage, pit) {
   }
   parts.push('</div>');
 
-  // The mutation section links back to a capability by id, so the captions need
-  // an anchor to point at.
-  const capabilitiesForMutation = rows.map(row => row.capability);
-
-  for (const line of renderCoverage(coverage)) parts.push(line);
-  for (const line of renderMutation(pit, capabilitiesForMutation)) parts.push(line);
-
-  for (const row of rows) {
+  // Capability cards: most interesting first.
+  for (const row of sortedRows) {
     const cap = row.capability;
-    parts.push('<table>');
-    parts.push(`<caption id="cap-${escapeHtml(cap.id)}"><span class="cap-id">${escapeHtml(cap.id)}</span> &mdash; ${escapeHtml(cap.intent)}</caption>`);
-    parts.push('<thead><tr><th>verified_by</th><th>kind</th><th>test</th><th>status</th></tr></thead>');
-    parts.push('<tbody>');
+    let failures = 0, unmatched = 0, tests = 0, scenariosMatched = 0, scenariosTotal = 0;
     for (const item of row.entries) {
-      const label = escapeHtml(item.entry);
-      if (!item.tests.length) {
-        parts.push(`<tr><td><code>${label}</code></td><td>${item.kind}</td><td class="none" colspan="2">no matching test found</td></tr>`);
+      tests += item.tests.length;
+      if (item.tests.length === 0) unmatched++;
+      failures += item.tests.filter(t => t.status === 'failure').length;
+      if (item.scenarios) {
+        scenariosTotal += item.scenarios.length;
+        scenariosMatched += item.scenarios.filter(s => s.named.length > 0 || s.classLevel.length > 0).length;
+      }
+    }
+    const pct = row.mutationTotal ? ((row.mutationKilled / row.mutationTotal) * 100).toFixed(1) : 'n/a';
+    const capLink = githubLink('capabilities/capabilities.yml');
+    parts.push('<div class="card">');
+    parts.push(`<h2><a href="#cap-${escapeHtml(cap.id)}">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a></h2>`);
+    parts.push(`<p>${escapeHtml(cap.intent)}</p>`);
+    parts.push('<div class="summary">');
+    parts.push(`<div><strong>${row.entries.length}</strong>verified_by</div>`);
+    parts.push(`<div><strong>${unmatched}</strong>no test</div>`);
+    parts.push(`<div><strong>${failures}</strong>failing</div>`);
+    parts.push(`<div><strong>${tests}</strong>tests</div>`);
+    if (scenariosTotal) parts.push(`<div><strong>${scenariosMatched}/${scenariosTotal}</strong>scenarios</div>`);
+    parts.push(`<div><strong>${pct}%</strong>mutants killed</div>`);
+    parts.push('</div>');
+    parts.push('</div>');
+  }
+
+  // Drilldown sections: one per capability, anchored so the nav links work.
+  // Most interesting first, matching the card order above.
+  for (const row of sortedRows) {
+    const cap = row.capability;
+    const capLink = githubLink('capabilities/capabilities.yml');
+    parts.push(`<section id="cap-${escapeHtml(cap.id)}" class="drilldown">`);
+    parts.push(`<h2><a href="#cap-${escapeHtml(cap.id)}">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a> — ${escapeHtml(cap.intent)}</h2>`);
+    parts.push(`<p class="meta">Capability: <code>${escapeHtml(cap.id)}</code> · Owner: ${escapeHtml(cap.owner)} · Status: ${escapeHtml(cap.status)} · Since: ${escapeHtml(cap.since)}</p>`);
+    parts.push('<table class="drilldown-table">');
+    parts.push('<thead><tr><th>Domain</th><th>Entry</th><th>Proof (test / scenario)</th><th>Status</th></tr></thead>');
+    parts.push('<tbody>');
+
+    for (const item of row.entries) {
+      const domainLabel = item.kind === 'feature' ? 'Feature' : item.kind === 'file' ? 'Source file' : 'Test class';
+      const entryLabel = `<code>${escapeHtml(item.entry)}</code>`;
+
+      if (!item.tests.length && !item.scenarios) {
+        parts.push(
+          `<tr><td>${domainLabel}</td><td>${entryLabel}</td><td class="none" colspan="2">no matching test found</td></tr>`
+        );
         continue;
       }
-      item.tests.forEach((test, index) => {
-        const status = test.status || 'pass';
-        const lead = index === 0
-          ? `<td rowspan="${item.tests.length}"><code>${label}</code></td><td rowspan="${item.tests.length}">${item.kind}</td>`
-          : '';
-        parts.push(
-          `<tr>${lead}` +
-          `<td><code>${escapeHtml(test.name)}</code><br><span class="meta">${escapeHtml(test.classname)}</span></td>` +
-          `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
-        );
-      });
 
-      // Feature entries keep their class rows, then break out one row per
-      // scenario so the chain reads capability -> feature -> scenario -> test.
-      if (item.feature) {
-        const title = escapeHtml(item.feature.title || path.basename(item.feature.file));
+      if (item.kind === 'feature' && item.feature) {
+        // Feature title row (no test proof - proof lives on scenarios)
+        const featureLink = githubLink(item.feature.file, item.feature.titleLine);
+        parts.push(
+          `<tr><td>Feature</td><td>${entryLabel}</td><td><em><a href="${featureLink}">${escapeHtml(item.feature.title || path.basename(item.feature.file))}</a></em></td><td>—</td></tr>`
+        );
+        // One row per scenario
         item.scenarios.forEach((scenario, index) => {
           const lead = index === 0
-            ? `<td rowspan="${item.scenarios.length}"><code>${label}</code></td>` +
-              `<td rowspan="${item.scenarios.length}">scenario</td>`
+            ? `<td rowspan="${item.scenarios.length}">Feature</td><td rowspan="${item.scenarios.length}">${entryLabel}</td>`
             : '';
+          const proof = scenarioCell(scenario);
+          const status = scenario.status || 'pass';
+          const scenarioLink = githubLink(item.feature.file, scenario.line);
           parts.push(
             `<tr>${lead}` +
-            `<td><em>${escapeHtml(scenario.name)}</em><br>${scenarioCell(scenario)}</td>` +
-            `<td class="${escapeHtml(scenario.status)}">${escapeHtml(scenario.status)}</td></tr>`
+            `<td>Scenario</td><td><em><a href="${scenarioLink}">${escapeHtml(scenario.name.name)}</a></em><br>${proof}</td>` +
+            `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
+          );
+        });
+      } else if (item.tests.length) {
+        // Test-class entry (java): one row per test case
+        item.tests.forEach((test, index) => {
+          const lead = index === 0
+            ? `<td rowspan="${item.tests.length}">${domainLabel}</td><td rowspan="${item.tests.length}">${entryLabel}</td>`
+            : '';
+          const status = test.status || 'pass';
+          const testLink = githubLink(test.file);
+          parts.push(
+            `<tr>${lead}` +
+            `<td>Test</td><td><a href="${testLink}"><code>${escapeHtml(test.name)}</code></a><br><span class="meta">${escapeHtml(test.classname)}</span></td>` +
+            `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
           );
         });
       }
     }
+
     parts.push('</tbody></table>');
+    parts.push('</section>');
   }
 
+  parts.push('</main>');
   parts.push('</body>');
   parts.push('</html>');
 
