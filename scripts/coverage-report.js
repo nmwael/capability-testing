@@ -865,14 +865,14 @@ function sortByInterestingness(rows) {
 function renderNav(rows) {
   const parts = [];
   parts.push('<nav class="topnav">');
-  parts.push('<a href="#overview">Overview</a>');
-  parts.push('<a href="#coverage">Code coverage</a>');
-  parts.push('<a href="#mutation">Mutation testing</a>');
-  parts.push('<span class="nav-spacer"></span>');
   parts.push('<a href="../">Home</a>');
   parts.push('<a href="../capabilities">Capabilities</a>');
   parts.push('<a href="../reports">CI &amp; Reports</a>');
   parts.push('<a href="../governance">Governance</a>');
+  parts.push('<span class="nav-spacer"></span>');
+  parts.push('<a href="#overview">Overview</a>');
+  parts.push('<a href="#coverage">Code coverage</a>');
+  parts.push('<a href="#mutation">Mutation testing</a>');
   for (const row of rows) {
     parts.push(`<a href="#cap-${escapeHtml(row.capability.id)}">${escapeHtml(row.capability.id)}</a>`);
   }
