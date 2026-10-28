@@ -874,7 +874,7 @@ function renderNav(rows) {
   parts.push('<a href="#coverage">Code coverage</a>');
   parts.push('<a href="#mutation">Mutation testing</a>');
   for (const row of rows) {
-    parts.push(`<a href="#cap-${escapeHtml(row.capability.id)}">${escapeHtml(row.capability.id)}</a>`);
+    parts.push(`<a class="cap-link" href="#cap-${escapeHtml(row.capability.id)}">${escapeHtml(row.capability.id)}</a>`);
   }
   parts.push('</nav>');
   return parts;
@@ -921,6 +921,8 @@ function renderHtml(report, generatedAt, coverage, pit) {
   parts.push('.topnav a{color:#c9d1da;text-decoration:none;padding:.2rem .6rem;border-radius:4px;font-size:.88rem}');
   parts.push('.topnav a:hover,.topnav a:focus{background:#30363d;color:#fff}');
   parts.push('.topnav a.active{background:#238636;color:#fff}');
+  parts.push('.topnav .cap-link{background:#23863d;color:#fff;padding:.15rem .5rem;border-radius:999px;font-size:.82rem}');
+  parts.push('.topnav .cap-link:hover{background:#2ea043}');
   parts.push('main{max-width:72rem;padding:1.5rem}');
   parts.push('h1{margin:.5rem 0 .5rem 0}');
   parts.push('.meta{color:#57606a;font-size:.9rem;margin-top:0}');
