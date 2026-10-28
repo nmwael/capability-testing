@@ -23,6 +23,7 @@ const path = require('path');
 const DEFAULT_CAPABILITIES = 'capabilities/capabilities.yml';
 const DEFAULT_OUT = 'docs/coverage';
 const DEFAULT_FEATURES = 'features/**/*.feature';
+const DEFAULT_PIT = null;
 
 function parseArgs(args) {
   const opts = {
@@ -33,6 +34,7 @@ function parseArgs(args) {
     jacoco: null,
     frontendCoverage: null,
     features: DEFAULT_FEATURES,
+    pit: DEFAULT_PIT,
     out: DEFAULT_OUT,
     summary: null,
   };
@@ -440,6 +442,125 @@ function readFeatures(spec) {
   return features;
 }
 
+// --- Mutation testing (PIT) ------------------------------------------------
+// A mutant is killed when a test ran and noticed the change; NO_COVERAGE means
+// no eligible test reached the line. Only a killed mutant is evidence of an
+// assertion, so the section reports the three counts apart rather than lumping
+// an untested line together with a weak one.
+function parsePitXml(xmlContent) {
+  const out = [];
+  const re = /<mutation\b([^>]*)>/g;
+  let m;
+  while ((m = re.exec(xmlContent)) !== null) {
+    const end = xmlContent.indexOf('</mutation>', m.index);
+    const body = end === -1 ? '' : xmlContent.slice(m.index, end);
+    const field = name => {
+      const f = new RegExp('<' + name + '>([^<]*)</' + name + '>').exec(body);
+      return f ? f[1] : '';
+    };
+    const status = (/status\s*=\s*['"]([A-Z_]+)['"]/.exec(m[1]) || [])[1] || 'UNKNOWN';
+    out.push({
+      status,
+      testsRun: parseInt((/numberOfTestsRun\s*=\s*['"](\d+)['"]/.exec(m[1]) || [])[1] || '0', 10),
+      mutatedClass: field('mutatedClass'),
+      mutator: (field('mutator') || '').split('.').pop(),
+      description: field('description'),
+      lineNumber: parseInt(field('lineNumber') || '0', 10),
+    });
+  }
+  return out;
+}
+
+function readPit(spec) {
+  if (!spec) return null;
+  const classes = new Map();
+  let reports = 0;
+
+  for (const file of expandSurefire(spec)) {
+    let mutations;
+    try {
+      mutations = parsePitXml(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+      console.error(`coverage-report: cannot parse ${file}: ${e.message}`);
+      continue;
+    }
+    if (!mutations.length) continue;
+    reports++;
+    for (const mutation of mutations) {
+      const key = mutation.mutatedClass || '(unknown)';
+      if (!classes.has(key)) classes.set(key, { killed: 0, survived: 0, noCoverage: 0 });
+      const bucket = classes.get(key);
+      if (mutation.status === 'KILLED') bucket.killed++;
+      else if (mutation.status === 'NO_COVERAGE') bucket.noCoverage++;
+      else if (mutation.status !== 'TIMED_OUT' && mutation.status !== 'MEMORY_ERROR') bucket.survived++;
+    }
+  }
+
+  return reports ? { classes, total: [...classes.values()].reduce((sum, c) => sum + c.killed + c.survived + c.noCoverage, 0) } : null;
+}
+
+// Which capabilities a mutated class backs, by the same class-suffix rule the
+// verified_by java entries use.
+function capabilitiesForClass(className, capabilities) {
+  const simple = className.split('.').pop();
+  const owners = [];
+  for (const capability of capabilities) {
+    const hit = capability.verifiedBy.some(entry => {
+      if (classifyEntry(entry) !== 'java') return false;
+      const wanted = entry.split('.').pop();
+      return wanted === simple;
+    });
+    if (hit) owners.push(capability.id);
+  }
+  return owners;
+}
+
+function renderMutation(pit, capabilities) {
+  if (!pit || !pit.classes.size) return [];
+
+  const parts = [];
+  parts.push('<h2>Mutation testing</h2>');
+  parts.push('<p class="meta">PIT reruns the tests against mutated copies of the production classes. ' +
+    'A <strong>killed</strong> mutant means a test noticed the change; <strong>survived</strong> means a test ran and did not; ' +
+    '<strong>no coverage</strong> means no eligible test reached the line at all. ' +
+    'A class that no capability names is itself a traceability gap, not a scoring artefact.</p>');
+  parts.push('<table class="mutation">');
+  parts.push('<thead><tr><th>class</th><th>capability</th><th>mutants</th><th>killed</th><th>survived</th><th>no coverage</th></tr></thead>');
+  parts.push('<tbody>');
+
+  const rows = [...pit.classes.entries()]
+    .map(([className, counts]) => ({
+      className,
+      counts,
+      total: counts.killed + counts.survived + counts.noCoverage,
+      owners: capabilitiesForClass(className, capabilities),
+    }))
+    .sort((a, b) => b.total - a.total || a.className.localeCompare(b.className));
+
+  for (const row of rows) {
+    const pct = row.total ? ((row.counts.killed / row.total) * 100).toFixed(1) : '0.0';
+    const cls = row.counts.killed === row.total ? 'pass' : row.counts.killed === 0 ? 'failure' : 'skipped';
+    const owners = row.owners.length
+      ? row.owners.map(id => `<a href="#cap-${escapeHtml(id)}">${escapeHtml(id)}</a>`).join(', ')
+      : '<span class="meta">not named by any capability</span>';
+    parts.push(
+      '<tr>' +
+      `<td><code>${escapeHtml(row.className)}</code></td>` +
+      `<td>${owners}</td>` +
+      `<td>${row.total}</td>` +
+      `<td class="${cls}">${row.counts.killed} (${pct}%)</td>` +
+      `<td>${row.counts.survived}</td>` +
+      `<td>${row.counts.noCoverage}</td>` +
+      '</tr>'
+    );
+  }
+  parts.push('</tbody></table>');
+
+  const killed = [...pit.classes.values()].reduce((sum, c) => sum + c.killed, 0);
+  parts.push(`<p class="meta">${killed} of ${pit.total} mutants killed across ${pit.classes.size} classes.</p>`);
+  return parts;
+}
+
 // --- Code coverage ---------------------------------------------------------
 // JaCoCo emits one <report> per Maven module. Its report-level counters are the
 // direct children that follow the last </package>; summing every nested counter
@@ -683,7 +804,7 @@ function scenarioCell(scenario) {
   return '<span class="none">no matching test found.</span>';
 }
 
-function renderHtml(report, generatedAt, coverage) {
+function renderHtml(report, generatedAt, coverage, pit) {
   const { rows, matchedCount, unmatchedCount, failureCount, testCount } = report;
 
   const parts = [];
@@ -710,6 +831,7 @@ function renderHtml(report, generatedAt, coverage) {
   parts.push('.skipped{color:#9a6700;font-weight:600}');
   parts.push('.none{color:#b42318;font-style:italic}');
   parts.push('.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}');
+  parts.push('table.mutation td:nth-child(2){max-width:14rem}');
   parts.push('</style>');
   parts.push('</head>');
   parts.push('<body>');
@@ -727,12 +849,17 @@ function renderHtml(report, generatedAt, coverage) {
   }
   parts.push('</div>');
 
+  // The mutation section links back to a capability by id, so the captions need
+  // an anchor to point at.
+  const capabilitiesForMutation = rows.map(row => row.capability);
+
   for (const line of renderCoverage(coverage)) parts.push(line);
+  for (const line of renderMutation(pit, capabilitiesForMutation)) parts.push(line);
 
   for (const row of rows) {
     const cap = row.capability;
     parts.push('<table>');
-    parts.push(`<caption><span class="cap-id">${escapeHtml(cap.id)}</span> &mdash; ${escapeHtml(cap.intent)}</caption>`);
+    parts.push(`<caption id="cap-${escapeHtml(cap.id)}"><span class="cap-id">${escapeHtml(cap.id)}</span> &mdash; ${escapeHtml(cap.intent)}</caption>`);
     parts.push('<thead><tr><th>verified_by</th><th>kind</th><th>test</th><th>status</th></tr></thead>');
     parts.push('<tbody>');
     for (const item of row.entries) {
@@ -779,7 +906,7 @@ function renderHtml(report, generatedAt, coverage) {
   return parts.join('\n') + '\n';
 }
 
-function renderSummary(report, coverage) {
+function renderSummary(report, coverage, pit) {
   const lines = [];
   lines.push('## Capability to test coverage');
   lines.push('');
@@ -796,6 +923,10 @@ function renderSummary(report, coverage) {
     const fmt = data => (data ? `${formatPercent(data.line)} lines, ${formatPercent(data.branch)} branches` : 'n/a');
     lines.push(`- backend coverage: ${fmt(coverage.backend)}`);
     lines.push(`- frontend coverage: ${fmt(coverage.frontend)}`);
+  }
+  if (pit) {
+    const killed = [...pit.classes.values()].reduce((sum, c) => sum + c.killed, 0);
+    lines.push(`- mutation coverage: ${killed} of ${pit.total} mutants killed across ${pit.classes.size} classes`);
   }
   lines.push('');
   for (const row of report.rows) {
@@ -848,9 +979,10 @@ function main() {
     backend: readBackendCoverage(opts.jacoco),
     frontend: readFrontendCoverage(opts.frontendCoverage),
   };
+  const pit = readPit(opts.pit);
 
   const report = buildReport(capabilities, surefireKept, vitestTests, features, cucumberTests);
-  const html = renderHtml(report, new Date().toISOString(), coverage);
+  const html = renderHtml(report, new Date().toISOString(), coverage, pit);
 
   fs.mkdirSync(opts.out, { recursive: true });
   const outputPath = path.join(opts.out, 'index.html');
@@ -858,7 +990,7 @@ function main() {
 
   if (opts.summary) {
     try {
-      fs.writeFileSync(opts.summary, renderSummary(report, coverage));
+      fs.writeFileSync(opts.summary, renderSummary(report, coverage, pit));
     } catch (e) {
       console.error(`coverage-report: cannot write summary ${opts.summary}: ${e.message}`);
     }
@@ -877,6 +1009,10 @@ function main() {
   if (coverage.backend || coverage.frontend) {
     console.log(`Backend coverage: ${coverage.backend ? formatPercent(coverage.backend.line) : 'n/a'} lines`);
     console.log(`Frontend coverage: ${coverage.frontend ? formatPercent(coverage.frontend.line) : 'n/a'} lines`);
+  }
+  if (pit) {
+    const killed = [...pit.classes.values()].reduce((sum, c) => sum + c.killed, 0);
+    console.log(`Mutation coverage: ${killed} of ${pit.total} mutants killed across ${pit.classes.size} classes`);
   }
 }
 
