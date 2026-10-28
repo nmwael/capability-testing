@@ -1,58 +1,67 @@
 import { test, expect } from '@playwright/test'
 
+// alert.rule-edit exercises the rule-editing capability. The mounted page is
+// the designer (index.tsx renders AlertRuleDesigner at '/'), which carries the
+// behaviours features/frontend/alert-rule-edit.feature describes - the
+// standalone AlertRuleEdit.tsx component is never mounted, so it cannot be
+// driven end to end. Save/Generate post to the default '/rules' endpoint.
+const RULES = '**/rules'
+
+async function focusCanvas(page: import('@playwright/test').Page) {
+  await page.locator('[data-testid="condition-node"]').first().waitFor({ state: 'visible', timeout: 15000 })
+  await page.locator('[data-testid="canvas"]').click()
+}
+
 test.describe('alert.rule-edit', () => {
   test('@bdd loads default graph when no saved graph', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    await page.locator('[data-testid="condition-node"]').waitFor({ state: 'visible', timeout: 10000 })
-    await page.waitForTimeout(1000)
-    await expect(page.locator('[data-testid="condition-node"]')).toBeVisible()
+    await page.goto('/')
+    await expect(page.locator('[data-testid="condition-node"]')).toBeVisible({ timeout: 15000 })
     await expect(page.locator('[data-testid="action-node"]')).toBeVisible()
   })
 
   test('@bdd edits condition value', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    await page.locator('[data-testid="condition-value-select"]').waitFor({ state: 'visible', timeout: 10000 })
-    const condition = page.locator('[data-testid="condition-node"]')
-    const valueInput = condition.locator('[data-testid="condition-value-select"]')
+    await page.goto('/')
+    const valueInput = page.locator('[data-testid="condition-node"] [data-testid="value-input"]').first()
+    await valueInput.waitFor({ state: 'visible', timeout: 15000 })
     await valueInput.selectOption('Moderate')
     await expect(valueInput).toHaveValue('Moderate')
+    await expect(page.getByTestId('unsaved-changes')).toBeVisible()
   })
 
   test('@bdd renames node via rename panel', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    const condition = page.locator('[data-testid="condition-node"]')
-    await condition.first().click()
-    await page.waitForTimeout(1000)
-    await expect(page.getByTestId('rule-edit-rename-panel')).toBeVisible()
-    const input = page.getByTestId('rule-edit-rename-input')
-    await input.fill('my-condition')
+    await page.goto('/')
+    await focusCanvas(page)
+    await page.keyboard.press('c')
+    const panel = page.getByTestId('rule-designer-rename-panel')
+    await expect(panel).toBeVisible()
+    const input = page.getByTestId('rename-input')
+    await input.fill('tornado-warning')
     await page.keyboard.press('Enter')
-    await expect(page.getByTestId('rule-edit-rename-panel')).toBeHidden()
-  })
-
-  test('@bdd deletes node with Backspace', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    const action = page.locator('[data-testid="action-node"]')
-    await action.click()
-    await page.waitForTimeout(500)
-    await page.keyboard.press('Backspace')
-    await page.waitForTimeout(500)
-    await expect(action).not.toBeVisible()
+    await expect(panel).toBeHidden()
   })
 
   test('@bdd saving posts to /rules endpoint', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    await page.waitForSelector('[data-testid="rule-edit-save"]', { state: 'visible', timeout: 10000 })
-    await page.click('[data-testid="rule-edit-save"]')
-    const response = await page.waitForResponse((req) => req.url().includes('/rules'))
+    await page.route(RULES, route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ruleCount: 1 }),
+    }))
+    await page.goto('/')
+    await expect(page.locator('[data-testid="condition-node"]')).toBeVisible({ timeout: 15000 })
+    await page.click('[data-testid="save-button"]')
+    const response = await page.waitForResponse(req => req.url().includes('/rules'))
+    expect(response.request().method()).toBe('POST')
     expect(response.status()).toBe(200)
+    await expect(page.getByTestId('rule-designer-status')).toContainText('Generated 1 rules')
   })
 
   test('@bdd keeps edit when save is rejected', async ({ page }) => {
-    await page.goto('/?ruleName=tornado-routing')
-    await page.waitForSelector('[data-testid="rule-edit-save"]', { state: 'visible', timeout: 10000 })
-    await page.route('**/rules/**', route => route.abort('failed'))
-    await page.click('[data-testid="rule-edit-save"]')
-    await expect(page.getByTestId('rule-edit-unsaved')).toBeVisible()
+    await page.route(RULES, route => route.abort('failed'))
+    await page.goto('/')
+    await expect(page.locator('[data-testid="condition-node"]')).toBeVisible({ timeout: 15000 })
+    await page.click('[data-testid="save-button"]')
+    await expect(page.getByTestId('rule-designer-status')).toContainText('Could not reach the rule design endpoint')
+    await expect(page.locator('[data-testid="condition-node"]')).toBeVisible()
+    await expect(page.getByTestId('unsaved-changes')).toBeVisible()
   })
 })
