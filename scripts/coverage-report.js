@@ -718,6 +718,8 @@ function buildReport(capabilities, surefireTests, vitestTests, features, cucumbe
       // its scenarios. Count only non-feature entries at the entry level so a
       // test is never counted twice - once on the feature row and once on a
       // scenario row.
+      // A feature entry is matched only if at least one scenario has test proof.
+      // Non-feature entries are matched only if they have direct tests.
       if (kind === 'feature') {
         matchedCount++; // the feature entry itself resolves to a feature file
       } else if (tests.length) {
@@ -751,6 +753,13 @@ function buildReport(capabilities, surefireTests, vitestTests, features, cucumbe
           });
           item.feature = feature;
           item.scenarios = scenarios;
+
+          // If no scenario has test proof, the feature entry is unmatched.
+          const scenarioHasProof = scenarios.some(s => s.named.length > 0 || s.classLevel.length > 0);
+          if (!scenarioHasProof) {
+            matchedCount--;
+            unmatchedCount++;
+          }
         }
       }
 
@@ -920,7 +929,8 @@ function renderHtml(report, generatedAt, coverage, pit) {
   parts.push('.pass{color:#116329;font-weight:600}');
   parts.push('.failure{color:#b42318;font-weight:600}');
   parts.push('.skipped{color:#9a6700;font-weight:600}');
-  parts.push('.none{color:#b42318;font-style:italic}');
+  parts.push('.none{color:#b42318;font-weight:600;background:#ffeef0}');
+parts.push('.card.issues{border-left:4px solid #b42318;background:#fff8f9}');
   parts.push('.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}');
   parts.push('table.mutation td:nth-child(2){max-width:14rem}');
   parts.push('.card{border:1px solid #d0d7de;border-radius:6px;padding:1rem;margin:1rem 0;background:#fff}');
@@ -951,8 +961,16 @@ function renderHtml(report, generatedAt, coverage, pit) {
     let failures = 0, unmatched = 0, tests = 0, scenariosMatched = 0, scenariosTotal = 0;
     for (const item of row.entries) {
       tests += item.tests.length;
-      if (item.tests.length === 0) unmatched++;
+      if (item.kind === 'feature') {
+        // Feature entries prove themselves through scenarios; unmatched only if
+        // no scenario has any test proof.
+        const scenarioHasProof = item.scenarios.some(s => s.named.length > 0 || s.classLevel.length > 0);
+        if (!scenarioHasProof) unmatched++;
+      } else if (item.tests.length === 0) {
+        unmatched++;
+      }
       failures += item.tests.filter(t => t.status === 'failure').length;
+      failures += item.scenarios ? item.scenarios.filter(s => s.status === 'failure').length : 0;
       if (item.scenarios) {
         scenariosTotal += item.scenarios.length;
         scenariosMatched += item.scenarios.filter(s => s.named.length > 0 || s.classLevel.length > 0).length;
@@ -960,13 +978,14 @@ function renderHtml(report, generatedAt, coverage, pit) {
     }
     const pct = row.mutationTotal ? ((row.mutationKilled / row.mutationTotal) * 100).toFixed(1) : 'n/a';
     const capLink = githubLink('capabilities/capabilities.yml');
-    parts.push('<div class="card">');
+    const isIssue = unmatched > 0 || failures > 0;
+    parts.push(`<div class="card${isIssue ? ' issues' : ''}">`);
     parts.push(`<h2><a href="#cap-${escapeHtml(cap.id)}">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a></h2>`);
     parts.push(`<p>${escapeHtml(cap.intent)}</p>`);
     parts.push('<div class="summary">');
     parts.push(`<div><strong>${row.entries.length}</strong>verified_by</div>`);
-    parts.push(`<div><strong>${unmatched}</strong>no test</div>`);
-    parts.push(`<div><strong>${failures}</strong>failing</div>`);
+    parts.push(`<div${unmatched > 0 ? ' class="failure"' : ''}><strong>${unmatched}</strong>no test</div>`);
+    parts.push(`<div${failures > 0 ? ' class="failure"' : ''}><strong>${failures}</strong>failing</div>`);
     parts.push(`<div><strong>${tests}</strong>tests</div>`);
     if (scenariosTotal) parts.push(`<div><strong>${scenariosMatched}/${scenariosTotal}</strong>scenarios</div>`);
     parts.push(`<div><strong>${pct}%</strong>mutants killed</div>`);
