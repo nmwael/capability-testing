@@ -532,7 +532,7 @@ function renderMutation(pit, capabilities) {
   if (!pit || !pit.classes.size) return [];
 
   const parts = [];
-  parts.push('<h2>Mutation testing</h2>');
+  parts.push('<h2 id="mutation">Mutation testing</h2>');
   parts.push('<p class="meta">PIT reruns the tests against mutated copies of the production classes. ' +
     'A <strong>killed</strong> mutant means a test noticed the change; <strong>survived</strong> means a test ran and did not; ' +
     '<strong>no coverage</strong> means no eligible test reached the line at all. ' +
@@ -802,7 +802,7 @@ function renderCoverage(coverage) {
   if (!suites.length) return [];
 
   const parts = [];
-  parts.push('<h2>Code coverage</h2>');
+  parts.push('<h2 id="coverage">Code coverage</h2>');
   parts.push('<table class="coverage">');
   parts.push('<thead><tr><th>suite</th><th>lines</th><th>branches</th></tr></thead>');
   parts.push('<tbody>');
@@ -1004,6 +1004,9 @@ function renderOverviewPage(report, generatedAt, coverage, pit) {
     parts.push(`<a class="drilldown-link" href="cap-${escapeHtml(cap.id)}.html">View capability drilldown →</a>`);
     parts.push('</div>');
   }
+
+  for (const line of renderCoverage(coverage)) parts.push(line);
+  for (const line of renderMutation(pit, sortedRows.map(row => row.capability))) parts.push(line);
 
   parts.push('</main>');
   parts.push('</body>');
