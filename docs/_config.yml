@@ -1,5 +1,6 @@
 title: Capability Contract & Project Status
 description: Protecting capabilities via explicit declaration, accountable owners, independent governance, traceable verification, automated CI
+baseurl: /capability-testing
 nav:
   - title: Home
     url: /capability-testing/

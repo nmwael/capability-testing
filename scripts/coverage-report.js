@@ -870,9 +870,9 @@ function renderNav(rows) {
   parts.push('<a href="#mutation">Mutation testing</a>');
   parts.push('<span class="nav-spacer"></span>');
   parts.push('<a href="../">Home</a>');
-  parts.push('<a href="../capabilities/">Capabilities</a>');
-  parts.push('<a href="../reports/">CI &amp; Reports</a>');
-  parts.push('<a href="../governance/">Governance</a>');
+  parts.push('<a href="../capabilities">Capabilities</a>');
+  parts.push('<a href="../reports">CI &amp; Reports</a>');
+  parts.push('<a href="../governance">Governance</a>');
   for (const row of rows) {
     parts.push(`<a href="#cap-${escapeHtml(row.capability.id)}">${escapeHtml(row.capability.id)}</a>`);
   }
