@@ -874,13 +874,13 @@ function renderNav(rows) {
   parts.push('<a href="#coverage">Code coverage</a>');
   parts.push('<a href="#mutation">Mutation testing</a>');
   for (const row of rows) {
-    parts.push(`<a class="cap-link" href="#cap-${escapeHtml(row.capability.id)}">${escapeHtml(row.capability.id)}</a>`);
+    parts.push(`<a class="cap-link" href="cap-${escapeHtml(row.capability.id)}.html">${escapeHtml(row.capability.id)}</a>`);
   }
   parts.push('</nav>');
   return parts;
 }
 
-function renderHtml(report, generatedAt, coverage, pit) {
+function renderOverviewPage(report, generatedAt, coverage, pit) {
   const { rows, matchedCount, unmatchedCount, failureCount, testCount } = report;
 
   // Attach per-capability mutation stats for sorting.
@@ -938,12 +938,16 @@ function renderHtml(report, generatedAt, coverage, pit) {
   parts.push('.failure{color:#b42318;font-weight:600}');
   parts.push('.skipped{color:#9a6700;font-weight:600}');
   parts.push('.none{color:#b42318;font-weight:600;background:#ffeef0}');
-parts.push('.card.issues{border-left:4px solid #b42318;background:#fff8f9}');
+  parts.push('.card.issues{border-left:4px solid #b42318;background:#fff8f9}');
   parts.push('.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}');
   parts.push('table.mutation td:nth-child(2){max-width:14rem}');
   parts.push('.card{border:1px solid #d0d7de;border-radius:6px;padding:1rem;margin:1rem 0;background:#fff}');
   parts.push('.card h2{margin-top:0}');
   parts.push('.card .meta{font-size:.85rem}');
+  parts.push('.card a.cap-link{color:#fff;text-decoration:none}');
+  parts.push('.card a.cap-link:hover{color:#fff;text-decoration:none}');
+  parts.push('.drilldown-link{display:inline-block;margin-top:.5rem;padding:.4rem .8rem;background:#23863d;color:#fff;text-decoration:none;border-radius:4px;font-size:.88rem}');
+  parts.push('.drilldown-link:hover{background:#2ea043;text-decoration:none}');
   parts.push('</style>');
   parts.push('</head>');
   parts.push('<body>');
@@ -963,15 +967,14 @@ parts.push('.card.issues{border-left:4px solid #b42318;background:#fff8f9}');
   }
   parts.push('</div>');
 
-  // Capability cards: most interesting first.
+  // Capability cards: most interesting first. Each card links to its
+  // dedicated capability page (cap-<id>.html).
   for (const row of sortedRows) {
     const cap = row.capability;
     let failures = 0, unmatched = 0, tests = 0, scenariosMatched = 0, scenariosTotal = 0;
     for (const item of row.entries) {
       tests += item.tests.length;
       if (item.kind === 'feature') {
-        // Feature entries prove themselves through scenarios; unmatched only if
-        // no scenario has any test proof.
         const scenarioHasProof = item.scenarios.some(s => s.named.length > 0 || s.classLevel.length > 0);
         if (!scenarioHasProof) unmatched++;
       } else if (item.tests.length === 0) {
@@ -988,7 +991,7 @@ parts.push('.card.issues{border-left:4px solid #b42318;background:#fff8f9}');
     const capLink = githubLink('capabilities/capabilities.yml');
     const isIssue = unmatched > 0 || failures > 0;
     parts.push(`<div class="card${isIssue ? ' issues' : ''}">`);
-    parts.push(`<h2><a href="#cap-${escapeHtml(cap.id)}">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a></h2>`);
+    parts.push(`<h2><a href="cap-${escapeHtml(cap.id)}.html">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a></h2>`);
     parts.push(`<p>${escapeHtml(cap.intent)}</p>`);
     parts.push('<div class="summary">');
     parts.push(`<div><strong>${row.entries.length}</strong>verified_by</div>`);
@@ -998,73 +1001,171 @@ parts.push('.card.issues{border-left:4px solid #b42318;background:#fff8f9}');
     if (scenariosTotal) parts.push(`<div><strong>${scenariosMatched}/${scenariosTotal}</strong>scenarios</div>`);
     parts.push(`<div><strong>${pct}%</strong>mutants killed</div>`);
     parts.push('</div>');
+    parts.push(`<a class="drilldown-link" href="cap-${escapeHtml(cap.id)}.html">View capability drilldown →</a>`);
     parts.push('</div>');
   }
 
-  // Drilldown sections: one per capability, anchored so the nav links work.
-  // Most interesting first, matching the card order above.
-  for (const row of sortedRows) {
-    const cap = row.capability;
-    const capLink = githubLink('capabilities/capabilities.yml');
-    parts.push(`<section id="cap-${escapeHtml(cap.id)}" class="drilldown">`);
-    parts.push(`<h2><a href="#cap-${escapeHtml(cap.id)}">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a> — ${escapeHtml(cap.intent)}</h2>`);
-    parts.push(`<p class="meta">Capability: <code>${escapeHtml(cap.id)}</code> · Owner: ${escapeHtml(cap.owner)} · Status: ${escapeHtml(cap.status)} · Since: ${escapeHtml(cap.since)}</p>`);
-    parts.push('<table class="drilldown-table">');
-    parts.push('<thead><tr><th>Domain</th><th>Entry</th><th>Proof (test / scenario)</th><th>Status</th></tr></thead>');
-    parts.push('<tbody>');
+  parts.push('</main>');
+  parts.push('</body>');
+  parts.push('</html>');
 
-    for (const item of row.entries) {
-      const domainLabel = item.kind === 'feature' ? 'Feature' : item.kind === 'file' ? 'Source file' : 'Test class';
-      const entryLabel = `<code>${escapeHtml(item.entry)}</code>`;
+  return parts.join('\n') + '\n';
+}
 
-      if (!item.tests.length && !item.scenarios) {
-        parts.push(
-          `<tr><td>${domainLabel}</td><td>${entryLabel}</td><td class="none" colspan="2">no matching test found</td></tr>`
-        );
-        continue;
-      }
+function renderCapabilityPage(row, generatedAt, coverage, pit) {
+  const cap = row.capability;
+  const rowEntries = row.entries;
 
-      if (item.kind === 'feature' && item.feature) {
-        // Feature title row (no test proof - proof lives on scenarios)
-        const featureLink = githubLink(item.feature.file, item.feature.titleLine);
-        parts.push(
-          `<tr><td>Feature</td><td>${entryLabel}</td><td><em><a href="${featureLink}">${escapeHtml(item.feature.title || path.basename(item.feature.file))}</a></em></td><td>—</td></tr>`
-        );
-        // One row per scenario
-        item.scenarios.forEach((scenario, index) => {
-          const lead = index === 0
-            ? `<td rowspan="${item.scenarios.length}">Feature</td><td rowspan="${item.scenarios.length}">${entryLabel}</td>`
-            : '';
-          const proof = scenarioCell(scenario);
-          const status = scenario.status || 'pass';
-          const scenarioLink = githubLink(item.feature.file, scenario.line);
-          parts.push(
-            `<tr>${lead}` +
-            `<td>Scenario</td><td><em><a href="${scenarioLink}">${escapeHtml(scenario.name.name)}</a></em><br>${proof}</td>` +
-            `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
-          );
+  // Capability-level mutation stats.
+  const pitById = new Map();
+  if (pit) {
+    for (const [className, counts] of pit.classes.entries()) {
+      const owners = rowEntries
+        .filter(entry => {
+          if (classifyEntry(entry.entry) !== 'java') return false;
+          const wanted = entry.entry.split('.').pop();
+          return wanted === className.split('.').pop();
         });
-      } else if (item.tests.length) {
-        // Test-class entry (java): one row per test case
-        item.tests.forEach((test, index) => {
-          const lead = index === 0
-            ? `<td rowspan="${item.tests.length}">${domainLabel}</td><td rowspan="${item.tests.length}">${entryLabel}</td>`
-            : '';
-          const status = test.status || 'pass';
-          const testLink = githubLink(test.file);
-          parts.push(
-            `<tr>${lead}` +
-            `<td>Test</td><td><a href="${testLink}"><code>${escapeHtml(test.name)}</code></a><br><span class="meta">${escapeHtml(test.classname)}</span></td>` +
-            `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
-          );
-        });
+      if (owners.length > 0) {
+        const existing = pitById.get(cap.id) || { killed: 0, total: 0 };
+        pitById.set(cap.id, { killed: existing.killed + counts.killed, total: existing.total + counts.total });
       }
     }
+  }
+  const pitStats = pitById.get(cap.id) || { killed: 0, total: 0 };
 
-    parts.push('</tbody></table>');
-    parts.push('</section>');
+  // Aggregate stats.
+  let failures = 0, unmatched = 0, tests = 0, scenariosMatched = 0, scenariosTotal = 0;
+  for (const item of rowEntries) {
+    tests += item.tests.length;
+    if (item.kind === 'feature') {
+      const scenarioHasProof = item.scenarios.some(s => s.named.length > 0 || s.classLevel.length > 0);
+      if (!scenarioHasProof) unmatched++;
+    } else if (item.tests.length === 0) {
+      unmatched++;
+    }
+    failures += item.tests.filter(t => t.status === 'failure').length;
+    failures += item.scenarios ? item.scenarios.filter(s => s.status === 'failure').length : 0;
+    if (item.scenarios) {
+      scenariosTotal += item.scenarios.length;
+      scenariosMatched += item.scenarios.filter(s => s.named.length > 0 || s.classLevel.length > 0).length;
+    }
+  }
+  const pct = pitStats.total ? ((pitStats.killed / pitStats.total) * 100).toFixed(1) : 'n/a';
+
+  const capLink = githubLink('capabilities/capabilities.yml');
+  const isIssue = unmatched > 0 || failures > 0;
+
+  const parts = [];
+  parts.push('<!DOCTYPE html>');
+  parts.push('<html lang="en">');
+  parts.push('<head>');
+  parts.push('<meta charset="utf-8">');
+  parts.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
+  parts.push(`<title>${escapeHtml(cap.id)} — Capability test coverage</title>`);
+  parts.push('<style>');
+  parts.push('body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;padding:0;color:#1b1f23;line-height:1.5}');
+  parts.push('.topnav{position:sticky;top:0;z-index:100;background:#1b1f23;padding:.6rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem}');
+  parts.push('.topnav a{color:#c9d1da;text-decoration:none;padding:.2rem .6rem;border-radius:4px;font-size:.88rem}');
+  parts.push('.topnav a:hover,.topnav a:focus{background:#30363d;color:#fff}');
+  parts.push('.topnav a.active{background:#238636;color:#fff}');
+  parts.push('.topnav .cap-link{background:#23863d;color:#fff;padding:.15rem .5rem;border-radius:999px;font-size:.82rem}');
+  parts.push('.topnav .cap-link:hover{background:#2ea043}');
+  parts.push('main{max-width:72rem;padding:1.5rem}');
+  parts.push('h1{margin:.5rem 0 .5rem 0}');
+  parts.push('.meta{color:#57606a;font-size:.9rem;margin-top:0}');
+  parts.push('.summary{display:flex;gap:1.5rem;margin:1rem 0;flex-wrap:wrap}');
+  parts.push('.summary div{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:.75rem 1rem}');
+  parts.push('.summary strong{display:block;font-size:1.4rem}');
+  parts.push('table{width:100%;border-collapse:collapse;margin:.5rem 0 2rem}');
+  parts.push('caption{text-align:left;font-weight:600;padding:.5rem 0;font-size:1.1rem}');
+  parts.push('th,td{border:1px solid #d0d7de;padding:.4rem .6rem;text-align:left;vertical-align:top;font-size:.92rem}');
+  parts.push('th{background:#f6f8fa}');
+  parts.push('code{background:#f6f8fa;padding:.1rem .3rem;border-radius:3px;font-size:.88em}');
+  parts.push('.pass{color:#116329;font-weight:600}');
+  parts.push('.failure{color:#b42318;font-weight:600}');
+  parts.push('.skipped{color:#9a6700;font-weight:600}');
+  parts.push('.none{color:#b42318;font-weight:600;background:#ffeef0}');
+  parts.push('.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}');
+  parts.push('table.mutation td:nth-child(2){max-width:14rem}');
+  parts.push('.card{border:1px solid #d0d7de;border-radius:6px;padding:1rem;margin:1rem 0;background:#fff}');
+  parts.push('.card h2{margin-top:0}');
+  parts.push('.card .meta{font-size:.85rem}');
+  parts.push('</style>');
+  parts.push('</head>');
+  parts.push('<body>');
+  parts.push('<nav class="topnav">');
+  parts.push('<a href="../">Home</a>');
+  parts.push('<a href="../capabilities">Capabilities</a>');
+  parts.push('<a href="../reports">CI &amp; Reports</a>');
+  parts.push('<a href="../governance">Governance</a>');
+  parts.push('<span class="nav-spacer"></span>');
+  parts.push('<a href="../index.html">Overview</a>');
+  for (const row of rowEntries.map(item => ({ capability: cap, entries: [item] }))) {
+    // not used; just keeping structure
+  }
+  parts.push('</nav>');
+  parts.push('<main>');
+  parts.push(`<h1><a href="cap-${escapeHtml(cap.id)}.html">${escapeHtml(cap.id)}</a> <a href="${capLink}" class="meta" title="Source: capabilities/capabilities.yml">📄</a> — ${escapeHtml(cap.intent)}</h1>`);
+  parts.push(`<p class="meta">Capability: <code>${escapeHtml(cap.id)}</code> · Owner: ${escapeHtml(cap.owner)} · Status: ${escapeHtml(cap.status)} · Since: ${escapeHtml(cap.since)}</p>`);
+  parts.push('<div class="summary">');
+  parts.push(`<div><strong>${rowEntries.length}</strong>verified_by</div>`);
+  parts.push(`<div${unmatched > 0 ? ' class="failure"' : ''}><strong>${unmatched}</strong>no test</div>`);
+  parts.push(`<div${failures > 0 ? ' class="failure"' : ''}><strong>${failures}</strong>failing</div>`);
+  parts.push(`<div><strong>${tests}</strong>tests</div>`);
+  if (scenariosTotal) parts.push(`<div><strong>${scenariosMatched}/${scenariosTotal}</strong>scenarios</div>`);
+  parts.push(`<div><strong>${pct}%</strong>mutants killed</div>`);
+  parts.push('</div>');
+  parts.push('<table class="drilldown-table">');
+  parts.push('<thead><tr><th>Domain</th><th>Entry</th><th>Proof (test / scenario)</th><th>Status</th></tr></thead>');
+  parts.push('<tbody>');
+
+  for (const item of rowEntries) {
+    const domainLabel = item.kind === 'feature' ? 'Feature' : item.kind === 'file' ? 'Source file' : 'Test class';
+    const entryLabel = `<code>${escapeHtml(item.entry)}</code>`;
+
+    if (!item.tests.length && !item.scenarios) {
+      parts.push(
+        `<tr><td>${domainLabel}</td><td>${entryLabel}</td><td class="none" colspan="2">no matching test found</td></tr>`
+      );
+      continue;
+    }
+
+    if (item.kind === 'feature' && item.feature) {
+      const featureLink = githubLink(item.feature.file, item.feature.titleLine);
+      parts.push(
+        `<tr><td>Feature</td><td>${entryLabel}</td><td><em><a href="${featureLink}">${escapeHtml(item.feature.title || path.basename(item.feature.file))}</a></em></td><td>—</td></tr>`
+      );
+      item.scenarios.forEach((scenario, index) => {
+        const lead = index === 0
+          ? `<td rowspan="${item.scenarios.length}">Feature</td><td rowspan="${item.scenarios.length}">${entryLabel}</td>`
+          : '';
+        const proof = scenarioCell(scenario);
+        const status = scenario.status || 'pass';
+        const scenarioLink = githubLink(item.feature.file, scenario.line);
+        parts.push(
+          `<tr>${lead}` +
+          `<td>Scenario</td><td><em><a href="${scenarioLink}">${escapeHtml(scenario.name.name)}</a></em><br>${proof}</td>` +
+          `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
+        );
+      });
+    } else if (item.tests.length) {
+      item.tests.forEach((test, index) => {
+        const lead = index === 0
+          ? `<td rowspan="${item.tests.length}">${domainLabel}</td><td rowspan="${item.tests.length}">${entryLabel}</td>`
+          : '';
+        const status = test.status || 'pass';
+        const testLink = githubLink(test.file);
+        parts.push(
+          `<tr>${lead}` +
+          `<td>Test</td><td><a href="${testLink}"><code>${escapeHtml(test.name)}</code></a><br><span class="meta">${escapeHtml(test.classname)}</span></td>` +
+          `<td class="${escapeHtml(status)}">${escapeHtml(status)}</td></tr>`
+        );
+      });
+    }
   }
 
+  parts.push('</tbody></table>');
   parts.push('</main>');
   parts.push('</body>');
   parts.push('</html>');
@@ -1148,11 +1249,19 @@ function main() {
   const pit = readPit(opts.pit);
 
   const report = buildReport(capabilities, surefireKept, vitestTests, features, cucumberTests);
-  const html = renderHtml(report, new Date().toISOString(), coverage, pit);
+  const overviewHtml = renderOverviewPage(report, new Date().toISOString(), coverage, pit);
 
   fs.mkdirSync(opts.out, { recursive: true });
   const outputPath = path.join(opts.out, 'index.html');
-  fs.writeFileSync(outputPath, html);
+  fs.writeFileSync(outputPath, overviewHtml);
+
+  // Write individual capability drilldown pages: cap-<id>.html
+  for (const row of report.rows) {
+    const capHtml = renderCapabilityPage(row, new Date().toISOString(), coverage, pit);
+    const capPath = path.join(opts.out, `cap-${escapeHtml(row.capability.id)}.html`);
+    fs.writeFileSync(capPath, capHtml);
+    console.log(`Capability page: ${capPath}`);
+  }
 
   if (opts.summary) {
     try {
@@ -1196,5 +1305,7 @@ module.exports = {
   classifyEntry,
   matchEntry,
   buildReport,
-  renderHtml,
+  renderOverviewPage,
+  renderCapabilityPage,
+  renderSummary,
 };
