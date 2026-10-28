@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
+    "test:e2e": "xvfb-run -a npx playwright test --headed --reporter=line",
     "coverage": "vitest --coverage",
     "cruise": "depcruise src --config .depcruiser.js"
   },
