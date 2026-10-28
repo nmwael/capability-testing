@@ -7,6 +7,11 @@ title: Governance
 
 This page documents governance roles, separation of duties, and approval policies.
 
+<div class="card">
+<h2><a href="https://github.com/nmwael/capability-testing/blob/main/docs/governance.md" class="github-link" target="_blank" rel="noopener">📄</a> Source: docs/governance.md</h2>
+<p>Governance maintains independence by separating definition from verification. Changes must pass both the PO Architect and Test Manager gates before merging.</p>
+</div>
+
 ## Governance Roles
 
 | Role | Responsibilities | Gates |
@@ -50,3 +55,4 @@ The governance process currently lacks automated approval workflows for capabili
 
 - [Capabilities](/capability-testing/capabilities) - Capability table and status
 - [CI & Reports](/capability-testing/reports) - CI jobs and coverage reports
+- [Coverage](/capability-testing/coverage/) - Capability-to-test drilldown report

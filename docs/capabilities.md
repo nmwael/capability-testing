@@ -5,7 +5,12 @@ title: Capabilities
 
 # Capabilities
 
-This page documents all capabilities governed by the Capability Contract.
+This page documents all capabilities governed by the Capability Contract. Each capability is linked to its source in `capabilities/capabilities.yml`.
+
+<div class="card">
+<h2><a href="https://github.com/nmwael/capability-testing/blob/main/capabilities/capabilities.yml" class="github-link" target="_blank" rel="noopener">📄</a> Source: capabilities/capabilities.yml</h2>
+<p>The capability registry is the single source of truth. Each entry lists its <code>verified_by</code> entries which drill down to individual tests in the <a href="{{ site.baseurl }}/coverage/">coverage report</a>.</p>
+</div>
 
 ## Capability Table
 
@@ -22,12 +27,13 @@ This page documents all capabilities governed by the Capability Contract.
 
 The following capabilities are marked as draft and require implementation:
 
-### `@cap:docs.onboarding`
-
-- **Status**: Draft
-- **Scenarios**: 5 total, 5 to do (0 implemented)
-- **Intent**: Ensure proper onboarding documentation
-- **Next Steps**: Implement remaining scenarios and verify with `scripts/check-docs.js`
+<div class="card">
+<h2>@cap:docs.onboarding</h2>
+<p><strong>Status:</strong> Draft</p>
+<p><strong>Scenarios:</strong> 5 total, 5 to do (0 implemented)</p>
+<p><strong>Intent:</strong> Ensure proper onboarding documentation</p>
+<p><strong>Next Steps:</strong> Implement remaining scenarios and verify with <code>scripts/check-docs.js</code></p>
+</div>
 
 ## Implementation Status
 
@@ -39,3 +45,4 @@ The following capabilities are marked as draft and require implementation:
 
 - [CI & Reports](/capability-testing/reports) - Detailed CI job coverage and BDD tracking
 - [Governance](/capability-testing/governance) - Governance roles and approval policies
+- [Coverage](/capability-testing/coverage/) - Capability-to-test drilldown report
