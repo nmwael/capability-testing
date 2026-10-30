@@ -1,0 +1,76 @@
+# Requirement registry — what this repository must do, at the level below a capability.
+#
+# ID format: REQ-<LANE>-<nnn>, where LANE is PUB | ALERT | FRONT | DOCS and nnn is
+# allocated once and never reused. A deleted requirement is retired, not recycled.
+#
+# The relationship is stored in ONE direction: every requirement names exactly one
+# `capability:` from capabilities/capabilities.yml. The inverse ("which requirements
+# cover this capability") is derived by scripts/verify-traceability.mjs, never stored
+# here — a second writer would drift.
+#
+# One requirement per (capability, lane) pair that appears in a capability's
+# `verified_by:`, so a capability verified in two lanes carries one requirement in
+# each. Scenario coverage lives in the feature files: every scenario carries
+# @scenario:SC-<LANE>-<nnn> and @req:<id>, and Git remains the source of truth for
+# both the Gherkin and the tags.
+
+requirements:
+  - id: REQ-PUB-001
+    title: "Publish an alert as a CAP v1.2 message that validates against the OASIS schema"
+    capability: alert.publish
+    status: active
+    since: 1.2.0
+
+  - id: REQ-PUB-002
+    title: "Draw routing rules as a graph, compile and execute them in Drools"
+    capability: alert.rule-design
+    status: active
+    since: 1.2.0
+
+  - id: REQ-PUB-003
+    title: "Accept, replace and echo a saved routing rule graph as JSON"
+    capability: alert.rule-edit
+    status: active
+    since: 1.2.0
+
+  - id: REQ-PUB-004
+    title: "Serve an alert's distribution as a JSON endpoint"
+    capability: alert.flow
+    status: active
+    since: 1.2.0
+
+  - id: REQ-ALERT-001
+    title: "Route a CAP alert by its severity, urgency and certainty"
+    capability: alert.route
+    status: active
+    since: 1.2.0
+
+  - id: REQ-FRONT-001
+    title: "Author and inspect a routing rule graph on a React Flow surface"
+    capability: alert.rule-design
+    status: active
+    since: 1.2.0
+
+  - id: REQ-FRONT-002
+    title: "Load, edit and post a saved rule graph from the designer"
+    capability: alert.rule-edit
+    status: active
+    since: 1.2.0
+
+  - id: REQ-FRONT-003
+    title: "Show an alert's distribution on a React Flow canvas"
+    capability: alert.flow
+    status: active
+    since: 1.2.0
+
+  - id: REQ-FRONT-004
+    title: "List every CAP v1.2 attribute with its type and valid values"
+    capability: alert.cap-fields
+    status: active
+    since: 1.2.0
+
+  - id: REQ-DOCS-001
+    title: "Provide an entrypoint README and onboarding documentation for the repo"
+    capability: docs.onboarding
+    status: active
+    since: 1.2.0

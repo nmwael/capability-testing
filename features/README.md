@@ -44,6 +44,34 @@ copied into a backend module, so the Maven filter stays as it is (`not @todo`).
 5. **Frontend specs live under `features/frontend/`** and are owned by the frontend runner
    (`npm run test:unit` from `frontend/`, vitest). They are intentionally not wired into Maven.
 
+## Requirement and scenario IDs
+
+Every scenario carries a stable, globally unique id and a link to a requirement:
+
+```
+  @scenario:SC-PUB-001
+  @req:REQ-PUB-001
+  Scenario: A well-formed alert validates against the CAP 1.2 schema
+```
+
+- **`REQ-<LANE>-<nnn>`** — one requirement per (capability, lane) pair, stored in
+  `requirements/requirements.yml` with a `capability:` field naming the capability it covers.
+  The inverse (which requirements cover a capability) is derived by the gate, not stored twice.
+- **`@scenario:SC-<LANE>-<nnn>`** — allocated once per scenario, never renumbered, never reused.
+  Rewording or reordering a scenario leaves its id unchanged. Split, merge, or delete retires the
+  id into `features/.retired-ids.yml`.
+- **`@req:<id>`** — links each scenario to exactly one requirement; the requirement's
+  `capability:` must match the file's `@cap:` tag.
+- **Git remains the source of truth** for Gherkin and automated tests — there is no separate
+  test-case repository or external TMS. These tags live in the `.feature` files themselves.
+
+Run the gate:
+
+```sh
+node scripts/verify-traceability.mjs   # requirements ↔ capabilities ↔ scenarios, no dangling refs
+node scripts/verify-capabilities.js    # verified_by resolves; lane tag matches directory
+```
+
 ## Running
 
 ```sh

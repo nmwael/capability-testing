@@ -20,6 +20,7 @@ jobs:
           node-version: 24
       - run: node scripts/verify-capabilities.js
       - run: node scripts/check-docs.js
+      - run: node scripts/verify-traceability.mjs
 
   backend:
     runs-on: ubuntu-24.04

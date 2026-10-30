@@ -3,6 +3,8 @@
 @frontend
 Feature: Rule Designer Rename Panel
 
+  @scenario:SC-FRONT-058
+  @req:REQ-FRONT-001
   Scenario: Rename a rule using the rename panel
     Given the rule designer is open
     When I click on the "rule-designer-rename-panel" button
@@ -10,6 +12,8 @@ Feature: Rule Designer Rename Panel
     Then the rule name is updated
     And the "rule-designer-reopen-button" is shown to reopen the panel
 
+  @scenario:SC-FRONT-059
+  @req:REQ-FRONT-001
   Scenario: Reopen the rename panel
     Given the rename panel has been closed
     When I click the "rule-designer-reopen-button"

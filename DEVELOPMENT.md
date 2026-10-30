@@ -63,7 +63,15 @@ Structural integrity check — must pass before you call work done:
 
 ```bash
 node scripts/verify-capabilities.js
+node scripts/verify-traceability.mjs   # requirements ↔ capabilities ↔ scenarios, no dangling refs
 ```
+
+`scripts/verify-traceability.mjs` validates `requirements/requirements.yml` against
+`capabilities/capabilities.yml` and the `.feature` files in `features/`: every requirement
+names a known capability, every scenario carries `@req:` pointing at a known requirement, the
+`@req:` capability matches the file's `@cap:`, scenario ids are unique and never reused
+(retired ids live in `features/.retired-ids.yml`), and an empty input set fails the gate
+rather than passing vacuously.
 
 ---
 

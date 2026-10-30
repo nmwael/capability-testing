@@ -13,6 +13,8 @@ Feature: Serve an alert's distribution
   I want the channels one alert reached and those it skipped
   So that the canvas can show who was warned
 
+  @scenario:SC-PUB-021
+  @req:REQ-PUB-004
   Scenario: The distribution names every channel and whether it was reached
     Given alert "ALERT-001" has been published
     When I read the distribution of "ALERT-001"
@@ -20,28 +22,38 @@ Feature: Serve an alert's distribution
     And the channel "sirens" is reported as reached
     And the channel "social" is reported as skipped
 
+  @scenario:SC-PUB-022
+  @req:REQ-PUB-004
   Scenario: A reached channel names the rule that chose it
     Given alert "ALERT-001" has been published
     And its routing reached the channel "sirens" through the rule "severe"
     When I read the distribution of "ALERT-001"
     Then the entry for "sirens" names the rule "severe"
 
+  @scenario:SC-PUB-023
+  @req:REQ-PUB-004
   Scenario: The distribution carries the alert's danger level
     Given alert "ALERT-001" has been published with severity "Extreme" and urgency "Immediate"
     When I read the distribution of "ALERT-001"
     Then the response reports severity "Extreme" and urgency "Immediate"
 
+  @scenario:SC-PUB-024
+  @req:REQ-PUB-004
   Scenario: The distribution is JSON the canvas can read
     Given alert "ALERT-001" has been published
     When I read the distribution of "ALERT-001"
     Then the response is JSON
     And it names the alert's identifier and its list of channels
 
+  @scenario:SC-PUB-025
+  @req:REQ-PUB-004
   Scenario: An alert that was never published has no distribution
     Given no alert "ALERT-404" has been published
     When I read the distribution of "ALERT-404"
     Then the response is 404
 
+  @scenario:SC-PUB-026
+  @req:REQ-PUB-004
   Scenario: Reading a distribution fires nothing
     Given alert "ALERT-001" has been published
     When I read the distribution of "ALERT-001" twice

@@ -13,28 +13,38 @@ Feature: Exchange a routing rule graph as JSON
   I want to accept and return a routing graph as JSON
   So that the designer can change routing without a redeploy
 
+  @scenario:SC-PUB-016
+  @req:REQ-PUB-003
   Scenario: A posted graph is accepted and stored under its name
     Given the rule design endpoint is running
     When I post the JSON graph "tornado-routing"
     Then the request is accepted
     And the graph is stored under the name "tornado-routing"
 
+  @scenario:SC-PUB-017
+  @req:REQ-PUB-003
   Scenario: A stored graph comes back in the same JSON shape
     Given the JSON graph "tornado-routing" has been stored
     When I fetch the graph "tornado-routing"
     Then the response is JSON with a "name", a list of "nodes" and a list of "edges"
     And it holds the nodes that were posted
 
+  @scenario:SC-PUB-018
+  @req:REQ-PUB-003
   Scenario: A second post replaces the stored graph
     Given the JSON graph "tornado-routing" has been stored with the condition "severe"
     When I post "tornado-routing" again with the condition "severe" removed
     Then fetching "tornado-routing" returns the graph without the condition "severe"
 
+  @scenario:SC-PUB-019
+  @req:REQ-PUB-003
   Scenario: An edit for a graph that was never stored is refused
     Given the rule design endpoint holds no graph "ghost"
     When I post an edit for the graph "ghost" that is not a create
     Then the request is rejected with 404
 
+  @scenario:SC-PUB-020
+  @req:REQ-PUB-003
   Scenario: Malformed JSON is rejected with the reason
     Given the rule design endpoint is running
     When I post a body that is not a rule graph

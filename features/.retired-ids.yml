@@ -1,0 +1,9 @@
+# Retired scenario and requirement IDs.
+#
+# IDs are allocated once and never reused. When a scenario is split, merged, or
+# deleted, its @scenario: id is recorded here instead of being recycled. A gate
+# fails if a live @scenario: or @req: references an id listed here.
+#
+# commit: the git sha of the commit that retired the id (filled in at retirement time).
+
+retired: []

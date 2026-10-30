@@ -23,8 +23,9 @@ function readYamlSimple(filePath) {
       continue;
     }
     
-    // New capability item
-    const capMatch = line.match(/^\s*-\s+id:\s*(.+)$/);
+    // New capability item. Anchored to exactly two spaces: a nested list entry
+    // (`      - id: REQ-...`) must not be mistaken for a capability.
+    const capMatch = line.match(/^ {2}- id:\s*(.+)$/);
     if (capMatch) {
       currentCap = { verified_by: [] };
       let idVal = capMatch[1].split('#')[0].trim().replace(/^['"]|['"]$/g, '');
@@ -36,8 +37,9 @@ function readYamlSimple(filePath) {
     
     if (!currentCap) continue;
     
-    // Key-value pairs
-    const kv = line.match(/^\s{2,}(\w+):\s*(.*)$/);
+    // Key-value pairs. Anchored to exactly four spaces so a nested key inside a
+    // list entry cannot overwrite a capability field.
+    const kv = line.match(/^ {4}(\w+):\s*(.*)$/);
     if (kv) {
       const key = kv[1];
       let val = kv[2].trim();
@@ -45,11 +47,11 @@ function readYamlSimple(filePath) {
       val = val.split('#')[0].trim();
       if (val.startsWith('#')) val = '';
       if (val === '') {
-        // Could be list start
-        if (key === 'verified_by') {
-          inVerifiedBy = true;
-          currentCap.verified_by = [];
-        }
+        // Could be list start. Only `verified_by:` opens a list we collect; any
+        // other valueless key closes it. Without this reset a following block
+        // (plans:, requirements:) has its items appended to verified_by.
+        inVerifiedBy = key === 'verified_by';
+        if (inVerifiedBy) currentCap.verified_by = [];
         currentKey = key;
         continue;
       }
@@ -60,9 +62,11 @@ function readYamlSimple(filePath) {
       continue;
     }
     
-    // List items under verified_by
+    // List items under verified_by. Anchored to six spaces: a nested block's
+    // items live at the same depth, so the inVerifiedBy reset above is what
+    // keeps them out, not this pattern.
     if (inVerifiedBy) {
-      const listItem = line.match(/^\s{4,}-\s*(.+)$/);
+      const listItem = line.match(/^ {6}- \s*(.+)$/);
       if (listItem) {
         let v = listItem[1].split('#')[0].trim().replace(/^['"]|['"]$/g, '');
         if (v) currentCap.verified_by.push(v);
@@ -155,16 +159,28 @@ function checkLaneTags(repoRoot, errors) {
   }
 }
 
+function argValue(flag) {
+  const i = process.argv.indexOf(flag);
+  return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : null;
+}
+
 function main() {
   const repoRoot = process.cwd();
-  const capsPath = path.join(repoRoot, 'capabilities', 'capabilities.yml');
+  // --caps lets a fixture be parsed without editing the real manifest.
+  const capsArg = argValue('--caps');
+  const capsPath = capsArg ? path.resolve(repoRoot, capsArg) : path.join(repoRoot, 'capabilities', 'capabilities.yml');
   if (!fs.existsSync(capsPath)) {
-    console.error('ERROR: capabilities/capabilities.yml not found');
+    console.error(`ERROR: ${path.relative(repoRoot, capsPath)} not found`);
     process.exit(1);
   }
   const data = readYamlSimple(capsPath);
   const errors = [];
   const warnings = [];
+
+  if (!Array.isArray(data.capabilities) || data.capabilities.length === 0) {
+    // Never pass vacuously on an empty parse.
+    errors.push('no capabilities parsed — the manifest is empty or its indentation changed');
+  }
   
   // Find all feature files and test classes
   const featureFiles = findFiles(repoRoot, /\.(feature)$/);
@@ -180,18 +196,14 @@ function main() {
     }
     // active or deprecated
     const vb = Array.isArray(cap.verified_by) ? cap.verified_by : [];
-    const plans = Array.isArray(cap.plans) ? cap.plans : [];
-    
-    // Filter out plans entries from verified_by check
-    const filteredVb = vb.filter(ref => !ref.startsWith("186:") && !ref.match(/^\d+:/));
-    
-    if (filteredVb.length === 0) {
+
+    if (vb.length === 0) {
       if (status !== 'retired') {
         errors.push(`Active capability '${cap.id}' has empty verified_by`);
       }
       continue;
     }
-    for (const ref of filteredVb) {
+    for (const ref of vb) {
       // try to find file/class reference
       const exists = featureFiles.some(f => f === ref || f.endsWith(ref) || ref.endsWith(f)) ||
                      testFiles.some(f => f === ref || f.endsWith(ref) || ref.endsWith(f)) ||
@@ -209,7 +221,7 @@ function main() {
     for (const e of errors) console.error('  - ' + e);
     process.exit(1);
   }
-  console.log('Capability traceability check PASSED');
+  console.log(`Capability traceability check PASSED (${data.capabilities.length} capabilities)`);
   process.exit(0);
 }
 

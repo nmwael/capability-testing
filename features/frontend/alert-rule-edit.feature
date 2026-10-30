@@ -18,12 +18,16 @@ Feature: Edit a saved routing rule graph
   I want to change a routing rule that is already saved
   So that I can adjust who gets warned without redrawing the whole graph
 
+  @scenario:SC-FRONT-012
+  @req:REQ-FRONT-002
   Scenario: A saved graph opens in the designer as editable nodes
     Given the rule design endpoint holds the graph "tornado-routing"
     When I open the graph "tornado-routing" for editing
     Then the canvas shows that graph's nodes and edges
     And every node can be changed
 
+  @scenario:SC-FRONT-013
+  @req:REQ-FRONT-002
   Scenario: The graph crosses the wire as JSON
     Given the rule design endpoint holds the graph "tornado-routing"
     When I open the graph "tornado-routing" for editing
@@ -32,6 +36,8 @@ Feature: Edit a saved routing rule graph
     And an action node has "kind" "action" and a "channel"
     And an edge has "from" and "to"
 
+  @scenario:SC-FRONT-014
+  @req:REQ-FRONT-002
   Scenario: Changing a condition's value leaves the rest of the graph alone
     Given I am editing the graph "tornado-routing"
     When I change the condition "severe" to the value "Moderate"
@@ -39,18 +45,24 @@ Feature: Edit a saved routing rule graph
     And the values offered are still the schema's enumeration for that field
     And every other node and edge is unchanged
 
+  @scenario:SC-FRONT-015
+  @req:REQ-FRONT-002
   Scenario: Renaming an action node keeps its incoming edge
     Given I am editing the graph "tornado-routing"
     When I rename the action node "broadcast" to "sirens"
     Then an edge still connects "severe" to "sirens"
     And no edge points at a node that is no longer on the canvas
 
+  @scenario:SC-FRONT-016
+  @req:REQ-FRONT-002
   Scenario: Deleting an action node leaves no dangling condition
     Given I am editing the graph "tornado-routing"
     When I delete the action node "broadcast"
     Then no edge starts at the condition "severe"
     And the generate action reports the graph as incomplete
 
+  @scenario:SC-FRONT-017
+  @req:REQ-FRONT-002
   Scenario: Saving an edit posts the changed graph as JSON
     Given I am editing the graph "tornado-routing"
     When I change the condition "severe" to the value "Moderate"
@@ -58,12 +70,16 @@ Feature: Edit a saved routing rule graph
     Then the JSON posted contains the value "Moderate"
     And the response's rule count is shown
 
+  @scenario:SC-FRONT-018
+  @req:REQ-FRONT-002
   Scenario: A rejected save leaves the edit on the canvas
     Given I am editing the graph "tornado-routing"
     When I save a graph the endpoint rejects
     Then the rejection is shown
     And the canvas still holds my unsaved change
 
+  @scenario:SC-FRONT-019
+  @req:REQ-FRONT-002
   Scenario: An edit round-trips through the backend
     Given I am editing the graph "tornado-routing"
     When I change the condition "severe" to the value "Moderate"
