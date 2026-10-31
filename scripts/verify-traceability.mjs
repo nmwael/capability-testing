@@ -220,6 +220,18 @@ for (const s of scenarios) {
   }
 }
 
+// every scenario must have a stable @scenario: ID
+const scenarioIdFormat = /^SC-(ALERT|PUB|DOCS|FRONT)-\d{3}$/;
+for (const s of scenarios) {
+  if (!s.scenarioId) {
+    errors.push(`${s.file}:${s.line}: scenario has no @scenario: tag`);
+  } else if (!scenarioIdFormat.test(s.scenarioId)) {
+    errors.push(
+      `${s.file}:${s.line}: scenario id '${s.scenarioId}' does not match format SC-<LANE>-<nnn>`
+    );
+  }
+}
+
 // every @req: must name an existing requirement
 const reqIdSet = new Set(reqIds);
 for (const s of scenarios) {
