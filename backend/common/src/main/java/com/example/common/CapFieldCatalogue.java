@@ -2,6 +2,9 @@ package com.example.common;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,20 +34,20 @@ public class CapFieldCatalogue {
   }
 
   private static List<String> extractOrderedElementNames(String content) {
-    Pattern p = Pattern.compile("<element(?:\\s+name\\s*=\\s*[\"']([^\"]+)\"'?|\\s*ref\\s*=\\s*[\"']cap:[^\"]+\"')");
+    Pattern p = Pattern.compile("<element(?:\\s+name\\s*=\\s*[\"']([^\"]+)[\"']?|\\s*ref\\s*=\\s*[\"']cap:([^\"]+)[\"'])");
     Matcher m = p.matcher(content);
     List<String> names = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     while (m.find()) {
       String name = m.group(1);
-      if (name == null) {
-        name = m.group(2);
-        if (name != null) {
-          name = name.replace("cap:valueName", "valueName").replace("cap:value", "value");
-        }
-      }
+      String ref = m.group(2);
       if (name != null) {
+        // Deduplicate named elements by name value (repeated names count once)
         if (!seen.contains(name)) { seen.add(name); names.add(name); }
+      } else if (ref != null) {
+        // Ref elements always count individually (a cap:valueName ref may appear
+        // multiple times in the schema and each occurrence is significant)
+        names.add(ref);
       }
     }
     return names;
@@ -102,10 +105,23 @@ public class CapFieldCatalogue {
     return new CatalogueEntry("string", null);
   }
 
+  private static String readXsdContent() throws IOException {
+    URL xsdUrl = CapFieldCatalogue.class.getClassLoader()
+        .getResource("cap-v1.2.xsd");
+    if (xsdUrl == null) {
+      throw new IOException("CAP XSD resource not found on classpath");
+    }
+    try {
+      return Files.readString(Path.of(xsdUrl.toURI()));
+    } catch (URISyntaxException e) {
+      throw new IOException("Failed to resolve CAP XSD resource URI: " + e.getMessage(), e);
+    }
+  }
+
   private static void writeJson(Map<String, CatalogueEntry> catalogue, Path out) throws IOException {
     FileWriter fw = new FileWriter(out.toFile());
     fw.write("{\n");
-    List<String> names = extractOrderedElementNames(Files.readString(Paths.get("backend/common/src/main/resources/cap-v1.2.xsd")));
+    List<String> names = extractOrderedElementNames(readXsdContent());
     fw.write("  \"names\": [");
     for (int i = 0; i < names.size(); i++) {
       if (i > 0) fw.write(", ");
@@ -139,7 +155,7 @@ public class CapFieldCatalogue {
     FileWriter fw = new FileWriter(out.toFile());
     fw.write("# CAP Field Catalogue - YAML format\n");
     fw.write("\n");
-    List<String> names = extractOrderedElementNames(Files.readString(Paths.get("backend/common/src/main/resources/cap-v1.2.xsd")));
+    List<String> names = extractOrderedElementNames(readXsdContent());
     for (String name : names) {
       CatalogueEntry entry = catalogue.get(name);
       fw.write(name + ": " + entry.type);
@@ -162,13 +178,17 @@ public class CapFieldCatalogue {
   public Map<String, CatalogueEntry> getCatalogue() {
     // Build catalogue on demand
     try {
-      // Use resources from the classpath - XSD is in common module resources
-      // Path is relative to the workspace root (backend directory)
-      Path xsd = Paths.get("backend/common/src/main/resources/cap-v1.2.xsd");
-      String content = Files.readString(xsd);
+      // Use classpath resource so it resolves from any working directory
+      // (Maven surefire runs with module dir as cwd, not repo root)
+      URL xsdUrl = CapFieldCatalogue.class.getClassLoader()
+          .getResource("cap-v1.2.xsd");
+      if (xsdUrl == null) {
+        throw new RuntimeException("Failed to read CAP XSD: resource not found on classpath");
+      }
+      String content = Files.readString(Path.of(xsdUrl.toURI()));
       List<String> ordered = extractOrderedElementNames(content);
       return buildCatalogue(content, ordered);
-    } catch (IOException e) {
+    } catch (IOException | URISyntaxException e) {
       throw new RuntimeException("Failed to read CAP XSD: " + e.getMessage(), e);
     }
   }

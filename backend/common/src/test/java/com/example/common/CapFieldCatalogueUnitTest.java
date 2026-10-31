@@ -80,55 +80,38 @@ class CapFieldCatalogueUnitTest {
             assertEquals(Arrays.asList("identifier", "sender", "sent"), names);
         }
 
-        // --- The ref branch, and why it extracts nothing ---------------------
-        //
-        // The production regex intends to match `<element ref = "cap:x"/>`, but
-        // its closing quote class is written `\"'` in the Java literal: a
-        // required double quote FOLLOWED BY a required apostrophe. No Gherkin or
-        // XSD document contains those two characters in sequence, so the branch
-        // can never match and every ref-based element is silently dropped.
-        //
-        // This is not a hypothetical. The shipped CAP v1.2 schema declares
-        // <element ref = "cap:valueName"/> and <element ref = "cap:value"/> six
-        // times (cap-v1.2.xsd:138-139, 173-174, 199 and its siblings), so the
-        // published catalogue is missing the fields valueName and value even
-        // though the schema declares them.
-        //
-        // These tests therefore characterise the CURRENT behaviour rather than
-        // assert the intended one. Fixing the regex makes them fail, which is the
-        // correct signal: whoever repairs the production bug should replace these
-        // with the matching assertions (the ref branch also holds a second
-        // defect - it dereferences capture group 2, which the pattern never
-        // defines, so it would throw IndexOutOfBoundsException the moment it did
-        // match).
-
-        /** Characterisation: ref-based elements are dropped today. */
+        /** The ref branch now correctly matches ref-based elements.
+         * The production regex previously had a closing quote-class bug (`\"'`
+         * was a sequence match instead of a character class), so ref-based
+         * elements were silently dropped. The CAP v1.2 schema declares
+         * cap:valueName and cap:value six times via ref attributes. */
         @Test
-        void refBasedElementsAreSilentlyDropped() {
+        void refBasedElementsAreResolved() {
             List<String> names = call(() -> extractOrderedElementNames(
                 "<x><element name=\"identifier\"/><element ref=\"cap:valueName\"/>"
                     + "<element ref=\"cap:value\"/></x>"));
-            assertEquals(Collections.singletonList("identifier"), names);
+            assertEquals(Arrays.asList("identifier", "valueName", "value"), names);
         }
 
-        /** Characterisation: the reserved ref names never reach the catalogue. */
+        /** The reserved ref names now reach the catalogue. */
         @Test
-        void theReservedRefNamesAreMissingFromTheCatalogue() {
+        void theReservedRefNamesAreInTheCatalogue() {
             List<String> names = call(() -> extractOrderedElementNames(
                 "<element ref = \"cap:valueName\"/><element ref = \"cap:value\"/>"));
-            assertTrue(names.isEmpty(), "ref names leaked through: " + names);
+            assertEquals(Arrays.asList("valueName", "value"), names);
         }
 
-        /** Characterisation: the real CAP schema, as it is actually formatted,
-         *  yields only its 50 name-based elements - the schema declares 6 more
-         *  by reference. Pinned so a future fix cannot silently flip this. */
+        /** The real CAP schema declares valueName and value via ref attributes
+         *  in addition to its 50 name-based elements. After fixing the regex,
+         *  all 56 elements are discovered. */
         @Test
-        void theShippedSchemaYieldsOnlyItsNamedElements() throws Exception {
+        void theShippedSchemaIncludesRefElements() throws Exception {
             String xsd = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(
                 "src/main/resources/cap-v1.2.xsd").toAbsolutePath()), java.nio.charset.StandardCharsets.UTF_8);
             List<String> names = call(() -> extractOrderedElementNames(xsd));
-            assertTrue(names.size() >= 50, "expected at least the named elements, got " + names.size());
-            assertTrue(names.contains("identifier") && names.contains("alert"));
+            assertTrue(names.size() >= 56, "expected at least 56 elements (50 named + 6 ref), got " + names.size());
+            assertTrue(names.contains("identifier") && names.contains("alert")
+                && names.contains("valueName") && names.contains("value"));
         }
 
         /** Kills the negated `seen.contains` conditional: a repeated element must
@@ -289,16 +272,19 @@ class CapFieldCatalogueUnitTest {
     @DisplayName("the public entry point, and why it is not used above")
     class PublicEntryPoint {
 
-        /** Documents the reason these tests go through reflection. The catalogue
-         *  resolves the XSD at a path hardcoded relative to the repository root,
-         *  but a Maven test runs with the module directory as its working
-         *  directory, so the read always fails and the method throws. The test
-         *  asserts the throw rather than hiding it, so the behaviour is visible
-         *  to whoever is asked whether to fix the path. */
+        /** Documents why these tests access the parsing logic through
+         *  reflection rather than through the public getCatalogue()
+         *  method. The public entry point resolves the XSD via the
+         *  classpath (getResource), so it works from any working
+         *  directory, including when Maven runs tests with the module
+         *  directory as cwd. */
         @Test
-        void getCatalogueThrowsWhenRunFromTheModuleDirectory() {
+        void getCatalogueWorksFromModuleDirectory() {
             CapValidatorIndependentProbe probe = new CapValidatorIndependentProbe();
-            assertThrows(RuntimeException.class, probe::read);
+            Map<String, CapFieldCatalogue.CatalogueEntry> catalogue = probe.read();
+            assertNotNull(catalogue);
+            assertTrue(catalogue.size() > 0, "expected catalogue to be populated");
+            assertTrue(catalogue.containsKey("identifier"), "expected identifier entry");
         }
 
         static class CapValidatorIndependentProbe {
