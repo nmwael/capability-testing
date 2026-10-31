@@ -152,10 +152,8 @@
       },
       "steps": 20
     }
-  },
-
-  "cloudAgents": {
-    "architect": {
+  ,
+    "cloud_architect": {
       "model": "nvidia/nemotron-3-ultra-550b-a55b",
       "request": {
         "body": {
@@ -164,7 +162,7 @@
       },
       "steps": 500
     },
-    "researcher": {
+    "cloud_researcher": {
       "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "request": {
         "body": {
@@ -173,7 +171,7 @@
       },
       "steps": 20
     },
-    "reviewer": {
+    "cloud_reviewer": {
       "model": "nvidia/nemotron-3-ultra-550b-a55b",
       "request": {
         "body": {
@@ -182,7 +180,7 @@
       },
       "steps": 15
     },
-    "build": {
+    "cloud_build": {
       "model": "nvidia/llama-3.1-nemotron-70b-instruct",
       "request": {
         "body": {
@@ -191,7 +189,7 @@
       },
       "steps": 40
     },
-    "ui": {
+    "cloud_ui": {
       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
       "request": {
         "body": {
@@ -200,7 +198,7 @@
       },
       "steps": 20
     },
-    "artist": {
+    "cloud_artist": {
       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
       "request": {
         "body": {
@@ -209,7 +207,7 @@
       },
       "steps": 15
     },
-    "coder": {
+    "cloud_coder": {
       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
       "request": {
         "body": {
@@ -218,7 +216,7 @@
       },
       "steps": 25
     },
-    "fact-checker": {
+    "cloud_fact-checker": {
       "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "request": {
         "body": {
@@ -228,6 +226,7 @@
       "steps": 20
     }
   },
+    
 
   "permissions": [
     {

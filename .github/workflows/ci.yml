@@ -21,6 +21,10 @@ jobs:
       - run: node scripts/verify-capabilities.js
       - run: node scripts/check-docs.js
       - run: node scripts/verify-traceability.mjs
+      - name: Change impact analysis
+        run: node scripts/change-impact.mjs --since HEAD~1 || echo "No previous commit to compare against"
+      - name: Release readiness checklist
+        run: node scripts/release-checklist.mjs
 
   backend:
     runs-on: ubuntu-24.04

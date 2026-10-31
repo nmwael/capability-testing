@@ -59,6 +59,97 @@ function readRegistry(file) {
   return caps;
 }
 
+// --- requirements coverage ------------------------------------------------
+// Simple YAML parser for requirements.yml to extract requirements with capability and status
+
+function parseRequirementsYaml(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const requirements = [];
+  let inList = false;
+  let current = null;
+
+  for (const raw of lines) {
+    const line = raw.replace(/#.*$/, '').trimEnd();
+    if (!line.trim()) continue;
+
+    if (line.match(/^requirements:/)) {
+      inList = true;
+      continue;
+    }
+    if (!inList) continue;
+
+    const item = line.match(/^ {2,}- (\w+):\s*(.*)$/);
+    if (item) {
+      if (current && current.id) requirements.push(current);
+      current = { [item[1]]: item[2].trim().replace(/^['"]|['"]$/g, '') };
+      continue;
+    }
+    const nested = line.match(/^ {4,}(\w+):\s*(.*)$/);
+    if (nested && current) {
+      current[nested[1]] = nested[2].trim().replace(/^['"]|['"]$/g, '');
+      continue;
+    }
+  }
+  if (current && current.id) requirements.push(current);
+  return requirements;
+}
+
+// Count scenarios per requirement from feature files
+function countScenariosPerRequirement(featureFiles, requirements) {
+  const reqCoverage = new Map();
+  
+  for (const req of requirements) {
+    reqCoverage.set(req.id, {
+      id: req.id,
+      capability: req.capability,
+      scenarioCount: 0,
+      scenarios: []
+    });
+  }
+
+  // Parse feature files for scenarios
+  for (const file of featureFiles) {
+    const text = fs.readFileSync(path.isAbsolute(file) ? file : path.join(ROOT, file), 'utf8');
+    const lines = text.split('\n');
+
+    // Parse feature-level @cap: tag
+    const head = text.split(/^[ \t]*Feature:/m)[0];
+    const capTags = head.match(/^@cap:(\S+)/gm);
+    const capId = capTags ? capTags[0].slice('@cap:'.length) : null;
+
+    // Scan for scenarios with their @req: tags
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const sm = line.match(/^  Scenario:/);
+      if (!sm) continue;
+
+      // Collect scenario-level tags immediately above this scenario
+      let j = i - 1;
+      let reqId = null;
+      while (j >= 0 && lines[j].match(/^  @/)) {
+        const tagLine = lines[j];
+        const rid = tagLine.match(/^  @req:(REQ-\S+)/);
+        if (rid) reqId = rid[1];
+        j--;
+      }
+
+      if (reqId) {
+        const coverage = reqCoverage.get(reqId);
+        if (coverage) {
+          coverage.scenarioCount++;
+          coverage.scenarios.push({
+            scenarioId: lines[j-1]?.match(/^  @scenario:(SC-\S+)/)?.[1] || 'unknown',
+            file: file,
+            line: i + 1
+          });
+        }
+      }
+    }
+  }
+
+  return Array.from(reqCoverage.values());
+}
+
 // --- specs ----------------------------------------------------------------
 
 function readFeature(file) {
@@ -293,7 +384,7 @@ function scanSpecs(featuresDir) {
 
 const dash = n => (n ? String(n) : '–');
 
-function render(caps, specs, testResults) {
+function render(caps, specs, testResults, requirementsCoverage) {
   const per = new Map(caps.map(c => [c.id, { sc: {}, total: 0, todoTotal: 0 }]));
   for (const s of specs) {
     const a = per.get(s.cap);
@@ -319,23 +410,36 @@ function render(caps, specs, testResults) {
   for (const a of per.values()) { total += a.total; todoTotal += a.todoTotal; }
   const pct = total ? Math.round(((total - todoTotal) / total) * 100) : 0;
 
+  // Build capability to requirements coverage map
+  const capCoverage = new Map();
+  for (const coverage of requirementsCoverage) {
+    capCoverage.set(coverage.capability, {
+      covered: coverage.scenarioCount,
+      uncovered: coverage.scenarioCount === 0,
+      scenarios: coverage.scenarios.length
+    });
+  }
+
   const L = [];
   L.push('## Capability report');
   L.push('');
   L.push(`**${caps.length} capabilities** · **${total} scenarios** · `
     + `**${total - todoTotal} implemented** · **${todoTotal} to do** · **${pct}%**`);
   L.push('');
-  L.push('| Capability | Intent | Owner | Status | Frontend | Publication | Alerting | To do | Scenarios | Test |');
-  L.push('| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |');
+  L.push('| Capability | Intent | Owner | Status | Frontend | Publication | Alerting | To do | Scenarios | Test | Req Coverage |');
+  L.push('| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const c of caps) {
     const a = per.get(c.id);
     const lane = l => (a.sc[l] ? String(a.sc[l]) : '–');
     const test = a.testFailures !== undefined ? String(a.testFailures) : '–';
+    const coverage = capCoverage.get(c.id) || { covered: 0, uncovered: true, scenarios: 0 };
+    const reqStatus = coverage.uncovered ? 'NO SCENARIOS' : `${coverage.covered} scenarios`;
     L.push(`| ${c.id} | ${(c.intent || '–').replace(/\|/g, '\\|')} `
       + `| ${c.owner || '–'} | ${c.status || '–'} `
       + `| ${lane('frontend')} | ${lane('publication')} | ${lane('alerting')} `
       + `| ${dash(a.todoTotal)} | ${dash(a.total)} |`
-      + `| ${test} |`);
+      + `| ${test} |`
+      + `| ${reqStatus} |`);
   }
 
   const remaining = caps.filter(c => per.get(c.id).todoTotal > 0);
@@ -360,6 +464,25 @@ function render(caps, specs, testResults) {
       L.push(`- \`${s.rel}\` — ${s.cap ? `@cap:${s.cap} is not in capabilities.yml` : 'no `@cap:` tag'}`);
     }
   }
+
+  // Requirements coverage summary
+  const totalRequirements = requirementsCoverage.length;
+  const requirementsWithScenarios = requirementsCoverage.filter(r => r.scenarioCount > 0).length;
+  const requirementsWithoutScenarios = totalRequirements - requirementsWithScenarios;
+  const totalScenarios = total;
+  const scenariosWithRequirements = requirementsCoverage.reduce((sum, r) => sum + r.scenarioCount, 0);
+  const scenariosWithoutRequirements = totalScenarios - scenariosWithRequirements;
+
+  L.push('');
+  L.push('### Requirements Coverage Summary');
+  L.push('');
+  L.push(`- Total requirements: ${totalRequirements}`);
+  L.push(`- Requirements with scenarios: ${requirementsWithScenarios}`);
+  L.push(`- Requirements without scenarios: ${requirementsWithoutScenarios}`);
+  L.push(`- Total scenarios: ${totalScenarios}`);
+  L.push(`- Scenarios with requirements: ${scenariosWithRequirements}`);
+  L.push(`- Scenarios without requirements: ${scenariosWithoutRequirements}`);
+
   return L.join('\n') + '\n';
 }
 
@@ -374,18 +497,26 @@ function main() {
     ? process.argv[process.argv.indexOf('--vitest') + 1] : null;
 
   const registryPath = path.join(ROOT, 'capabilities', 'capabilities.yml');
-  if (!fs.existsSync(registryPath)) {
-    console.error(`capability report: ${registryPath} not found`);
+  const requirementsPath = path.join(ROOT, 'requirements', 'requirements.yml');
+  if (!fs.existsSync(registryPath) || !fs.existsSync(requirementsPath)) {
+    console.error(`capability report: ${registryPath} or ${requirementsPath} not found`);
     process.exit(1);
   }
 
   const specs = scanSpecs(path.join(ROOT, 'features'));
+  const featureFiles = specs.map(s => path.join(ROOT, s.rel));
+  
+  const requirements = parseRequirementsYaml(fs.readFileSync(requirementsPath, 'utf8'));
   let testResults = null;
+  let requirementsCoverage = null;
   if (surefire || vitest) {
     testResults = parseTestResults(surefire, vitest);
   }
+  if (requirements && featureFiles.length > 0) {
+    requirementsCoverage = countScenariosPerRequirement(featureFiles, requirements);
+  }
 
-  const text = render(readRegistry(registryPath), specs, testResults);
+  const text = render(readRegistry(registryPath), specs, testResults, requirementsCoverage);
 
   if (summary) {
     fs.appendFileSync(summary, text, 'utf8');

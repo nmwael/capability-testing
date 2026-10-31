@@ -161,8 +161,60 @@ Web search is disabled for agents by design; use `webfetch`.
 
 ---
 
-## 📝 Conventions
+## ☁️ Cloud Agent Lane (NVIDIA NIM)
 
-- Commit early and often; `main` pushes to `origin/main`.
-- There is no GPG card in this container (`commit.gpgsign=false`), so commits may be unsigned.
-- Never commit `models/*.gguf`.
+The repository supports a cloud agent lane that routes all agents to NVIDIA NIM
+hosted models instead of the local llama-server/bifrost stack. This is opt-in via
+the `CLOUD_MODE=true` environment variable.
+
+### Cloud vs Local Lane
+
+| Aspect | Local Lane (default) | Cloud Lane (`CLOUD_MODE=true`) |
+|--------|---------------------|--------------------------------|
+| Model server | llama-server (GGUF) | NVIDIA NIM (cloud) |
+| Gateway | bifrost on :8082 | Direct HTTPS to integrate.api.nvidia.com |
+| opencode serve | :4096 (web UI + API) | :4096 (web UI only) |
+| Model storage | `models/*.gguf` (bind-mounted) | None (cloud-hosted) |
+| Password | `OPENCODE_SERVER_PASSWORD` | `OPENCODE_SERVER_PASSWORD` (for web UI) |
+| API key | None required | `NVIDIA_API_KEY` required |
+| Services skipped | None | llama-server, bifrost, watchdog |
+
+### Cloud Agent Model Assignments
+
+| Role | Local Model | Cloud Model (NVIDIA NIM) |
+|------|-------------|-------------------------|
+| architect | qwen3.5-9b-mtp-s1 | nemotron-3-ultra-550b-a55b |
+| coder | qwen3.5-9b-mtp-s0 | nemotron-3.5-super-vl-120b-a12b |
+| reviewer | qwen3.5-9b-mtp-s1 | nemotron-3-ultra-550b-a55b |
+| build | qwen3.5-9b-mtp-s1 | llama-3.1-nemotron-70b-instruct |
+| ui | qwen3.5-9b-mtp-s1 | nemotron-3.5-super-vl-120b-a12b |
+| artist | qwen3.5-9b-mtp-s1 | nemotron-3.5-super-vl-120b-a12b |
+| researcher | qwen3.5-9b-mtp-s1 | nemotron-3.5-lightning-30b-a3b |
+| fact-checker | qwen3.5-9b-mtp-s1 | nemotron-3.5-lightning-30b-a3b |
+
+### Enabling Cloud Mode
+
+```bash
+export CLOUD_MODE=true
+export NVIDIA_API_KEY=<your-nvidia-api-key>
+export OPENCODE_SERVER_PASSWORD=<your-password>
+bash scripts/auto-startup.sh   # skips llama-server/bifrost, starts opencode serve
+```
+
+### Known Issues
+
+- **Cloud agent 404 errors:** NVIDIA NIM requires model names with the `nvidia/`
+  prefix (e.g., `nvidia/nemotron-3-ultra-550b-a55b`). If opencode strips the
+  provider prefix when forwarding to NVIDIA, requests will return 404. This is
+  an opencode CLI behavior that may need adjustment in the provider config.
+- **opencode serve on :4096:** In cloud mode, opencode serve runs the web UI
+  only. The `/v1/models` endpoint may not be available through the web UI
+  server. Agents connect directly to NVIDIA NIM, bypassing the local server.
+
+### Disabling Cloud Mode
+
+```bash
+unset CLOUD_MODE
+bash scripts/auto-startup.sh   # restarts llama-server/bifrost normally
+```
+
