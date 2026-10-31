@@ -17,7 +17,7 @@
 // Outputs a Markdown checklist and optionally an HTML report.
 
 import { execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = process.cwd();
@@ -219,6 +219,9 @@ function main() {
     for (const d of readdirSync(historyDir)) {
       const dir = join(historyDir, d);
       if (d === 'archive') continue;
+      try {
+        if (!statSync(dir).isDirectory()) continue;
+      } catch (e) { continue; }
       for (const f of readdirSync(dir).filter(x => x.endsWith('.json'))) {
         try {
           executionRecords.push(JSON.parse(readFileSync(join(dir, f), 'utf8')));

@@ -1,0 +1,475 @@
+{
+  "executionId": "20261031T110940Z-manual-1793444980285",
+  "commitSha": "d6a9babf50b42444bc117a6df3c3bf088a0bdbd7",
+  "branch": "main",
+  "buildId": "manual-1793444980285",
+  "timestamp": "2026-10-31T11:09:40.285Z",
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "linux",
+    "arch": "x64",
+    "ci": "false",
+    "githubActions": "false",
+    "cwd": "/workspaces/capability-testing"
+  },
+  "results": [
+    {
+      "name": "frontend toolchain &gt; renders the alert distribution canvas",
+      "classname": "src/smoke.test.tsx",
+      "time": 0.15521763,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "frontend toolchain &gt; renders the alert rule designer with default condition node and CAP fields",
+      "classname": "src/smoke.test.tsx",
+      "time": 0.103443833,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; renders an alert as a canvas with one node per channel",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.156734192,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; shows a loading state when the endpoint is slow",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.025749331,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; reports an unknown alert, not an empty canvas",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.020439804,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; shows a retry button when the fetch fails",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.022717218,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; renders channel nodes for reached and skipped channels",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.022230011,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; styles the alert node by danger level",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.016806976,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; connects alert to each channel with an edge",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.020048566,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; fits the graph to the viewport",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.01927696,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; allows zooming and panning the canvas",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.01808545,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-flow frontend spec &gt; supports keyboard navigation to channel nodes",
+      "classname": "src/features/alert-flow/AlertFlow.test.tsx",
+      "time": 0.014516784,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; renders the React Flow canvas",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.249651149,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; starts with nothing to undo or redo",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.11452711,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; enables undo after an edit, and undo/redo step back and forth",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.295121456,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; records each edit as its own undo step",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.09406545,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; disables Generate Rules once an unconnected action node is added",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.062615541,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; shows the default graph name and keeps it editable",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.038467466,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; exposes a connection handle on the condition node and none outgoing on the action node",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.03826796,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; offers a minimap of the graph",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.042622094,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; snaps dragged nodes to the grid",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.033283901,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; Backspace deletes the selected node exactly once",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.063001725,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; typing in the graph-name field does not trigger the canvas shortcut",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.043620158,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; a disabled generate control says what is missing",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.068212818,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; the two node kinds are visually distinguishable",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.026533013,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; selecting a node is not an edit",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.053741476,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "AlertRuleDesigner behaviour &gt; does not set onlyRenderVisibleElements (CI compatibility)",
+      "classname": "src/features/alert-rule-designer/AlertRuleDesigner.test.tsx",
+      "time": 0.021723137,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "CAP field catalogue &gt; lists all CAP fields and their types",
+      "classname": "src/features/alert-rule-designer/cap-catalogue.test.tsx",
+      "time": 0.002400251,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "CAP field catalogue &gt; severity has closed vocabulary",
+      "classname": "src/features/alert-rule-designer/cap-catalogue.test.tsx",
+      "time": 0.000911542,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "CAP field catalogue &gt; renders designer with catalogue-backed fields",
+      "classname": "src/features/alert-rule-designer/cap-catalogue.test.tsx",
+      "time": 0.230304921,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "designer against the rule design endpoint &gt; posts the drawn graph and shows the rule count back",
+      "classname": "src/features/alert-rule-designer/endpoint-wiring.test.tsx",
+      "time": 0.503258015,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "designer against the rule design endpoint &gt; shows a rejection and leaves the edit on the canvas",
+      "classname": "src/features/alert-rule-designer/endpoint-wiring.test.tsx",
+      "time": 0.135035763,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "designer against the rule design endpoint &gt; shows a loading state rather than an empty canvas while the endpoint is slow",
+      "classname": "src/features/alert-rule-designer/endpoint-wiring.test.tsx",
+      "time": 0.045131311,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "designer against the rule design endpoint &gt; keeps the graph editable and reports the failure when the backend is unreachable",
+      "classname": "src/features/alert-rule-designer/endpoint-wiring.test.tsx",
+      "time": 0.094473801,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "designer against the rule design endpoint &gt; restores the saved graph when the designer reopens",
+      "classname": "src/features/alert-rule-designer/endpoint-wiring.test.tsx",
+      "time": 0.048645259,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "designer against the rule design endpoint &gt; keeps the built-in example and says so when nothing is stored yet",
+      "classname": "src/features/alert-rule-designer/endpoint-wiring.test.tsx",
+      "time": 0.048701661,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "rule graph wire shape &gt; carries a name, a node list and an edge list",
+      "classname": "src/features/alert-rule-designer/wire-shape.test.ts",
+      "time": 0.004888395,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "rule graph wire shape &gt; writes a condition node as kind, field and value",
+      "classname": "src/features/alert-rule-designer/wire-shape.test.ts",
+      "time": 0.001122936,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "rule graph wire shape &gt; writes an action node as kind and channel",
+      "classname": "src/features/alert-rule-designer/wire-shape.test.ts",
+      "time": 0.000391481,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "rule graph wire shape &gt; writes an edge as from and to, never source or target",
+      "classname": "src/features/alert-rule-designer/wire-shape.test.ts",
+      "time": 0.000875524,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "rule graph wire shape &gt; never leaks React Flow layout onto the wire",
+      "classname": "src/features/alert-rule-designer/wire-shape.test.ts",
+      "time": 0.000640545,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "rule graph wire shape &gt; reads a wire graph back without losing a condition field or value",
+      "classname": "src/features/alert-rule-designer/wire-shape.test.ts",
+      "time": 0.002033937,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; loads the default graph with condition-1, action-1 nodes",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.181500269,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; represents the graph with name input and node/edge management",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.093320495,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; keeps the CAP field when changing a condition value",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.050339115,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; keeps the incoming edge when renaming an action node",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.072574029,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; leaves no dangling condition when deleting an action node",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.06722159,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; posts the changed graph as JSON when saving",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.055902574,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; keeps the edit on the canvas when a save is rejected",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.055713169,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    },
+    {
+      "name": "alert-rule-edit frontend spec &gt; round-trips an edit through the backend",
+      "classname": "src/features/alert-rule-edit/AlertRuleEdit.test.tsx",
+      "time": 0.057408735,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [],
+      "scenarioIds": []
+    }
+  ],
+  "source": "frontend/reports/junit.xml",
+  "capabilities": [],
+  "scenarioIds": [],
+  "summary": {
+    "total": 50,
+    "passed": 50,
+    "failed": 0
+  }
+}
