@@ -99,68 +99,140 @@ function parseSurefire(xmlPath) {
   return parseJUnitText(text);
 }
 
-function parseJUnitText(text) {
+function parseJUnitText(text, featureMap, reportType = 'surefire') {
   // Extract test names and failure counts from JUnit XML
-  const results = new Map();
-  const lines = text.split('\n');
-  let inTests = false;
-  let inFailure = false;
-  let currentTest = null;
-  let currentFailures = 0;
+  const perCap = new Map();
+  const capFiles = new Map();
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.includes('<testsuites') || line.includes('<testsuite')) {
-      inTests = true;
-      continue;
-    }
-    if (inTests) {
-      if (line.includes('</testsuites>') || line.includes('</testsuite>')) {
-        inTests = false;
-        continue;
-      }
-      if (line.includes('<testcase')) {
-        const nameMatch = line.match(/name="([^"]+)"/);
-        if (nameMatch) {
-          currentTest = nameMatch[1];
-          currentFailures = 0;
-        }
-      }
-      if (inFailure && line.includes('</failure>')) {
-        currentFailures++;
-        inFailure = false;
-      }
-      if (line.includes('<failure')) {
-        inFailure = true;
-      }
-      if (line.includes('<testcase')) {
-        if (currentTest) {
-          // Extract capability from test name (e.g., "features.publication.User.feature")
-          const parts = currentTest.split('.');
-          const featureFile = parts[0];
-          const capability = parts[1];
-          if (capability) {
-            const capKey = `surefire:${capability}`;
-            const failures = currentFailures;
-            if (!results.has(capKey)) {
-              results.set(capKey, { failures: 0, files: [] });
-            }
-            results.get(capKey).failures += failures;
-            if (!results.get(capKey).files.includes(featureFile)) {
-              results.get(capKey).files.push(featureFile);
+  // Build feature name to capability map if not provided
+  if (!featureMap) {
+    featureMap = new Map();
+    try {
+      const featuresDir = path.join(ROOT, 'features');
+      if (fs.existsSync(featuresDir)) {
+        for (const lane of fs.readdirSync(featuresDir)) {
+          const dir = path.join(featuresDir, lane);
+          if (!fs.statSync(dir).isDirectory()) continue;
+          for (const file of fs.readdirSync(dir)) {
+            if (!file.endsWith('.feature')) continue;
+            const filePath = path.join(dir, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+              const match = lines[i].match(/^\s*Feature:\s*(.+)$/);
+              if (match) {
+                const featureName = match[1].trim();
+                // Read capability tag from above
+                for (let j = i - 1; j >= 0 && j > i - 10; j--) {
+                  const capMatch = lines[j].match(/@cap:(\S+)/);
+                  if (capMatch) {
+                    featureMap.set(featureName, capMatch[1]);
+                    break;
+                  }
+                }
+                break;
+              }
             }
           }
         }
-        currentTest = null;
-        currentFailures = 0;
-        inFailure = false;
       }
+    } catch (e) {
+      // ignore errors
     }
   }
   
-  return { perCap: new Map(), capFiles: new Map() };
+  function processTest(testName, classname, content, perCap, capFiles, featureMap) {
+    let capability = null;
+    let failures = 0;
+    
+    // Check for failures in content
+    if (content.includes('<failure')) failures++;
+    
+    // Try to extract capability from content (@cap: tags)
+    const capMatch = content.match(/@cap:([^\s"'><]+)/);
+    if (capMatch) {
+      capability = capMatch[1];
+    } else if (reportType === 'vitest') {
+      // Map Vitest test files to capabilities via filename
+      const fileName = path.basename(classname, '.test.tsx');
+      const fileNameLower = fileName.toLowerCase();
+      if (fileNameLower.includes('alertruleedit')) capability = 'alert.rule-edit';
+      else if (fileNameLower.includes('alertflow')) capability = 'alert.flow';
+      else if (fileNameLower.includes('alertrule-designer') || fileNameLower.includes('alertrule')) capability = 'alert.rule-design';
+      else if (fileNameLower.includes('cap-catalogue')) capability = 'alert.cap-fields';
+      else if (fileNameLower.includes('smoke')) capability = 'alert.publish';
+      else {
+        // Try to extract from test name
+        if (testName.toLowerCase().includes('alert-flow')) capability = 'alert.flow';
+        else if (testName.toLowerCase().includes('rule-designer')) capability = 'alert.rule-design';
+        else if (testName.toLowerCase().includes('rule-edit')) capability = 'alert.rule-edit';
+      }
+    } else if (featureMap.has(classname)) {
+      capability = featureMap.get(classname);
+    } else {
+      // Try to infer from classname
+      const parts = classname.split('.');
+      if (parts.length >= 3) {
+        const pkg = parts[2] || '';
+        if (pkg === 'alerting') capability = 'alert.route';
+        else if (pkg === 'publication') capability = 'alert.publish';
+        else capability = parts[parts.length - 2] || 'unknown';
+      } else {
+        capability = 'unknown';
+      }
+    }
+    
+    if (capability && capability !== 'unknown') {
+      const capKey = `${reportType}:${capability}`;
+      if (!perCap.has(capKey)) {
+        perCap.set(capKey, { failures: 0 });
+      }
+      perCap.get(capKey).failures += failures;
+      if (!capFiles.has(capKey)) {
+        capFiles.set(capKey, new Set());
+      }
+      capFiles.get(capKey).add(classname);
+    }
+  }
+  
+  // For simple parsing, use regex to extract testcase blocks
+  const testcaseRegex = /<testcase[^>]*?classname="([^"]+)"[^>]*?name="([^"]+)"[^>]*?time="[^"]*"[^>]*?\/>/g;
+  const testcaseWithContentRegex = /<testcase[^>]*?classname="([^"]+)"[^>]*?name="([^"]+)"[^>]*?time="[^"]*"[^>]*?>([\s\S]*?)<\/testcase>/g;
+  const testcaseNameFirstRegex = /<testcase[^>]*?name="([^"]+)"[^>]*?classname="([^"]+)"[^>]*?time="[^"]*"[^>]*?\/>/g;
+  const testcaseNameFirstWithContentRegex = /<testcase[^>]*?name="([^"]+)"[^>]*?classname="([^"]+)"[^>]*?time="[^"]*"[^>]*?>([\s\S]*?)<\/testcase>/g;
+  
+  let match;
+  // Process self-closing testcases (classname-first order)
+  while ((match = testcaseRegex.exec(text)) !== null) {
+    const classname = match[1];
+    const testName = match[2];
+    processTest(testName, classname, '', perCap, capFiles, featureMap);
+  }
+  // Process self-closing testcases (name-first order)
+  while ((match = testcaseNameFirstRegex.exec(text)) !== null) {
+    const testName = match[1];
+    const classname = match[2];
+    processTest(testName, classname, '', perCap, capFiles, featureMap);
+  }
+  
+  // Process testcases with content (classname-first order)
+  while ((match = testcaseWithContentRegex.exec(text)) !== null) {
+    const classname = match[1];
+    const testName = match[2];
+    const content = match[3];
+    processTest(testName, classname, content, perCap, capFiles, featureMap);
+  }
+  
+  // Process testcases with content (name-first order)
+  while ((match = testcaseNameFirstWithContentRegex.exec(text)) !== null) {
+    const testName = match[1];
+    const classname = match[2];
+    const content = match[3];
+    processTest(testName, classname, content, perCap, capFiles, featureMap);
+  }
+  
+  return { perCap, capFiles };
 }
-
 function parseTestResults(surefirePath, vitestPath) {
   const perCap = new Map();
   const capFiles = new Map();
@@ -174,11 +246,13 @@ function parseTestResults(surefirePath, vitestPath) {
         if (!fileStats.isFile()) continue;
         
         const text = fs.readFileSync(path.join(surefireDir, file), 'utf8');
-        const result = parseJUnitText(text);
+        const { perCap: filePerCap, capFiles: fileCapFiles } = parseJUnitText(text, null, 'surefire');
         
-        for (const [key, data] of Object.entries(result)) {
+        for (const [key, data] of filePerCap.entries()) {
           perCap.set(key, (perCap.get(key) || 0) + data.failures);
-          capFiles.set(key, [...(capFiles.get(key) || []), file]);
+          const existingFiles = capFiles.get(key) || [];
+          const newFiles = fileCapFiles.get(key) ? Array.from(fileCapFiles.get(key)) : [file];
+          capFiles.set(key, [...existingFiles, ...newFiles]);
         }
       }
     }
@@ -187,11 +261,13 @@ function parseTestResults(surefirePath, vitestPath) {
   // Parse vitest JUnit XML
   if (fs.existsSync(vitestPath)) {
     const text = fs.readFileSync(vitestPath, 'utf8');
-    const result = parseJUnitText(text);
+    const { perCap: filePerCap, capFiles: fileCapFiles } = parseJUnitText(text, null, 'vitest');
     
-    for (const [key, data] of Object.entries(result)) {
+    for (const [key, data] of filePerCap.entries()) {
       perCap.set(key, (perCap.get(key) || 0) + data.failures);
-      capFiles.set(key, [...(capFiles.get(key) || []), file]);
+      const existingFiles = capFiles.get(key) || [];
+      const newFiles = fileCapFiles.get(key) ? Array.from(fileCapFiles.get(key)) : ['vitest'];
+      capFiles.set(key, [...existingFiles, ...newFiles]);
     }
   }
 
@@ -254,7 +330,7 @@ function render(caps, specs, testResults) {
   for (const c of caps) {
     const a = per.get(c.id);
     const lane = l => (a.sc[l] ? String(a.sc[l]) : '–');
-    const test = a.testFailures ? String(a.testFailures) : '–';
+    const test = a.testFailures !== undefined ? String(a.testFailures) : '–';
     L.push(`| ${c.id} | ${(c.intent || '–').replace(/\|/g, '\\|')} `
       + `| ${c.owner || '–'} | ${c.status || '–'} `
       + `| ${lane('frontend')} | ${lane('publication')} | ${lane('alerting')} `
