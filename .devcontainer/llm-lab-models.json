@@ -11,5 +11,33 @@
     "parallel": 2,
     "kv_cache_type_k": "q8_0",
     "kv_cache_type_v": "q8_0"
+  },
+  {
+    "name": "nemotron-3-ultra-550b-a55b",
+    "provider": "nvidia",
+    "cloud": true,
+    "context": 1048576,
+    "output": 32768
+  },
+  {
+    "name": "nemotron-3.5-super-vl-120b-a12b",
+    "provider": "nvidia",
+    "cloud": true,
+    "context": 1048576,
+    "output": 32768
+  },
+  {
+    "name": "nemotron-3.5-lightning-30b-a3b",
+    "provider": "nvidia",
+    "cloud": true,
+    "context": 1048576,
+    "output": 32768
+  },
+  {
+    "name": "llama-3.1-nemotron-70b-instruct",
+    "provider": "nvidia",
+    "cloud": true,
+    "context": 131072,
+    "output": 4096
   }
 ]

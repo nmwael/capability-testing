@@ -39,9 +39,46 @@
       "settings": {
         "setCacheKey": false
       }
+    },
+    "nvidia": {
+      "package": "aisdk:@ai-sdk/openai-compatible",
+      "name": "NVIDIA NIM",
+      "settings": {
+        "baseURL": "https://integrate.api.nvidia.com/v1"
+      },
+      "models": {
+        "nemotron-3-ultra-550b-a55b": {
+          "name": "nemotron-3-ultra-550b-a55b (NVIDIA NIM)",
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        },
+        "nemotron-3.5-super-vl-120b-a12b": {
+          "name": "nemotron-3.5-super-vl-120b-a12b (NVIDIA NIM)",
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        },
+        "nemotron-3.5-lightning-30b-a3b": {
+          "name": "nemotron-3.5-lightning-30b-a3b (NVIDIA NIM)",
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        },
+        "llama-3.1-nemotron-70b-instruct": {
+          "name": "llama-3.1-nemotron-70b-instruct (NVIDIA NIM)",
+          "limit": {
+            "context": 131072,
+            "output": 4096
+          }
+        }
+      }
     }
-
   },
+
   "agents": {
     "architect": {
       "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
@@ -105,8 +142,93 @@
         }
       },
       "steps": 25
+    },
+    "fact-checker": {
+      "model": "local-qwen3.5-9b-mtp/qwen3.5-9b-mtp-s1",
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
+      "steps": 20
     }
   },
+
+  "cloudAgents": {
+    "architect": {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
+      "steps": 500
+    },
+    "researcher": {
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
+      "steps": 20
+    },
+    "reviewer": {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
+      "steps": 15
+    },
+    "build": {
+      "model": "nvidia/llama-3.1-nemotron-70b-instruct",
+      "request": {
+        "body": {
+          "temperature": 0.2
+        }
+      },
+      "steps": 40
+    },
+    "ui": {
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "request": {
+        "body": {
+          "temperature": 0.2
+        }
+      },
+      "steps": 20
+    },
+    "artist": {
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "request": {
+        "body": {
+          "temperature": 0.3
+        }
+      },
+      "steps": 15
+    },
+    "coder": {
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
+      "steps": 25
+    },
+    "fact-checker": {
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "request": {
+        "body": {
+          "temperature": 0.1
+        }
+      },
+      "steps": 20
+    }
+  },
+
   "permissions": [
     {
       "action": "*",

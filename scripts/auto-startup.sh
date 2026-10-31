@@ -72,7 +72,9 @@ if command -v tailscale >/dev/null 2>&1; then
     fi
 fi
 
-if [ -n "${SKIP_LLAMA_START:-}" ]; then
+if [ "${CLOUD_MODE:-false}" = "true" ]; then
+    echo "[auto-startup] CLOUD_MODE=true — skipping llama-server startup (using NVIDIA NIM cloud models)"
+elif [ -n "${SKIP_LLAMA_START:-}" ]; then
     echo "[auto-startup] SKIP_LLAMA_START set — skipping llama-server"
 elif [ ! -f "$STACK_JSON" ]; then
     echo "[auto-startup] WARNING: no manifest at $STACK_JSON — nothing to serve."
@@ -214,7 +216,7 @@ fi
 
 BIFROST_CFG_SCRIPT=/usr/local/share/llm-lab/bifrost/write-bifrost-config.sh
 BIFROST_CFG=/usr/local/share/llm-lab/bifrost/config/bifrost.json
-if [ -x "$BIFROST_CFG_SCRIPT" ] && [ -f "$STACK_JSON" ] && [ "$(jq -r '.cloud // false' "$STACK_JSON" 2>/dev/null || echo false)" != "true" ]; then
+if [ "${CLOUD_MODE:-false}" != "true" ] && [ -x "$BIFROST_CFG_SCRIPT" ] && [ -f "$STACK_JSON" ] && [ "$(jq -r '.cloud // false' "$STACK_JSON" 2>/dev/null || echo false)" != "true" ]; then
     _bf_before="$(sha256sum "$BIFROST_CFG" 2>/dev/null | cut -d' ' -f1 || true)"
     "$BIFROST_CFG_SCRIPT" "$STACK_JSON" "$BIFROST_CFG" 8089 >/dev/null || \
         echo "[auto-startup] WARNING: bifrost config refresh failed — routing may be stale"
@@ -232,25 +234,27 @@ if [ -x "$BIFROST_CFG_SCRIPT" ] && [ -f "$STACK_JSON" ] && [ "$(jq -r '.cloud //
 fi
 
 # --- bifrost gateway: routes each model id to its upstream by name prefix -----
-if [ -f "$STACK_JSON" ]; then
+if [ "${CLOUD_MODE:-false}" != "true" ] && [ -f "$STACK_JSON" ]; then
     BIFROST_PORT="$(jq -r '.bifrost_port // 8082' "$STACK_JSON")"
     OPENCODE_PORT="$(jq -r '.opencode_port // 4096' "$STACK_JSON")"
-fi
-if command -v start-bifrost >/dev/null 2>&1; then
-    if curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$BIFROST_PORT/"; then
-        echo "[auto-startup] bifrost already up on :$BIFROST_PORT"
+    if command -v start-bifrost >/dev/null 2>&1; then
+        if curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$BIFROST_PORT/"; then
+            echo "[auto-startup] bifrost already up on :$BIFROST_PORT"
+        else
+            echo "[auto-startup] starting bifrost on :$BIFROST_PORT (background)"
+            nohup start-bifrost >/tmp/bifrost.log 2>&1 &
+            n=0
+            while [ "$n" -lt 30 ]; do
+                curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$BIFROST_PORT/" && break
+                n=$((n + 1))
+                sleep 2
+            done
+        fi
     else
-        echo "[auto-startup] starting bifrost on :$BIFROST_PORT (background)"
-        nohup start-bifrost >/tmp/bifrost.log 2>&1 &
-        n=0
-        while [ "$n" -lt 30 ]; do
-            curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$BIFROST_PORT/" && break
-            n=$((n + 1))
-            sleep 2
-        done
+        echo "[auto-startup] bifrost launcher not installed — skipping"
     fi
 else
-    echo "[auto-startup] bifrost launcher not installed — skipping"
+    echo "[auto-startup] CLOUD_MODE=true — skipping bifrost gateway (NVIDIA NIM is direct HTTPS)"
 fi
 
 # --- opencode serve (mobile / remote control) ---------------------------------
@@ -280,9 +284,9 @@ fi
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || SCRIPT_DIR="$PWD"
 SCRIPT_PATH="$SCRIPT_DIR/auto-startup.sh"
 WATCHDOG_BIN=""
-if command -v llama-watchdog >/dev/null 2>&1; then
+if [ "${CLOUD_MODE:-false}" != "true" ] && command -v llama-watchdog >/dev/null 2>&1; then
     WATCHDOG_BIN="$(command -v llama-watchdog)"
-elif [ -f "$SCRIPT_DIR/llama-watchdog.sh" ]; then
+elif [ "${CLOUD_MODE:-false}" != "true" ] && [ -f "$SCRIPT_DIR/llama-watchdog.sh" ]; then
     WATCHDOG_BIN="$SCRIPT_DIR/llama-watchdog.sh"
 fi
 if [ -z "$WATCHDOG_BIN" ]; then

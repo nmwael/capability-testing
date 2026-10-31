@@ -41,3 +41,33 @@ library/
 Layout notes:
 - The java book moved from `java/` to `coder/`: Java is a coder concern; per maintainer directive it is not shared with `researcher`/`reviewer`.
 - `domainbooks/` (Danish crisis/firefighter/stormflood/cyberattack reference books from the original lab repo) is intentionally not shipped here.
+
+## Cloud Agent Lane (NVIDIA NIM)
+
+When `CLOUD_MODE=true`, every agent role routes to NVIDIA NIM cloud models via the hosted `opencode` provider instead of the local llama-server/bifrost stack. The local lane is unchanged; cloud mode is opt-in.
+
+### Cloud model assignments
+
+| Role | Cloud model | Reason |
+| :--- | :--- | :--- |
+| architect | `nvidia/nemotron-3-ultra-550b-a55b` | Frontier reasoning, complex agentic workflows, planning, long-context analysis |
+| coder | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Coding, tool-calling, multimodal agentic workloads |
+| reviewer | `nvidia/nemotron-3-ultra-550b-a55b` | Frontier reasoning, analysis, critique |
+| build | `nvidia/llama-3.1-nemotron-70b-instruct` | General purpose coordination, conversation, QA |
+| ui | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Multimodal vision-language, UI design |
+| artist | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Multimodal vision-language, visual creativity |
+| researcher | `nvidia/nemotron-3.5-lightning-30b-a3b` | Fast, long-running autonomous agents |
+| fact-checker | `nvidia/nemotron-3.5-lightning-30b-a3b` | Fast, precision-focused verification |
+
+### Configuration
+
+- `stack.json` — `cloud: false` by default; set `cloud: true` to enable. Cloud models and `cloudRoles` defined under `models[]` and `cloudRoles`.
+- `opencode.json` — `nvidia` provider at `https://integrate.api.nvidia.com/v1`; `cloudAgents` maps each role to its cloud model. Policies already allow `nvidia` provider.
+- `.devcontainer/llm-lab-models.json` — cloud model entries for the profile resolver.
+- `scripts/auto-startup.sh` — skips llama-server, bifrost, and llama watchdog when `CLOUD_MODE=true`.
+- API key: set `NVIDIA_API_KEY` in the host environment for NVIDIA NIM authentication.
+
+## Related configuration
+
+- `stack.json` `cloud_provider: "opencode"` selects the hosted `opencode` provider for cloud mode.
+- AGENTS.md: "Local-only unless the box is booted in cloud mode: `CLOUD_MODE=true` (models feature + `stack.json.cloud=true`) routes every agent to the hosted `opencode` provider (`opencode/<model>` pins) and skips llama/bifrost — the only cloud path for the whole agentic stack."
