@@ -13,7 +13,7 @@
 // Exit 0 = every case passed. Exit 1 = at least one failure.
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SCRIPT = join(process.cwd(), 'scripts', 'execution-history.mjs');
@@ -95,7 +95,10 @@ console.log('T3.3 — --store');
 
   // Find the stored file - search all date dirs in docs/execution-history
   const historyDir = join(process.cwd(), 'docs', 'execution-history');
-  const dateDirs = existsSync(historyDir) ? readdirSync(historyDir).filter(d => d !== 'archive') : [];
+  const dateDirs = existsSync(historyDir) ? readdirSync(historyDir).filter(d => {
+    const fullPath = join(historyDir, d);
+    return d !== 'archive' && statSync(fullPath).isDirectory();
+  }) : [];
   let found = false;
   for (const d of dateDirs) {
     const dir = join(historyDir, d);
@@ -127,7 +130,10 @@ console.log('T3.5 — --compare');
 {
   const historyDir = join(process.cwd(), 'docs', 'execution-history');
   // Find two execution records to compare
-  const dateDirs = existsSync(historyDir) ? readdirSync(historyDir).filter(d => d !== 'archive') : [];
+  const dateDirs = existsSync(historyDir) ? readdirSync(historyDir).filter(d => {
+    const fullPath = join(historyDir, d);
+    return d !== 'archive' && statSync(fullPath).isDirectory();
+  }) : [];
   let files = [];
   for (const d of dateDirs) {
     const dir = join(historyDir, d);

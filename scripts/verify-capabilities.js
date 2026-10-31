@@ -114,11 +114,15 @@ function extractCapTags(text) {
   return capTags ? capTags.map(t => t.replace('@cap:', '').trim()) : [];
 }
 
+// Helper to skip build artifacts and test fixtures
+const isBuildArtifact = (file) => file.includes('target/test-classes') || file.includes('wip/');
+
 function validateCapTags(repoRoot, capabilities, errors) {
   const featureFiles = findFiles(repoRoot, /\.(feature)$/);
   
   for (let k = 0; k < featureFiles.length; k++) {
     const file = featureFiles[k];
+    if (isBuildArtifact(file)) continue;
     const filePath = path.join(repoRoot, file);
     const content = fs.readFileSync(filePath, 'utf8');
     const capIds = extractCapTags(content);
@@ -247,9 +251,6 @@ function main() {
 
   // Lane validation improvements
 
-  // Helper function to filter out build artifact files
-  const isBuildArtifact = (file) => file.includes('target/test-classes') || file.includes('wip/');
-
   // 1) Validate that all lane values are non-empty and not just whitespace
   const validateLaneValues = () => {
     const laneValueErrors = [];
@@ -288,22 +289,42 @@ function main() {
     const consistencyErrors = [];
     const featureFiles = findFiles(repoRoot, /\.(feature)$/);
     
-    const VALID_LANE_DIRS = ['publication', 'alerting', 'frontend', 'docs'];
+    const OWNER_TO_LANE_DIR = {
+      publication: 'publication',
+      alerting: 'alerting',
+      frontend: 'frontend',
+      docs: 'docs'
+    };
     
     for (let k = 0; k < featureFiles.length; k++) {
       const file = featureFiles[k];
       // Skip build artifacts
       if (isBuildArtifact(file)) continue;
       
-      const pathParts = file.split('/');
-      // Feature files must be at features/<lane>/<file>
-      if (pathParts.length < 3 || pathParts[0] !== 'features') {
-        consistencyErrors.push(`${file}: feature file must live in features/<lane>/ directory`);
-        continue;
-      }
-      const laneDir = pathParts[1];
-      if (!VALID_LANE_DIRS.includes(laneDir)) {
-        consistencyErrors.push(`${file}: unknown lane directory '${laneDir}' (expected one of: ${VALID_LANE_DIRS.join(', ')})`);
+      const filePath = path.join(repoRoot, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      const capTags = extractCapTags(content);
+      
+      if (capTags.length === 1) {
+        const capId = capTags[0].replace('@cap:', '').trim().replace(/^['"]|['"]$/g, '');
+        
+        const capability = data.capabilities.find(c => c.id === capId);
+        if (capability) {
+          const owner = (capability.owner || 'unknown').trim();
+          const expectedLaneDir = OWNER_TO_LANE_DIR[owner];
+          
+          if (!expectedLaneDir) {
+            consistencyErrors.push(`${file}: capability '${capId}' has unknown owner '${owner}' (no lane mapping)`);
+            continue;
+          }
+          
+          const pathParts = file.split('/');
+          const actualLaneDir = pathParts.length > 1 ? pathParts[1] : pathParts[0];
+          
+          if (actualLaneDir !== expectedLaneDir) {
+            consistencyErrors.push(`${file}: capability '${capId}' has owner '${owner}' (expected directory 'features/${expectedLaneDir}/') but file is in 'features/${actualLaneDir}/'`);
+          }
+        }
       }
     }
     
