@@ -261,15 +261,51 @@ for (const req of requirements) {
   }
 }
 
+// requirements coverage report
+const reqCoverage = [];
+for (const req of requirements) {
+  const reqScenarios = scenarios.filter(s => s.reqId === req.id);
+  reqCoverage.push({
+    id: req.id,
+    capability: req.capability,
+    scenarioCount: reqScenarios.length,
+    scenarios: reqScenarios.map(s => `${s.scenarioId} (${s.file}:${s.line})`),
+  });
+}
+
+// scenarios without requirements
+const scenariosWithoutReq = scenarios.filter(s => !s.reqId);
+
 function printAndExit() {
   if (errors.length > 0) {
     console.error('Traceability check FAILED:');
     for (const e of errors) console.error(`  - ${e}`);
     process.exit(1);
   }
+
   console.log(
     `Traceability check PASSED (${requirements.length} requirements, ${scenarios.length} scenarios)`
   );
+
+  // Requirements coverage summary
+  console.log('\nRequirements coverage:');
+  for (const c of reqCoverage) {
+    const status = c.scenarioCount > 0 ? 'covered' : 'NO SCENARIOS';
+    console.log(
+      `  ${c.id} (${c.capability}): ${c.scenarioCount} scenario(s) — ${status}`
+    );
+    for (const sc of c.scenarios) {
+      console.log(`    - ${sc}`);
+    }
+  }
+
+  if (scenariosWithoutReq.length > 0) {
+    console.log('\nScenarios without @req: (coverage gaps):');
+    for (const s of scenariosWithoutReq) {
+      console.log(`  ${s.file}:${s.line}: ${s.scenarioId || '<no scenario id>'}`);
+    }
+  }
+
   process.exit(0);
 }
 
