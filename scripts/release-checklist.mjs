@@ -346,6 +346,40 @@ function main() {
   lines.push(`Result: ${passed}/${total} checks passed (${pct}%)`);
   lines.push('');
 
+  // Lifecycle summary
+  const lifecycleCounts = {};
+  let totalHealth = 0;
+  let healthCount = 0;
+  for (const cap of capabilities) {
+    const state = (cap.lifecycle_state || 'active').toLowerCase();
+    lifecycleCounts[state] = (lifecycleCounts[state] || 0) + 1;
+    // Compute health if available
+    const vb = Array.isArray(cap.verifiedBy) ? cap.verifiedBy : [];
+    let coverageSum = 0, mutationSum = 0, flakinessSum = 0, coverageCount = 0, mutationCount = 0, flakinessCount = 0;
+    let latestRun = null;
+    for (const entry of vb) {
+      if (!entry || typeof entry !== 'object') continue;
+      if (entry.coverage !== undefined) { const cov = parseInt(entry.coverage, 10); if (!isNaN(cov)) { coverageSum += cov; coverageCount++; } }
+      if (entry.mutation_score !== undefined) { const ms = parseInt(entry.mutation_score, 10); if (!isNaN(ms)) { mutationSum += ms; mutationCount++; } }
+      if (entry.flakiness !== undefined) { const fl = parseFloat(entry.flakiness); if (!isNaN(fl)) { flakinessSum += fl; flakinessCount++; } }
+      if (entry.last_run) { const runDate = new Date(entry.last_run); if (!isNaN(runDate.getTime()) && (!latestRun || runDate > latestRun)) latestRun = runDate; }
+    }
+    if (coverageCount > 0 || mutationCount > 0) {
+      const coverageAvg = coverageCount > 0 ? coverageSum / coverageCount : 50;
+      const mutationAvg = mutationCount > 0 ? mutationSum / mutationCount : 50;
+      const flakinessAvg = flakinessCount > 0 ? flakinessSum / flakinessCount : 0.1;
+      let freshness = 1.0;
+      if (latestRun) { const daysSinceRun = (Date.now() - latestRun.getTime()) / (1000 * 60 * 60 * 24); freshness = Math.max(0, 1 - daysSinceRun / 365); }
+      const healthScore = Math.round(coverageAvg * 0.4 + mutationAvg * 0.3 + (1 - flakinessAvg) * 100 * 0.2 + freshness * 100 * 0.1);
+      totalHealth += Math.max(0, Math.min(100, healthScore));
+      healthCount++;
+    }
+  }
+  const avgHealth = healthCount > 0 ? Math.round(totalHealth / healthCount) : 'N/A';
+  const lifecycleSummaryMd = '## Capability Lifecycle Summary\n\n' + Object.entries(lifecycleCounts).map(([state, count]) => `- ${state}: ${count}`).join('\n') + `\n- Average Health Score: ${avgHealth}\n`;
+  lines.push(lifecycleSummaryMd);
+  lines.push('');
+
   for (const check of checks) {
     const icon = check.passed ? '✅' : '❌';
     lines.push(`${icon} ${check.name}`);
@@ -362,11 +396,14 @@ function main() {
     writeFileSync(join(output, 'checklist.md'), report);
 
     // HTML version
+    // Generate lifecycle summary for HTML
+    const lifecycleSummaryHtml = '<h2>Capability Lifecycle Summary</h2>\n<ul>\n' + Object.entries(lifecycleCounts).map(([state, count]) => `<li>${state}: ${count}</li>`).join('\n') + `\n<li>Average Health Score: ${avgHealth}</li>\n</ul>`;
+    
     const html = `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Release Checklist</title>
 <style>body{font-family:system-ui,sans-serif;max-width:800px;padding:2rem}
-h1{border-bottom:2px solid #d0d7de;padding-bottom:.5rem}
+h1,h2{border-bottom:2px solid #d0d7de;padding-bottom:.5rem}
 .pass{color:#116329} .fail{color:#b42318}
 ul{list-style:none;padding:0}
 li{margin:.5rem 0;padding:.3rem;border:1px solid #d0d7de;border-radius:4px}
@@ -376,6 +413,7 @@ li.pass{background:#f0fdf4;border-color:#23863d} li.fail{background:#fff8f9;bord
 <p><strong>Commit:</strong> ${commitSha}</p>
 <p><strong>Branch:</strong> ${branch}</p>
 <p><strong>Result:</strong> <span class="${passed === total ? 'pass' : 'fail'}">${passed}/${total} checks passed (${pct}%)</span></p>
+${lifecycleSummaryHtml}
 <h2>Checks</h2>
 <ul>
 ${checks.map(c => `<li class="${c.passed ? 'pass' : 'fail'}"><strong>${c.name}</strong>: ${c.detail}</li>`).join('')}
