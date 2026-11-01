@@ -1,0 +1,113 @@
+name: Capability Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+jobs:
+  validate:
+    name: Validate Capabilities
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for regression check
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run capability validation
+        id: validate
+        run: |
+          node scripts/verify-capabilities.js 2>&1 | tee validation-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Upload validation output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-output
+          path: validation-output.txt
+          retention-days: 7
+
+  regression-check:
+    name: Regression Check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: validate
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression check
+        id: regression
+        run: |
+          node scripts/regression-check.mjs 2>&1 | tee regression-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Upload regression output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-output
+          path: regression-output.txt
+          retention-days: 7
+
+  pr-comment:
+    name: Post PR Comment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [validate, regression-check]
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+      issues: read
+    steps:
+      - name: Download validation output
+        uses: actions/download-artifact@v4
+        with:
+          name: validation-output
+          path: artifacts
+
+      - name: Download regression output
+        uses: actions/download-artifact@v4
+        with:
+          name: regression-output
+          path: artifacts
+
+      - name: Post PR comment
+        id: comment
+        run: |
+          node scripts/pr-comment.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}
+          REPO: ${{ github.repository }}
