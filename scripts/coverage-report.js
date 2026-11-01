@@ -242,10 +242,27 @@ function parseFeatureFile(featurePath) {
 function normalizeTestName(testName) {
   // Strip Vitest prefix like "frontend toolchain > " or "alert-flow frontend spec > "
   const stripped = testName.split('>').pop() || testName;
-  return stripped.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/_/g, '');
+  // Keep spaces for similarity, normalize punctuation
+  return stripped.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-// Match test names to scenarios
+// Compute similarity between two strings using keyword overlap (Jaccard-like)
+function computeSimilarity(str1, str2) {
+  const words1 = new Set(str1.split(/\s+/).filter(w => w.length > 1));
+  const words2 = new Set(str2.split(/\s+/).filter(w => w.length > 1));
+  
+  if (words1.size === 0 || words2.size === 0) return 0;
+  
+  let intersection = 0;
+  for (const w of words1) {
+    if (words2.has(w)) intersection++;
+  }
+  
+  const union = words1.size + words2.size - intersection;
+  return intersection / union;
+}
+
+// Match test names to scenarios using fuzzy matching
 function matchTestsToScenarios(tests, scenarios) {
   const scenarioTestsMap = new Map(); // scenarioId -> {name, tests: []}
   const unmatchedTests = [];
@@ -262,18 +279,30 @@ function matchTestsToScenarios(tests, scenarios) {
   
   for (const test of tests) {
     const normalizedTest = normalizeTestName(test.name);
-    let matched = false;
+    let bestMatch = null;
+    let bestScore = 0;
     
     for (const [scenarioId, scenarioData] of scenarioTestsMap) {
       const normalizedScenario = normalizeTestName(scenarioData.name);
+      
+      // Try exact match first (after normalization)
       if (normalizedTest === normalizedScenario) {
-        scenarioData.tests.push(test);
-        matched = true;
+        bestMatch = scenarioId;
+        bestScore = 1;
         break;
+      }
+      
+      // Fuzzy match using keyword similarity
+      const score = computeSimilarity(normalizedTest, normalizedScenario);
+      if (score > bestScore && score >= 0.15) { // Threshold for fuzzy match
+        bestScore = score;
+        bestMatch = scenarioId;
       }
     }
     
-    if (!matched) {
+    if (bestMatch) {
+      scenarioTestsMap.get(bestMatch).tests.push(test);
+    } else {
       unmatchedTests.push(test);
     }
   }
@@ -295,6 +324,8 @@ function matchTestsToScenarios(tests, scenarios) {
     unmatchedScenarios,
   };
 }
+
+
 
 // Generate HTML report
 function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatchedScenarios, summary, outDir) {
@@ -330,18 +361,16 @@ function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatched
   <h1>Coverage Report</h1>
   ${summary ? '<div class="summary"><h2>Summary</h2><div class="summary-stats"><span>Tests: ' + entries.length + '</span><span>Covered: ' + entries.filter(e => e.coverage).length + '</span><span>Scenarios with Tests: ' + (scenarioTestsMap.size - unmatchedScenarios.length) + '</span><span>Scenarios without Tests: ' + unmatchedScenarios.length + '</span><span>Tests without Traceability: ' + unmatchedTests.length + '</span></div></div>' : ''}
   <h2>Test Coverage</h2>
-  ${entries.map(e => {
-    const scenario = scenarioTestsMap.get(e.name);
-    const scenarioId = scenario ? scenario.scenarioId : '';
-    const reqIds = scenario ? scenario.reqIds.join(', ') : '';
-    return `
+  ${Array.from(scenarioTestsMap.entries()).map(([scenarioId, scenarioData]) => `
+    <h3>Scenario: ${escapeHtml(scenarioId)} - ${escapeHtml(scenarioData.name)}</h3>
+    ${scenarioData.reqIds.length > 0 ? '<div class="test-req">Requirements: ' + escapeHtml(scenarioData.reqIds.join(', ')) + '</div>' : ''}
+    ${scenarioData.tests.length > 0 ? scenarioData.tests.map(e => `
       <div class="test-entry">
         <div class="test-name">${escapeHtml(e.name)}</div>
-        ${scenarioId ? '<div class="test-scenario">Scenario: ' + escapeHtml(scenarioId) + '</div>' : ''}
-        ${reqIds ? '<div class="test-req">Requirements: ' + escapeHtml(reqIds) + '</div>' : ''}
-        ${e.coverage ? '<div class="coverage">Coverage: ' + e.coverage + '%</div>' : '<div class="missing">No matching test found</div>'}
-      </div>`;
-  }).join('')}
+        <div class="test-scenario">Scenario: ${escapeHtml(scenarioId)}</div>
+        ${e.coverage ? '<div class="coverage">Coverage: ' + e.coverage + '%</div>' : ''}
+      </div>`).join('') : '<div class="test-entry"><div class="test-name">No tests matched</div><div class="missing">No matching test found</div></div>'}
+  `).join('')}
   
   ${unmatchedScenarios.length > 0 ? '<h2>Scenarios Without Test Coverage</h2>' + 
     unmatchedScenarios.map(s => `
