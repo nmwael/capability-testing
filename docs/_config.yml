@@ -8,5 +8,13 @@ nav:
     url: /capability-testing/capabilities
   - title: CI & Reports
     url: /capability-testing/reports
+  - title: Coverage
+    url: /capability-testing/coverage/
+  - title: Execution History
+    url: /capability-testing/execution-history/
+  - title: Impact Analysis
+    url: /capability-testing/impact/
+  - title: Release Checklist
+    url: /capability-testing/release/
   - title: Governance
     url: /capability-testing/governance
