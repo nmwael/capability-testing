@@ -40,6 +40,27 @@ function readYamlSimple(filePath) {
       continue;
     }
 
+    // Handle dependencies array
+    const depsMatch = line.match(/^ {4}dependencies:\s*\[(.+)\]/);
+    if (depsMatch) {
+      const depsStr = depsMatch[1];
+      currentCap.dependencies = depsStr.split(",").map(d => d.trim().replace(/^['"]|['"]$/g, ""));
+      continue;
+    }
+
+    // Handle lifecycle_state field
+    const lifecycleMatch = line.match(/^ {4}lifecycle_state:\s*(.*)$/);
+    if (lifecycleMatch) {
+      let val = lifecycleMatch[1].trim();
+      val = val.split('#')[0].trim();
+      if (val.startsWith('#')) val = '';
+      if (val !== '') {
+        val = val.replace(/^['"]|['"]$/g, '');
+        currentCap.lifecycle_state = val;
+      }
+      continue;
+    }
+
     const kv = line.match(/^ {4}(\w+):\s*(.*)$/);
     if (kv) {
       const key = kv[1];
@@ -223,6 +244,14 @@ function main() {
     if (!STATUS_VALUES.includes(status.toLowerCase())) {
       warnings.push(`Invalid status '${status}' for capability '${cap.id || 'unknown'}'`);
     }
+    // Validate lifecycle_state if present
+    const lifecycleState = cap.lifecycle_state;
+    if (lifecycleState) {
+      const ls = lifecycleState.trim().toLowerCase();
+      if (!STATUS_VALUES.includes(ls)) {
+        warnings.push(`Invalid lifecycle_state '${lifecycleState}' for capability '${cap.id || 'unknown'}'`);
+      }
+    }
   }
 
   const ids = [];
@@ -393,7 +422,75 @@ function main() {
     }
     
     return deprecatedLaneErrors.length === 0;
+  }
+  // 4) Validate dependencies (existence + circular detection)
+  const validateDependencies = () => {
+    const depErrors = [];
+    const caps = data.capabilities || [];
+    const capIds = new Set(caps.map(c => c.id));
+    
+    // Check existence of all dependencies
+    for (let k = 0; k < caps.length; k++) {
+      const cap = caps[k];
+      const deps = cap.dependencies || [];
+      for (let d = 0; d < deps.length; d++) {
+        const depId = deps[d].trim();
+        if (!capIds.has(depId)) {
+          depErrors.push(`Capability '${cap.id}' depends on unknown capability '${depId}'`);
+        }
+      }
+    }
+    
+    // Check for circular dependencies using DFS
+    const graph = {};
+    for (let k = 0; k < caps.length; k++) {
+      const cap = caps[k];
+      graph[cap.id] = (cap.dependencies || []).map(d => d.trim());
+    }
+    
+    function hasCycle(node, visited, recStack, path) {
+      visited.add(node);
+      recStack.add(node);
+      path.push(node);
+      
+      const neighbors = graph[node] || [];
+      for (let i = 0; i < neighbors.length; i++) {
+        const neighbor = neighbors[i];
+        if (!visited.has(neighbor)) {
+          if (hasCycle(neighbor, visited, recStack, path)) {
+            return true;
+          }
+        } else if (recStack.has(neighbor)) {
+          // Found cycle - construct cycle path
+          const cycleStart = path.indexOf(neighbor);
+          const cycle = path.slice(cycleStart).join(' -> ') + ' -> ' + neighbor;
+          depErrors.push(`Circular dependency detected: ${cycle}`);
+          return true;
+        }
+      }
+      
+      recStack.delete(node);
+      path.pop();
+      return false;
+    }
+    
+    const visited = new Set();
+    const recStack = new Set();
+    for (let k = 0; k < caps.length; k++) {
+      const capId = caps[k].id;
+      if (!visited.has(capId)) {
+        hasCycle(capId, visited, recStack, []);
+      }
+    }
+    
+    if (depErrors.length > 0) {
+      errors.push(`Dependency validation failed: ${depErrors.join('; ')}`);
+    }
+    
+    return depErrors.length === 0;
   };
+
+;
 
   // Run the new validations
   if (!validateLaneValues()) {
@@ -406,6 +503,11 @@ function main() {
     // Already added error above
   }
   
+  // 4) Validate dependencies
+  if (!validateDependencies()) {
+    // Already added error above
+  }
+
   const featureFiles = findFiles(repoRoot, /\.(feature)$/);
   const testFiles = findFiles(repoRoot, /(IT|Test)\.java$/);
   

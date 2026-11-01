@@ -3,6 +3,7 @@ capabilities:
     intent: "Publish an alert as a CAP v1.2 message that validates against the OASIS schema"
     owner: publication
     status: active
+    lifecycle_state: active
     since: 1.0.0
     verified_by:
       - "AlertPublishIT"                          # backend integration test class
@@ -12,6 +13,7 @@ capabilities:
     intent: "Route a CAP alert by its severity, urgency and certainty"
     owner: alerting
     status: active
+    lifecycle_state: active
     since: 1.0.0
     verified_by:
       - "AlertRouteIT"
@@ -22,6 +24,8 @@ capabilities:
     owner: publication
     lanes: [publication, frontend]
     status: active
+    lifecycle_state: active
+    dependencies: [alert.publish]
     since: 1.0.0
     verified_by:
       - "AlertRuleDesignIT"
@@ -33,6 +37,8 @@ capabilities:
     owner: publication
     lanes: [publication, frontend]
     status: active
+    lifecycle_state: active
+    dependencies: [alert.rule-design]
     since: 1.0.0
     verified_by:
       - "features/frontend/alert-rule-edit.feature"         # designer: load, edit, post JSON (vitest)
@@ -43,6 +49,8 @@ capabilities:
     owner: publication
     lanes: [publication, frontend]
     status: active
+    lifecycle_state: active
+    dependencies: [alert.publish]
     since: 1.0.0
     verified_by:
       - "features/publication/alert-flow.feature"          # the distribution endpoint (JSON)
@@ -52,6 +60,8 @@ capabilities:
     intent: "List every CAP v1.2 attribute with its type and valid values, and drive the rule designer's condition fields from the schema"
     owner: frontend
     status: active
+    lifecycle_state: active
+    dependencies: [alert.rule-design]
     since: 1.0.0
     verified_by:
       - "features/frontend/cap-field-catalogue.feature"    # field catalogue + XSD drift guard (vitest)
@@ -60,6 +70,7 @@ capabilities:
     intent: "Create entrypoint README.md, optional ONBOARDING.md, inline mermaid diagrams, consolidate stale docs, remove generated Playwright artifacts"
     owner: docs
     status: draft
+    lifecycle_state: draft
     since: 1.1.0
     verified_by:
       - "features/docs/onboarding.feature"
