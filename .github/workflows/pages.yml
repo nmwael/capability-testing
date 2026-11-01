@@ -55,6 +55,7 @@ jobs:
           --jacoco 'backend/**/target/site/jacoco/jacoco.xml'
           --frontend-coverage frontend/coverage/coverage-summary.json
           --pit 'backend/*/target/pit-reports/mutations.xml'
+          --features features
           --out docs/coverage
       - name: Upload capability report
         uses: actions/upload-artifact@v4
