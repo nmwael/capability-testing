@@ -32,6 +32,14 @@ function readYamlSimple(filePath) {
     
     if (!currentCap) continue;
     
+    // Handle lanes array first (before general kv parsing)
+    const lanesMatch = line.match(/^ {4}lanes:\s*\[(.+)\]/);
+    if (lanesMatch) {
+      const lanesStr = lanesMatch[1];
+      currentCap.lanes = lanesStr.split(",").map(l => l.trim().replace(/^['"]|['"]$/g, ""));
+      continue;
+    }
+
     const kv = line.match(/^ {4}(\w+):\s*(.*)$/);
     if (kv) {
       const key = kv[1];
@@ -49,7 +57,7 @@ function readYamlSimple(filePath) {
       inVerifiedBy = false;
       continue;
     }
-    
+
     if (inVerifiedBy) {
       const listItem = line.match(/^ {6}- \s*(.+)$/);
       if (listItem) {
@@ -310,19 +318,20 @@ function main() {
         
         const capability = data.capabilities.find(c => c.id === capId);
         if (capability) {
-          const owner = (capability.owner || 'unknown').trim();
-          const expectedLaneDir = OWNER_TO_LANE_DIR[owner];
+          // Support both single owner and multiple lanes
+          const validLanes = capability.lanes ? (Array.isArray(capability.lanes) ? capability.lanes : [capability.lanes]) : [capability.owner];
+          const expectedLaneDirs = validLanes.map(lane => OWNER_TO_LANE_DIR[lane]).filter(Boolean);
           
-          if (!expectedLaneDir) {
-            consistencyErrors.push(`${file}: capability '${capId}' has unknown owner '${owner}' (no lane mapping)`);
+          if (expectedLaneDirs.length === 0) {
+            consistencyErrors.push(`${file}: capability '${capId}' has no valid lane mapping`);
             continue;
           }
           
           const pathParts = file.split('/');
           const actualLaneDir = pathParts.length > 1 ? pathParts[1] : pathParts[0];
           
-          if (actualLaneDir !== expectedLaneDir) {
-            consistencyErrors.push(`${file}: capability '${capId}' has owner '${owner}' (expected directory 'features/${expectedLaneDir}/') but file is in 'features/${actualLaneDir}/'`);
+          if (!expectedLaneDirs.includes(actualLaneDir)) {
+            consistencyErrors.push(`${file}: capability '${capId}' has valid lanes [${validLanes.join(', ')}] (expected directories [${expectedLaneDirs.join(', ')}]) but file is in 'features/${actualLaneDir}/'`);
           }
         }
       }
