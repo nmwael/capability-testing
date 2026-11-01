@@ -3,12 +3,106 @@
 const fs = require('fs');
 const path = require('path');
 
+// Simple glob pattern expander using minimatch-like logic
+function expandGlob(pattern) {
+  const results = [];
+  const isGlob = pattern.includes('*') || pattern.includes('**') || pattern.includes('?') || pattern.includes('[');
+  
+  if (!isGlob) {
+    if (fs.existsSync(pattern)) {
+      return [pattern];
+    }
+    return [];
+  }
+  
+  // Split pattern into directory parts
+  const parts = pattern.split('/');
+  let currentDirs = ['.'];
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const isLast = i === parts.length - 1;
+    const nextDirs = [];
+    
+    for (const dir of currentDirs) {
+      if (!fs.existsSync(dir)) continue;
+      
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      
+      if (part === '**') {
+        // Recursive directory match
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            const fullPath = path.join(dir, entry.name);
+            nextDirs.push(fullPath);
+            // Also search recursively
+            function walkRecursive(d) {
+              try {
+                const subEntries = fs.readdirSync(d, { withFileTypes: true });
+                for (const subEntry of subEntries) {
+                  if (subEntry.isDirectory()) {
+                    nextDirs.push(path.join(d, subEntry.name));
+                    walkRecursive(path.join(d, subEntry.name));
+                  }
+                }
+              } catch (e) {}
+            }
+            walkRecursive(fullPath);
+          }
+        }
+        // Also include current dir for ** matching zero directories
+        if (!isLast) {
+          nextDirs.push(dir);
+        }
+      } else if (part.includes('*') || part.includes('?') || part.includes('[')) {
+        // Pattern match on filenames
+        const regex = new RegExp('^' + part
+          .replace(/\./g, '\\.')
+          .replace(/\*/g, '.*')
+          .replace(/\?/g, '.')
+          .replace(/\[([^\]]+)\]/g, '[$1]') + '$');
+        
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (regex.test(entry.name)) {
+            if (isLast) {
+              if (entry.isFile()) results.push(fullPath);
+            } else if (entry.isDirectory()) {
+              nextDirs.push(fullPath);
+            }
+          }
+        }
+      } else {
+        // Exact match
+        const fullPath = path.join(dir, part);
+        if (fs.existsSync(fullPath)) {
+          const stat = fs.statSync(fullPath);
+          if (isLast) {
+            if (stat.isFile()) results.push(fullPath);
+          } else if (stat.isDirectory()) {
+            nextDirs.push(fullPath);
+          }
+        }
+      }
+    }
+    
+    if (nextDirs.length === 0) break;
+    currentDirs = [...new Set(nextDirs)]; // deduplicate
+  }
+  
+  return [...new Set(results)]; // deduplicate
+}
+
 // Parse command line arguments
 function parseArgs() {
   const args = process.argv.slice(2);
   const result = {
     surefire: null,
     vitest: null,
+    cucumber: null,
+    jacoco: null,
+    frontendCoverage: null,
+    pit: null,
     features: null,
     out: null,
     summary: false,
@@ -20,6 +114,14 @@ function parseArgs() {
       result.surefire = args[++i];
     } else if (arg === '--vitest' && args[i + 1]) {
       result.vitest = args[++i];
+    } else if (arg === '--cucumber' && args[i + 1]) {
+      result.cucumber = args[++i];
+    } else if (arg === '--jacoco' && args[i + 1]) {
+      result.jacoco = args[++i];
+    } else if (arg === '--frontend-coverage' && args[i + 1]) {
+      result.frontendCoverage = args[++i];
+    } else if (arg === '--pit' && args[i + 1]) {
+      result.pit = args[++i];
     } else if (arg === '--features' && args[i + 1]) {
       result.features = args[++i];
     } else if (arg === '--out' && args[i + 1]) {
@@ -29,12 +131,16 @@ function parseArgs() {
     } else if (arg === '--help' || arg === '-h') {
       console.log('Usage: coverage-report.js [options]');
       console.log('Options:');
-      console.log('  --surefire <path>   Path to surefire XML output');
-      console.log('  --vitest <path>     Path to vitest XML output');
-      console.log('  --out <dir>         Output directory for HTML report');
-      console.log('  --summary           Include summary section');
-      console.log('  --help, -h          Show this help');
-      console.log('  --features <path>   Path to feature directory for scenario extraction');
+      console.log('  --surefire <path>          Path to surefire XML output (glob supported)');
+      console.log('  --vitest <path>            Path to vitest XML output (glob supported)');
+      console.log('  --cucumber <path>          Path to cucumber XML output (glob supported)');
+      console.log('  --jacoco <path>            Path to jacoco XML output (glob supported)');
+      console.log('  --frontend-coverage <path> Path to frontend coverage JSON (glob supported)');
+      console.log('  --pit <path>               Path to PIT mutation XML (glob supported)');
+      console.log('  --out <dir>                Output directory for HTML report');
+      console.log('  --summary                  Include summary section');
+      console.log('  --help, -h                 Show this help');
+      console.log('  --features <path>          Path to feature directory for scenario extraction');
       process.exit(0);
     }
     i++;
@@ -271,13 +377,23 @@ function main() {
 
   const entries = [];
 
-  if (args.surefire) {
-    const surefireEntries = parseSurefireXml(args.surefire);
+  // Expand globs for all file path arguments
+  const surefireFiles = args.surefire ? expandGlob(args.surefire) : [];
+  const vitestFiles = args.vitest ? expandGlob(args.vitest) : [];
+  const cucumberFiles = args.cucumber ? expandGlob(args.cucumber) : [];
+  const jacocoFiles = args.jacoco ? expandGlob(args.jacoco) : [];
+  const frontendCoverageFiles = args.frontendCoverage ? expandGlob(args.frontendCoverage) : [];
+  const pitFiles = args.pit ? expandGlob(args.pit) : [];
+
+  // Parse surefire XML files
+  for (const file of surefireFiles) {
+    const surefireEntries = parseSurefireXml(file);
     entries.push(...surefireEntries);
   }
 
-  if (args.vitest) {
-    const vitestEntries = parseVitestXml(args.vitest);
+  // Parse vitest XML files
+  for (const file of vitestFiles) {
+    const vitestEntries = parseVitestXml(file);
     entries.push(...vitestEntries);
   }
 
