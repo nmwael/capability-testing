@@ -1,4 +1,44 @@
+# Core capability registry
 /capabilities/capabilities.yml       @org/architects @org/product-owners @org/test-managers
+
+# Verification scripts
 /scripts/verify-capabilities.js      @org/architects @org/test-managers
 /scripts/capability-report.js        @org/architects
+/scripts/verify-traceability.mjs     @org/architects @org/test-managers
+/scripts/change-impact.mjs           @org/architects @org/test-managers
+/scripts/release-checklist.mjs       @org/architects @org/product-owners
+/scripts/execution-history.mjs       @org/architects @org/test-managers
+
+# CI/CD workflows
 /.github/workflows/capability.yml    @org/architects @org/test-managers
+/.github/workflows/ci.yml            @org/architects @org/test-managers
+/.github/workflows/pages.yml         @org/architects @org/test-managers
+
+# Publication capabilities (alert.publish, alert.rule-design, alert.rule-edit, alert.flow, alert.cap-fields)
+/features/publication/               @org/architects
+/features/frontend/alert-rule-designer.feature @org/architects
+/features/frontend/alert-rule-edit.feature @org/architects
+/features/frontend/alert-flow.feature @org/architects
+/features/frontend/cap-field-catalogue.feature @org/architects
+
+# Alerting capabilities (alert.route)
+/features/alerting/                  @org/architects
+
+# Frontend capabilities (alert.rule-design, alert.rule-edit, alert.flow, alert.cap-fields)
+/features/frontend/                  @org/architects
+
+# Docs capabilities (docs.onboarding)
+/features/docs/                      @org/product-owners
+
+# Documentation
+/docs/                               @org/product-owners
+/README.md                           @org/product-owners
+
+# Scripts
+/scripts/                            @org/architects @org/test-managers
+
+# Frontend source
+/frontend/src/                       @org/architects
+
+# Backend source
+/backend/                            @org/architects

@@ -2,7 +2,7 @@ capabilities:
   - id: alert.publish
     intent: "Publish an alert as a CAP v1.2 message that validates against the OASIS schema"
     owner: publication
-    status: active
+    github_team: "@org/architects"
     lifecycle_state: active
     lifecycle_state_changed: "2026-01-15"
     since: 1.0.0
@@ -20,7 +20,7 @@ capabilities:
   - id: alert.route
     intent: "Route a CAP alert by its severity, urgency and certainty"
     owner: alerting
-    status: active
+    github_team: "@org/architects"
     lifecycle_state: active
     lifecycle_state_changed: "2026-02-20"
     since: 1.0.0
@@ -38,8 +38,8 @@ capabilities:
   - id: alert.rule-design
     intent: "Draw routing rules as a React Flow graph; compile and execute them in Drools"
     owner: publication
+    github_team: "@org/architects"
     lanes: [publication, frontend]
-    status: active
     lifecycle_state: active
     lifecycle_state_changed: "2026-03-10"
     dependencies: [alert.publish]
@@ -62,8 +62,8 @@ capabilities:
   - id: alert.rule-edit
     intent: "Edit a saved routing rule graph in the designer and exchange it with the backend as JSON"
     owner: publication
+    github_team: "@org/architects"
     lanes: [publication, frontend]
-    status: active
     lifecycle_state: active
     lifecycle_state_changed: "2026-04-05"
     dependencies: [alert.rule-design]
@@ -81,8 +81,8 @@ capabilities:
   - id: alert.flow
     intent: "Show an alert's distribution as a React Flow canvas"
     owner: publication
+    github_team: "@org/architects"
     lanes: [publication, frontend]
-    status: active
     lifecycle_state: active
     lifecycle_state_changed: "2026-05-12"
     dependencies: [alert.publish]
@@ -100,7 +100,7 @@ capabilities:
   - id: alert.cap-fields
     intent: "List every CAP v1.2 attribute with its type and valid values, and drive the rule designer's condition fields from the schema"
     owner: frontend
-    status: active
+    github_team: "@org/architects"
     lifecycle_state: active
     lifecycle_state_changed: "2026-06-20"
     dependencies: [alert.rule-design]
@@ -114,7 +114,7 @@ capabilities:
   - id: docs.onboarding
     intent: "Create entrypoint README.md, optional ONBOARDING.md, inline mermaid diagrams, consolidate stale docs, remove generated Playwright artifacts"
     owner: docs
-    status: draft
+    github_team: "@org/product-owners"
     lifecycle_state: draft
     lifecycle_state_changed: "2026-09-01"
     since: 1.1.0

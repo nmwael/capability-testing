@@ -299,6 +299,138 @@ const TRANSITION_TIME_WINDOWS = {
   deprecated_to_retired_days: 60    // Days below threshold before deprecated->retired
 };
 
+// Parse CODEOWNERS file
+function parseCodeOwners(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines = content.split('\n');
+  const rules = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    
+    const parts = trimmed.split(/\s+/);
+    if (parts.length < 2) continue;
+    
+    const pattern = parts[0];
+    const owners = parts.slice(1);
+    rules.push({ pattern, owners });
+  }
+  
+  return rules;
+}
+
+// Match file path against CODEOWNERS pattern
+function matchCodeOwnersPattern(pattern, filePath) {
+  // Normalize pattern - remove leading slash if present
+  let normalizedPattern = pattern.startsWith('/') ? pattern.slice(1) : pattern;
+  
+  // If pattern ends with /, it matches that directory and all subdirectories
+  const isDirectoryPattern = normalizedPattern.endsWith('/');
+  
+  // Convert glob pattern to regex
+  let regexPattern = normalizedPattern
+    .replace(/\./g, '\\.')
+    .replace(/\*\*/g, '.*')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\?/g, '[^/]');
+  
+  if (isDirectoryPattern) {
+    // Directory pattern matches the directory and all files under it
+    regexPattern = regexPattern.slice(0, -1) + '(/.*)?$';
+  } else {
+    regexPattern = '^' + regexPattern + '$';
+  }
+  
+  const regex = new RegExp(regexPattern);
+  return regex.test(filePath);
+}
+
+// Get CODEOWNERS for a file path
+function getCodeOwnersForPath(rules, filePath) {
+  // CODEOWNERS uses last matching pattern (like gitignore)
+  let matchedOwners = [];
+  for (const rule of rules) {
+    if (matchCodeOwnersPattern(rule.pattern, filePath)) {
+      matchedOwners = rule.owners;
+    }
+  }
+  return matchedOwners;
+}
+
+// 8) Validate CODEOWNERS coverage
+const validateCodeOwners = (repoRoot, data, errors, warnings) => {
+  const codeOwnersPath = path.join(repoRoot, '.github', 'CODEOWNERS');
+  if (!fs.existsSync(codeOwnersPath)) {
+    warnings.push('No .github/CODEOWNERS file found');
+    return true; // Not an error, just a warning
+  }
+  
+  const rules = parseCodeOwners(codeOwnersPath);
+  const caps = data.capabilities || [];
+  const codeOwnerErrors = [];
+  const codeOwnerWarnings = [];
+  
+  // Check each capability has github_team and corresponding CODEOWNERS entry
+  for (let k = 0; k < caps.length; k++) {
+    const cap = caps[k];
+    const capId = cap.id;
+    const githubTeam = cap.github_team;
+    
+    if (!githubTeam) {
+      codeOwnerWarnings.push(`Capability '${capId}' missing github_team field`);
+      continue;
+    }
+    
+    // Find feature files for this capability
+    const capFeatureFiles = [];
+    const vb = Array.isArray(cap.verified_by) ? cap.verified_by : [];
+    for (const entry of vb) {
+      const ref = (entry && typeof entry === 'object' && entry.ref) ? entry.ref : entry;
+      if (ref && (ref.endsWith('.feature') || ref.startsWith('features/'))) {
+        capFeatureFiles.push(ref);
+      }
+    }
+    
+    if (capFeatureFiles.length === 0) {
+      codeOwnerWarnings.push(`Capability '${capId}' has no feature files to validate CODEOWNERS`);
+      continue;
+    }
+    
+    // Check each feature file has CODEOWNERS matching capability's github_team
+    for (const featureFile of capFeatureFiles) {
+      const owners = getCodeOwnersForPath(rules, featureFile);
+      if (owners.length === 0) {
+        codeOwnerErrors.push(`Feature file '${featureFile}' for capability '${capId}' has no CODEOWNERS entry`);
+      } else if (!owners.includes(githubTeam)) {
+        codeOwnerErrors.push(`Feature file '${featureFile}' for capability '${capId}' owned by '${owners.join(', ')}' but capability requires '${githubTeam}'`);
+      }
+    }
+  }
+  
+  // Check critical files have CODEOWNERS
+  const criticalFiles = [
+    'capabilities/capabilities.yml',
+    'scripts/verify-capabilities.js'
+  ];
+  
+  for (const criticalFile of criticalFiles) {
+    const owners = getCodeOwnersForPath(rules, criticalFile);
+    if (owners.length === 0) {
+      codeOwnerErrors.push(`Critical file '${criticalFile}' has no CODEOWNERS entry`);
+    }
+  }
+  
+  if (codeOwnerWarnings.length > 0) {
+    for (const w of codeOwnerWarnings) warnings.push(w);
+  }
+  if (codeOwnerErrors.length > 0) {
+    for (const e of codeOwnerErrors) errors.push(e);
+  }
+  
+  return codeOwnerErrors.length === 0;
+};
+
 function main() {
   const repoRoot = process.cwd();
   const capsArg = argValue('--caps');
@@ -980,6 +1112,10 @@ function main() {
   validateLaneValues();
   validateLaneConsistency();
   validateDeprecatedCapabilityLanes();
+
+  if (!validateCodeOwners(repoRoot, data, errors, warnings)) {
+    // Already added error above
+  }
 
   if (warnings.length > 0) {
     console.warn('Capability traceability check has warnings:');
