@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "label": "Capability Health",
+  "message": "88%",
+  "color": "brightgreen",
+  "labelColor": "555",
+  "isError": false,
+  "namedLogo": "github",
+  "link": "https://nmwael.github.io/capability-testing/coverage/"
+}

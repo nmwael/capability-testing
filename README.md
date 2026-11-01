@@ -54,6 +54,8 @@ flowchart TD
 
 This project implements CAP v1.2 capability testing with traceability from schema to implementation.
 
+[![Capability Health](https://img.shields.io/endpoint?url=https://nmwael.github.io/capability-testing/coverage/badge.json)](https://nmwael.github.io/capability-testing/coverage/)
+
 ### Schema Traceability
 
 - **CAP v1.2 Schema** (`backend/common/src/main/resources/cap-v1.2.xsd`) defines the rule and flow schemas that the Drools rules engine enforces.
