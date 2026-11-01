@@ -1,0 +1,137 @@
+{
+  "capabilities": [
+    {
+      "capability": "docs.onboarding",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 4,
+      "tests": 0,
+      "failedTests": 0
+    }
+  ],
+  "requirements": [
+    {
+      "requirement": "REQ-PUB-001",
+      "capability": "alert.publish",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 7,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-PUB-002",
+      "capability": "alert.rule-design",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 8,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-PUB-003",
+      "capability": "alert.rule-edit",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 5,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-PUB-004",
+      "capability": "alert.flow",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 6,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-ALERT-001",
+      "capability": "alert.route",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 6,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-FRONT-001",
+      "capability": "alert.rule-design",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 35,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-FRONT-002",
+      "capability": "alert.rule-edit",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 8,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-FRONT-003",
+      "capability": "alert.flow",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 11,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-FRONT-004",
+      "capability": "alert.cap-fields",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 5,
+      "tests": 0,
+      "failedTests": 0
+    },
+    {
+      "requirement": "REQ-DOCS-001",
+      "capability": "docs.onboarding",
+      "specification": "Defined",
+      "implementation": "Not Implemented",
+      "automation": "Not Automated",
+      "execution": "Not Executed",
+      "freshness": "Unknown",
+      "scenarios": 5,
+      "tests": 0,
+      "failedTests": 0
+    }
+  ]
+}
