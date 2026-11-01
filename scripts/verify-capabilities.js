@@ -73,21 +73,68 @@ function readYamlSimple(filePath) {
         currentKey = key;
         continue;
       }
+      // Check if this looks like an object start (key: value on same line after key)
+      // For verified_by, we handle objects in the list parsing below
       val = val.replace(/^['"]|['"]$/g, '');
       currentCap[key] = val;
       inVerifiedBy = false;
       continue;
     }
 
+    // Handle verified_by list items - supports both string and object formats
     if (inVerifiedBy) {
       const listItem = line.match(/^ {6}- \s*(.+)$/);
       if (listItem) {
         let v = listItem[1].split('#')[0].trim().replace(/^['"]|['"]$/g, '');
-        if (v) currentCap.verified_by.push(v);
+        if (v) {
+          // Check if it's an object format starting with type:
+          if (v.startsWith('type:')) {
+            // Inline object format: type: X, ref: Y, ...
+            const obj = {};
+            const parts = v.split(',').map(p => p.trim());
+            for (const part of parts) {
+              const kvMatch = part.match(/^(\w+):\s*(.+)$/);
+              if (kvMatch) {
+                obj[kvMatch[1].trim()] = kvMatch[2].trim().replace(/^['"]|['"]$/g, '');
+              }
+            }
+            if (obj.type && !EVIDENCE_TYPES.includes(obj.type)) {
+              warnings.push(`Unknown evidence type '${obj.type}' in capability '${currentCap.id}'`);
+            }
+            currentCap.verified_by.push(obj);
+            currentCap._vbObjMode = true;  // Flag for multi-line object parsing
+          } else {
+            // Backward compatible: plain string
+            currentCap.verified_by.push({ type: 'unknown', ref: v });
+            currentCap._vbObjMode = false;
+          }
+        }
         continue;
-      } else {
-        inVerifiedBy = false;
       }
+      
+      // Handle multi-line object fields (indented 8 spaces under verified_by item)
+      const objFieldMatch = line.match(/^ {8}(\w+):\s*(.*)$/);
+      if (objFieldMatch && currentCap._vbObjMode && currentCap.verified_by.length > 0) {
+        const key = objFieldMatch[1];
+        let val = objFieldMatch[2].trim();
+        val = val.split('#')[0].trim();
+        if (val.startsWith('#')) val = '';
+        if (val !== '') {
+          val = val.replace(/^['"]|['"]$/g, '');
+          // Add to last verified_by entry
+          const lastEntry = currentCap.verified_by[currentCap.verified_by.length - 1];
+          if (lastEntry && typeof lastEntry === 'object') {
+            lastEntry[key] = val;
+          }
+        }
+        continue;
+      }
+      
+      if (!objFieldMatch) {
+        currentCap._vbObjMode = false;
+      }
+      
+      inVerifiedBy = false;
     }
   }
   return result;
@@ -225,6 +272,11 @@ function argValue(flag) {
 
 const STATUS_VALUES = ['active', 'deprecated', 'retired', 'draft'];
 
+const EVIDENCE_TYPES = [
+  'unit_test', 'integration_test', 'bdd_feature', 'contract_test',
+  'mutation_test', 'e2e_test', 'static_analysis', 'manual_review', 'audit'
+];
+
 function main() {
   const repoRoot = process.cwd();
   const capsArg = argValue('--caps');
@@ -250,6 +302,37 @@ function main() {
       const ls = lifecycleState.trim().toLowerCase();
       if (!STATUS_VALUES.includes(ls)) {
         warnings.push(`Invalid lifecycle_state '${lifecycleState}' for capability '${cap.id || 'unknown'}'`);
+      }
+    }
+    // Validate verified_by entries
+    const verifiedBy = cap.verified_by;
+    if (Array.isArray(verifiedBy)) {
+      for (let v = 0; v < verifiedBy.length; v++) {
+        const entry = verifiedBy[v];
+        if (entry && typeof entry === 'object') {
+          if (entry.type && !EVIDENCE_TYPES.includes(entry.type)) {
+            warnings.push(`Capability '${cap.id}' verified_by[${v}]: unknown evidence type '${entry.type}'`);
+          }
+          // Validate quality fields if present
+          if (entry.coverage !== undefined) {
+            const cov = parseInt(entry.coverage, 10);
+            if (isNaN(cov) || cov < 0 || cov > 100) {
+              warnings.push(`Capability '${cap.id}' verified_by[${v}]: coverage must be 0-100`);
+            }
+          }
+          if (entry.mutation_score !== undefined) {
+            const ms = parseInt(entry.mutation_score, 10);
+            if (isNaN(ms) || ms < 0 || ms > 100) {
+              warnings.push(`Capability '${cap.id}' verified_by[${v}]: mutation_score must be 0-100`);
+            }
+          }
+          if (entry.flakiness !== undefined) {
+            const fl = parseFloat(entry.flakiness);
+            if (isNaN(fl) || fl < 0 || fl > 1) {
+              warnings.push(`Capability '${cap.id}' verified_by[${v}]: flakiness must be 0-1`);
+            }
+          }
+        }
       }
     }
   }
@@ -524,8 +607,10 @@ function main() {
   
   const referencedFeaturePaths = [];
   for (let k = 0; k < verifiedByRefs.length; k++) {
-    const ref = verifiedByRefs[k];
-    if (ref.endsWith('.feature') || ref.startsWith('features/')) {
+    const entry = verifiedByRefs[k];
+    // Handle both string (legacy) and object formats
+    const ref = (entry && typeof entry === 'object' && entry.ref) ? entry.ref : entry;
+    if (ref && (ref.endsWith('.feature') || ref.startsWith('features/'))) {
       referencedFeaturePaths.push(ref);
     }
   }
@@ -566,6 +651,14 @@ function main() {
     }
     const vb = Array.isArray(cap.verified_by) ? cap.verified_by : [];
 
+    // Helper to extract reference string from verified_by entry
+    const getRefString = (entry) => {
+      if (!entry) return '';
+      if (typeof entry === 'string') return entry;
+      if (entry.ref) return entry.ref;
+      return JSON.stringify(entry);
+    };
+
     if (vb.length === 0) {
       if (status !== 'retired') {
         errors.push(`Active capability '${cap.id}' has empty verified_by`);
@@ -573,7 +666,7 @@ function main() {
       continue;
     }
     for (let m = 0; m < vb.length; m++) {
-      const ref = vb[m];
+      const ref = getRefString(vb[m]);
       let exists = false;
       for (let n = 0; n < featureFiles.length; n++) {
         const featureFile = featureFiles[n];
@@ -609,7 +702,7 @@ function main() {
     const verifyPathsExist = (repoRoot, paths, type) => {
       const missing = [];
       for (let p = 0; p < paths.length; p++) {
-        const pth = paths[p];
+        const pth = getRefString(paths[p]);
         let found = false;
         if (type === 'feature') {
           for (let f = 0; f < featureFiles.length; f++) {
@@ -636,7 +729,10 @@ function main() {
     };
     
     const missingFeatures = verifyPathsExist(repoRoot, referencedFeaturePaths, 'feature');
-    const testRefs = vb.filter(ref => !ref.endsWith('.feature') && !ref.startsWith('features/'));
+    const testRefs = vb.filter(entry => {
+      const r = getRefString(entry);
+      return !r.endsWith('.feature') && !r.startsWith('features/');
+    });
     const missingTests = verifyPathsExist(repoRoot, testRefs, 'test');
     
     for (let k = 0; k < missingFeatures.length; k++) {

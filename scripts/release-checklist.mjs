@@ -60,14 +60,61 @@ function loadCapabilities() {
     if (vb) { current._inVb = true; continue; }
     const field = trimmed.match(/^([A-Za-z_][\w]*):\s*(.*)$/);
     if (field) {
-      current._inVb = false;
+      // Check if this is a new top-level field (4 spaces indent, same as verified_by)
+      // If so, exit verified_by mode
+      const isTopLevelField = line.startsWith('    ') && !line.startsWith('      ');
+      if (isTopLevelField || !current._vbObjMode) {
+        current._inVb = false;
+      }
       const key = field[1];
       const val = field[2].replace(/^['"]|['"]$/g, '').replace(/\s*#.*$/, '').trim();
       if (key === 'owner') current.owner = val;
       if (key === 'status') current.status = val;
     }
     if (current._inVb && trimmed.startsWith('-')) {
-      current.verifiedBy.push(trimmed.replace(/^-/, '').replace(/^['"]|['"]$/g, '').replace(/\s*#.*$/, '').trim());
+      const item = trimmed.replace(/^-/, '').trim();
+      // Check if it's an object format (starts with type:)
+      if (item.startsWith('type:')) {
+        // Parse inline object: type: X, ref: Y, ...
+        const obj = {};
+        const parts = item.split(',').map(p => p.trim());
+        for (const part of parts) {
+          const kvMatch = part.match(/^(\w+):\s*(.+)$/);
+          if (kvMatch) {
+            obj[kvMatch[1].trim()] = kvMatch[2].trim().replace(/^['"]|['"]$/g, '');
+          }
+        }
+        current.verifiedBy.push(obj);
+        current._vbObjMode = true;
+      } else {
+        // Legacy string format
+        current.verifiedBy.push({ type: 'unknown', ref: item.replace(/^['"]|['"]$/g, '').replace(/\s*#.*$/, '').trim() });
+        current._vbObjMode = false;
+      }
+      continue;
+    }
+    // Handle multi-line object fields (indented under verified_by item - 6+ spaces for object fields)
+    // Debug removed
+    if (current._vbObjMode && current._inVb && line.startsWith('      ') && !trimmed.startsWith('-')) {
+      // Debug removed
+      const fieldMatch = line.match(/^\s*(\w+):\s*(.*)$/);
+      if (fieldMatch && current.verifiedBy.length > 0) {
+        const key = fieldMatch[1];
+        let val = fieldMatch[2].replace(/^['"]|['"]$/g, '').replace(/\s*#.*$/, '').trim();
+        if (val) {
+          const lastEntry = current.verifiedBy[current.verifiedBy.length - 1];
+          if (lastEntry && typeof lastEntry === 'object') {
+            lastEntry[key] = val;
+            // Debug removed
+          }
+        }
+      }
+      continue;
+    }
+    // Exit object mode when we hit a non-indented line or new list item
+    if (current._vbObjMode && (!line.startsWith('      ') || trimmed.startsWith('-'))) {
+      // Debug removed
+      current._vbObjMode = false;
     }
   }
   return caps;
@@ -155,6 +202,13 @@ function main() {
   const branch = git('git rev-parse --abbrev-ref HEAD') || 'unknown';
 
   const capabilities = loadCapabilities();
+  // Debug removed
+  capabilities.forEach(c => {
+    console.debug('  Capability:', c.id);
+    c.verifiedBy.forEach((entry, i) => {
+      console.debug('    Entry', i, ':', typeof entry, JSON.stringify(entry));
+    });
+  });
   const requirements = loadRequirements();
   const scenarios = loadFeatures();
 
@@ -260,16 +314,20 @@ function main() {
 
   let missingRefs = [];
   for (const cap of capabilities) {
-    for (const ref of cap.verifiedBy) {
+    for (const entry of cap.verifiedBy) {
+      // Handle both string (legacy) and object formats
+      const ref = (entry && typeof entry === 'object' && entry.ref) ? entry.ref : entry;
+      if (!ref) continue;
       const cleanRef = ref.replace(/^['"]|['"]$/g, '');
       const directPath = join(ROOT, cleanRef);
       if (existsSync(directPath)) continue;
       // Try matching Java class name to test file
       const className = cleanRef.split('.').pop();
-      const found = testFiles.some(tf => tf.endsWith(`/${className}.java`) || tf.endsWith(`\\${className}.java`));
+      const found = testFiles.some(tf => tf.endsWith(`/${className}.java`) || tf.endsWith(`\${className}.java`));
       if (!found) missingRefs.push(`${cap.id}: ${cleanRef}`);
     }
   }
+
   const check6 = missingRefs.length === 0;
   addCheck('All verified_by references resolve', check6,
     check6 ? 'All capability references exist on disk'
