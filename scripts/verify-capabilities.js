@@ -277,6 +277,28 @@ const EVIDENCE_TYPES = [
   'mutation_test', 'e2e_test', 'static_analysis', 'manual_review', 'audit'
 ];
 
+// Lifecycle state machine: valid transitions from -> to
+const LIFECYCLE_TRANSITIONS = {
+  'draft': ['active'],
+  'active': ['deprecated', 'retired'],
+  'deprecated': ['retired', 'active'],  // Can reactivate
+  'retired': []  // Terminal state
+};
+
+// Health thresholds
+const HEALTH_THRESHOLDS = {
+  draft_to_active: 70,      // Minimum health to transition draft->active
+  active_deprecated: 50,    // Health below this triggers active->deprecated
+  deprecated_retired: 30,   // Health below this triggers deprecated->retired
+  warning: 60,              // Health warning threshold
+  critical: 40              // Health critical threshold
+};
+
+const TRANSITION_TIME_WINDOWS = {
+  active_to_deprecated_days: 30,    // Days below threshold before active->deprecated
+  deprecated_to_retired_days: 60    // Days below threshold before deprecated->retired
+};
+
 function main() {
   const repoRoot = process.cwd();
   const capsArg = argValue('--caps');
@@ -573,7 +595,196 @@ function main() {
     return depErrors.length === 0;
   };
 
-;
+  // 5) Validate lifecycle transitions
+  const validateLifecycleTransitions = () => {
+    const transitionErrors = [];
+    const caps = data.capabilities || [];
+    
+    for (let k = 0; k < caps.length; k++) {
+      const cap = caps[k];
+      const currentState = (cap.lifecycle_state || 'active').trim().toLowerCase();
+      const previousState = (cap.previous_lifecycle_state || '').trim().toLowerCase();
+      
+      if (previousState && LIFECYCLE_TRANSITIONS[previousState]) {
+        const validTargets = LIFECYCLE_TRANSITIONS[previousState];
+        if (!validTargets.includes(currentState)) {
+          transitionErrors.push(`Capability '${cap.id}': invalid lifecycle transition from '${previousState}' to '${currentState}' (valid: ${validTargets.join(', ')})`);
+        }
+      }
+      
+      // Validate current state is known
+      if (!LIFECYCLE_TRANSITIONS[currentState] && currentState !== 'retired') {
+        warnings.push(`Capability '${cap.id}': unknown lifecycle_state '${currentState}'`);
+      }
+    }
+    
+    if (transitionErrors.length > 0) {
+      errors.push(`Lifecycle transition validation failed: ${transitionErrors.join('; ')}`);
+    }
+    
+    return transitionErrors.length === 0;
+  };
+
+  // 6) Validate health metrics
+  const validateHealthMetrics = () => {
+    const healthErrors = [];
+    const healthWarnings = [];
+    const caps = data.capabilities || [];
+    
+    for (let k = 0; k < caps.length; k++) {
+      const cap = caps[k];
+      const healthScore = computeHealthScore(cap);
+      
+      if (healthScore !== null) {
+        if (healthScore < HEALTH_THRESHOLDS.critical) {
+          healthErrors.push(`Capability '${cap.id}': health score ${healthScore} is below critical threshold (${HEALTH_THRESHOLDS.critical})`);
+        } else if (healthScore < HEALTH_THRESHOLDS.warning) {
+          healthWarnings.push(`Capability '${cap.id}': health score ${healthScore} is below warning threshold (${HEALTH_THRESHOLDS.warning})`);
+        }
+      }
+    }
+    
+    for (const w of healthWarnings) {
+      warnings.push(w);
+    }
+    for (const e of healthErrors) {
+      errors.push(e);
+    }
+    
+    return healthErrors.length === 0;
+  };
+
+  // 7) Validate lifecycle transition rules (advisory)
+  const validateLifecycleRules = () => {
+    const ruleWarnings = [];
+    const caps = data.capabilities || [];
+    
+    for (let k = 0; k < caps.length; k++) {
+      const cap = caps[k];
+      const currentState = (cap.lifecycle_state || 'active').trim().toLowerCase();
+      const healthScore = computeHealthScore(cap);
+      const daysInState = computeDaysInState(cap);
+      
+      if (healthScore === null || daysInState === null) continue;
+      
+      // Rule: draft -> active requires health >= 70 and at least 2 verified_by entries
+      if (currentState === 'draft') {
+        const verifiedCount = Array.isArray(cap.verified_by) ? cap.verified_by.length : 0;
+        if (healthScore >= HEALTH_THRESHOLDS.draft_to_active && verifiedCount >= 2) {
+          ruleWarnings.push(`Capability '${cap.id}': draft capability meets criteria for activation (health: ${healthScore}, verified_by: ${Array.isArray(cap.verified_by) ? cap.verified_by.length : 0})`);
+        }
+      }
+      
+      // Rule: active -> deprecated after 30 days below health 50
+      if (currentState === 'active' && healthScore < HEALTH_THRESHOLDS.active_deprecated) {
+        if (daysInState >= TRANSITION_TIME_WINDOWS.active_to_deprecated_days) {
+          ruleWarnings.push(`Capability '${cap.id}': active capability health (${healthScore}) below ${HEALTH_THRESHOLDS.active_deprecated} for ${daysInState} days - consider deprecation`);
+        }
+      }
+      
+      // Rule: deprecated -> retired after 60 days below health 30
+      if (currentState === 'deprecated' && healthScore < HEALTH_THRESHOLDS.deprecated_retired) {
+        if (daysInState >= TRANSITION_TIME_WINDOWS.deprecated_to_retired_days) {
+          ruleWarnings.push(`Capability '${cap.id}': deprecated capability health (${healthScore}) below ${HEALTH_THRESHOLDS.deprecated_retired} for ${daysInState} days - consider retirement`);
+        }
+      }
+      
+      // Rule: deprecated can be reactivated if health improves
+      if (currentState === 'deprecated' && healthScore >= HEALTH_THRESHOLDS.draft_to_active) {
+        ruleWarnings.push(`Capability '${cap.id}': deprecated capability health (${healthScore}) recovered - consider reactivation to active`);
+      }
+      
+      for (const w of ruleWarnings) {
+        warnings.push(w);
+      }
+    }
+    
+    return true;  // Rules are advisory, never fail
+  };
+
+  // Helper: compute health score from verified_by evidence
+  function computeHealthScore(cap) {
+    const vb = Array.isArray(cap.verified_by) ? cap.verified_by : [];
+    if (vb.length === 0) return null;
+    
+    let coverageSum = 0, mutationSum = 0, flakinessSum = 0, coverageCount = 0, mutationCount = 0, flakinessCount = 0;
+    let latestRun = null;
+    
+    for (let i = 0; i < vb.length; i++) {
+      const entry = vb[i];
+      if (!entry || typeof entry !== 'object') continue;
+      
+      if (entry.coverage !== undefined) {
+        const cov = parseInt(entry.coverage, 10);
+        if (!isNaN(cov)) { coverageSum += cov; coverageCount++; }
+      }
+      if (entry.mutation_score !== undefined) {
+        const ms = parseInt(entry.mutation_score, 10);
+        if (!isNaN(ms)) { mutationSum += ms; mutationCount++; }
+      }
+      if (entry.flakiness !== undefined) {
+        const fl = parseFloat(entry.flakiness);
+        if (!isNaN(fl)) { flakinessSum += fl; flakinessCount++; }
+      }
+      if (entry.last_run) {
+        const runDate = new Date(entry.last_run);
+        if (!isNaN(runDate.getTime()) && (!latestRun || runDate > latestRun)) {
+          latestRun = runDate;
+        }
+      }
+    }
+    
+    if (coverageCount === 0 && mutationCount === 0) return null;
+    
+    const coverageAvg = coverageCount > 0 ? coverageSum / coverageCount : 50;
+    const mutationAvg = mutationCount > 0 ? mutationSum / mutationCount : 50;
+    const flakinessAvg = flakinessCount > 0 ? flakinessSum / flakinessCount : 0.1;
+    
+    // Staleness factor (0-1, where 1 is fresh)
+    let freshness = 1.0;
+    if (latestRun) {
+      const daysSinceRun = (Date.now() - latestRun.getTime()) / (1000 * 60 * 60 * 24);
+      freshness = Math.max(0, 1 - daysSinceRun / 365);  // Decay over a year
+    }
+    
+    // Weighted health score: coverage 40%, mutation 30%, (1-flakiness) 20%, freshness 10%
+    const healthScore = Math.round(
+      coverageAvg * 0.4 + 
+      mutationAvg * 0.3 + 
+      (1 - flakinessAvg) * 100 * 0.2 + 
+      freshness * 100 * 0.1
+    );
+    
+    return Math.max(0, Math.min(100, healthScore));
+  }
+
+  // Helper: compute days in current lifecycle state
+  function computeDaysInState(cap) {
+    if (cap.lifecycle_state_changed) {
+      const changeDate = new Date(cap.lifecycle_state_changed);
+      if (!isNaN(changeDate.getTime())) {
+        return Math.floor((Date.now() - changeDate.getTime()) / (1000 * 60 * 60 * 24));
+      }
+    }
+    // Fallback: use oldest verified_by last_run or git commit date
+    const vb = Array.isArray(cap.verified_by) ? cap.verified_by : [];
+    let oldestRun = null;
+    for (let i = 0; i < vb.length; i++) {
+      const entry = vb[i];
+      if (entry && entry.last_run) {
+        const runDate = new Date(entry.last_run);
+        if (!isNaN(runDate.getTime()) && (!oldestRun || runDate < oldestRun)) {
+          oldestRun = runDate;
+        }
+      }
+    }
+    if (oldestRun) {
+      return Math.floor((Date.now() - oldestRun.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    return null;
+  }
+
+  ;
 
   // Run the new validations
   if (!validateLaneValues()) {
@@ -588,6 +799,21 @@ function main() {
   
   // 4) Validate dependencies
   if (!validateDependencies()) {
+    // Already added error above
+  }
+
+  // 5) Validate lifecycle transitions
+  if (!validateLifecycleTransitions()) {
+    // Already added error above
+  }
+
+  // 6) Validate health metrics
+  if (!validateHealthMetrics()) {
+    // Already added error above
+  }
+
+  // 7) Validate lifecycle rules (advisory)
+  if (!validateLifecycleRules()) {
     // Already added error above
   }
 
