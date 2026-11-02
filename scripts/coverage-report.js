@@ -704,7 +704,9 @@ function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatched
         const covered = scenarios.filter(s => s.scenarioData.tests.length > 0).length;
         const total = scenarios.length;
         const percentage = total > 0 ? Math.round((covered / total) * 100) : 0;
-        return `<button class="capability-tab" data-tab="${capability}" role="tab" onclick="showTab('${capability}')" ${capability === sortedCapabilities[0][0] ? 'class="capability-tab active"' : ''}>${escapeHtml(displayName)} <span style="opacity:0.7;">(${covered}/${total})</span></button>`;
+        const isActive = capability === sortedCapabilities[0][0];
+        const tabClass = `capability-tab${isActive ? ' active' : ''}`;
+        return `<button class="${tabClass}" data-tab="${capability}" role="tab" onclick="showTab('${capability}')">${escapeHtml(displayName)} <span style="opacity:0.7;">(${covered}/${total})</span></button>`;
       }).join('')}
     </div>
     
