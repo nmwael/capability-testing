@@ -1,63 +1,595 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ page.title | default: site.title }} — Capability Contract</title>
-<style>
-body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;padding:0;color:#1b1f23;line-height:1.5}
-.topnav{position:sticky;top:0;z-index:100;background:#1b1f23;padding:.6rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem;border-bottom:1px solid #30363d}
-.topnav a{color:#c9d1da;text-decoration:none;padding:.2rem .6rem;border-radius:4px;font-size:.88rem}
-.topnav a:hover,.topnav a:focus{background:#30363d;color:#fff}
-.topnav a.active{background:#238636;color:#fff}
-.topnav .nav-spacer{flex:1}
-main{max-width:72rem;padding:1.5rem}
-h1{margin:.5rem 0 .5rem 0;font-size:1.75rem}
-h2{margin:1.5rem 0 .75rem 0;font-size:1.35rem;border-bottom:1px solid #e1e4e8;padding-bottom:.3rem}
-h3{margin:1rem 0 .5rem 0;font-size:1.1rem}
-p{margin:.75rem 0}
-.meta{color:#57606a;font-size:.9rem;margin-top:0}
-a{color:#0969da;text-decoration:none}
-a:hover{text-decoration:underline}
-.summary{display:flex;gap:1.5rem;margin:1.5rem 0;flex-wrap:wrap}
-.summary div{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:.75rem 1rem;min-width:120px}
-.summary strong{display:block;font-size:1.4rem}
-table{width:100%;border-collapse:collapse;margin:1rem 0}
-caption{text-align:left;font-weight:600;padding:.5rem 0;font-size:1.1rem;color:#0969da}
-th,td{border:1px solid #d0d7de;padding:.4rem .6rem;text-align:left;vertical-align:top;font-size:.92rem}
-th{background:#f6f8fa}
-code{background:#f6f8fa;padding:.1rem .3rem;border-radius:3px;font-size:.88em}
-.pass{color:#116329;font-weight:600}
-.failure{color:#b42318;font-weight:600}
-.skipped{color:#9a6700;font-weight:600}
-.none{color:#b42318;font-style:italic}
-.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}
-.card{border:1px solid #d0d7de;border-radius:6px;padding:1rem;margin:1rem 0;background:#fff}
-.card h2{margin-top:0;font-size:1.2rem}
-.card h2 a{color:#0969da;text-decoration:none}
-.card h2 a:hover{text-decoration:underline}
-.card .meta{font-size:.85rem}
-.card p{margin:.5rem 0}
-footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #e1e4e8;color:#57606a;font-size:.85rem}
-.github-link{color:#57606a;font-size:.75rem;text-decoration:none;margin-left:.5rem}
-.github-link:hover{color:#0969da;text-decoration:underline}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title | default: site.title }} — Capability Contract</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary: #3f51b5;
+      --color-primary-hover: #303f9f;
+      --color-success: #4caf50;
+      --color-warning: #ff9800;
+      --color-error: #f44336;
+      --color-bg: #fafafa;
+      --color-surface: #ffffff;
+      --color-text: #1b1f23;
+      --color-text-secondary: #57606a;
+      --color-border: #d0d7de;
+      --color-border-light: #e1e4e8;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans);
+      margin: 0;
+      padding: 0;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      font-size: 1rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Header/Navigation */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .topnav a {
+      color: var(--color-primary);
+      text-decoration: none;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .topnav a:hover,
+    .topnav a:focus {
+      background: var(--color-primary);
+      color: white;
+      text-decoration: none;
+    }
+
+    .topnav a.active {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .nav-spacer {
+      flex: 1;
+    }
+
+    .github-link {
+      color: var(--color-text-secondary);
+      font-size: 0.75rem;
+      text-decoration: none;
+      margin-left: var(--spacing-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .github-link:hover {
+      color: var(--color-primary);
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--color-primary);
+      color: white;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.15s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .back-link:hover {
+      background: var(--color-primary-hover);
+      color: white;
+      text-decoration: none;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Main content */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--spacing-xl) var(--spacing-lg);
+    }
+
+    /* Summary Dashboard */
+    .summary-dashboard {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--spacing-xl);
+      box-shadow: var(--shadow-md);
+    }
+
+    .summary-dashboard h2 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.15);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+
+    /* Search Box */
+    .search-box {
+      margin-bottom: var(--spacing-xl);
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: var(--color-surface);
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.2);
+    }
+
+    /* Capability Tabs */
+    .capability-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: var(--spacing-xl);
+      flex-wrap: wrap;
+      border-bottom: 2px solid var(--color-border);
+      padding-bottom: 8px;
+    }
+
+    .capability-tab {
+      padding: 10px 20px;
+      background: #f5f5f5;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .capability-tab:hover {
+      background: #e8eaf6;
+      color: #3f51b5;
+    }
+
+    .capability-tab.active {
+      background: #3f51b5;
+      color: white;
+    }
+
+    .capability-tab:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    /* Capability Panels */
+    .capability-panel {
+      display: none;
+    }
+
+    .capability-panel.active {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Capability Cards */
+    .capability-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-md);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+    }
+
+    .capability-header {
+      padding: var(--spacing-md) var(--spacing-lg);
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .capability-stats {
+      display: flex;
+      gap: var(--spacing-lg);
+      flex-wrap: wrap;
+      margin-top: var(--spacing-sm);
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+    }
+
+    .capability-stats .stat {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+    }
+
+    .capability-stats strong {
+      color: var(--color-text);
+    }
+
+    /* Scenario List */
+    .scenario-list {
+      padding: 0 var(--spacing-lg) var(--spacing-lg);
+    }
+
+    .scenario-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 200px 120px 100px 100px;
+      gap: var(--spacing-md);
+      align-items: center;
+      padding: var(--spacing-sm) 0;
+      border-bottom: 1px solid var(--color-border-light);
+      font-size: 0.85rem;
+    }
+
+    .scenario-row:last-child {
+      border-bottom: none;
+    }
+
+    .scenario-row.uncovered {
+      background: #fff8f0;
+    }
+
+    .scenario-id {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+    }
+
+    .scenario-name {
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .scenario-reqs {
+      font-size: 0.75rem;
+      color: var(--color-error);
+      font-family: var(--font-mono);
+    }
+
+    .scenario-tests {
+      color: var(--color-primary);
+      font-weight: 500;
+    }
+
+    .scenario-coverage {
+      font-family: var(--font-mono);
+      color: var(--color-text-secondary);
+    }
+
+    .scenario-status {
+      font-weight: 500;
+    }
+
+    .scenario-status.covered {
+      color: var(--color-success);
+    }
+
+    .scenario-status.uncovered {
+      color: var(--color-warning);
+    }
+
+    /* Sections */
+    .section {
+      margin-top: var(--spacing-xl);
+    }
+
+    .section h2 {
+      font-size: 1.25rem;
+      color: var(--color-text);
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-sm);
+      border-bottom: 2px solid var(--color-border);
+    }
+
+    /* Unmatched Lists */
+    .unmatched-list,
+    .orphan-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .uncovered-item,
+    .orphan-item {
+      background: #fff8e1;
+      border-left: 4px solid var(--color-warning);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-sm);
+    }
+
+    .uncovered-item h3,
+    .orphan-item h3 {
+      margin: 0 0 var(--spacing-sm) 0;
+      color: var(--color-warning);
+    }
+
+    .reqs {
+      font-size: 0.85rem;
+      color: var(--color-error);
+      font-family: var(--font-mono);
+    }
+
+    /* Test Entries */
+    .test-entry {
+      background: #f5f5f5;
+      border-radius: 6px;
+      padding: var(--spacing-md);
+      margin: var(--spacing-sm) 0;
+    }
+
+    .test-name {
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .test-scenario {
+      color: #1565c0;
+      font-size: 0.85rem;
+    }
+
+    .test-file {
+      color: #666;
+      font-size: 0.8rem;
+    }
+
+    .test-req {
+      color: #d32f2f;
+      font-size: 0.8rem;
+    }
+
+    .coverage {
+      color: #2e7d32;
+      font-weight: 600;
+    }
+
+    .missing {
+      color: #ef5350;
+      font-weight: 600;
+    }
+
+    /* Summary */
+    .summary {
+      background: #e3f2fd;
+      padding: var(--spacing-lg);
+      margin: var(--spacing-xl) 0;
+      border-radius: var(--radius-md);
+      border-left: 4px solid #1976d2;
+    }
+
+    .summary h2 {
+      margin: 0 0 var(--spacing-md) 0;
+    }
+
+    .summary-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-lg);
+    }
+
+    .summary-stats span {
+      font-weight: 600;
+      color: #1565c0;
+    }
+
+    /* Uncovered/Orphan */
+    .uncovered {
+      background: #fff3e0;
+      border-left: 4px solid var(--color-warning);
+      padding: var(--spacing-md);
+      margin: var(--spacing-lg) 0;
+      border-radius: var(--radius-sm);
+    }
+
+    .uncovered h2,
+    .uncovered h3 {
+      margin: 0 0 var(--spacing-sm) 0;
+      color: var(--color-warning);
+    }
+
+    .no-tests {
+      background: #fff3e0;
+      border-left: 4px solid var(--color-warning);
+      padding: var(--spacing-md);
+      margin: var(--spacing-md) 0;
+      border-radius: var(--radius-sm);
+    }
+
+    .no-tests h3 {
+      margin: 0 0 var(--spacing-sm) 0;
+      color: var(--color-warning);
+    }
+
+    .orphan {
+      background: #e8f5e9;
+      border-left: 4px solid var(--color-success);
+      padding: var(--spacing-md);
+      margin: var(--spacing-md) 0;
+      border-radius: var(--radius-sm);
+    }
+
+    .orphan h3 {
+      margin: 0 0 var(--spacing-sm) 0;
+      color: var(--color-success);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--color-border-light);
+      text-align: center;
+      color: var(--color-text-secondary);
+      font-size: 0.85rem;
+    }
+
+    /* Hidden utility */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .scenario-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+      }
+
+      .scenario-id,
+      .scenario-reqs,
+      .scenario-tests,
+      .scenario-coverage,
+      .scenario-status {
+        display: none;
+      }
+
+      .capability-stats {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+      }
+
+      .header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: flex-start;
+      }
+
+      .topnav {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: flex-start;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      .topnav,
+      .search-box,
+      .capability-tabs,
+      .back-link {
+        display: none !important;
+      }
+
+      .capability-panel {
+        display: block !important;
+      }
+
+      body {
+        background: white;
+      }
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+    }
+  </style>
 </head>
 <body>
-<nav class="topnav">
-  <a href="{{ site.baseurl }}/">Home</a>
-  <a href="{{ site.baseurl }}/capabilities">Capabilities</a>
-  <a href="{{ site.baseurl }}/reports">CI &amp; Reports</a>
-  <a href="{{ site.baseurl }}/governance">Governance</a>
-  <a href="{{ site.baseurl }}/coverage/">Coverage</a>
-  <span class="nav-spacer"></span>
-  <a href="https://github.com/nmwael/capability-testing" class="github-link" target="_blank" rel="noopener">GitHub repo ↗</a>
-</nav>
-<main>
-{{ content }}
-</main>
-<footer>
-Generated from <a href="https://github.com/nmwael/capability-testing/blob/main/docs/{{ page.path }}">source</a> &middot; <a href="{{ site.baseurl }}/coverage/">View capability coverage report</a>
-</footer>
+  <nav class="topnav">
+    <a href="{{ site.baseurl }}/">Home</a>
+    <a href="{{ site.baseurl }}/capabilities">Capabilities</a>
+    <a href="{{ site.baseurl }}/reports">CI & Reports</a>
+    <a href="{{ site.baseurl }}/governance">Governance</a>
+    <a href="{{ site.baseurl }}/coverage/">Coverage</a>
+    <span class="nav-spacer"></span>
+    <a href="https://github.com/nmwael/capability-testing" class="github-link" target="_blank" rel="noopener">GitHub repo ↗</a>
+  </nav>
+  <main>
+    {{ content }}
+  </main>
+  <footer>
+    Generated from <a href="https://github.com/nmwael/capability-testing/blob/main/docs/{{ page.path }}">source</a> &middot; <a href="{{ site.baseurl }}/coverage/">View capability coverage report</a>
+  </footer>
 </body>
 </html>
