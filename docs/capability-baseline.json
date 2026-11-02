@@ -1,0 +1,51 @@
+{
+  "alert.publish": {
+    "health": 91,
+    "lifecycle_state": "active",
+    "verified_by_count": 2,
+    "coverage": "95",
+    "mutation_score": "85"
+  },
+  "alert.route": {
+    "health": 86,
+    "lifecycle_state": "active",
+    "verified_by_count": 2,
+    "coverage": "90",
+    "mutation_score": "75"
+  },
+  "alert.rule-design": {
+    "health": 87,
+    "lifecycle_state": "active",
+    "verified_by_count": 4,
+    "coverage": "88",
+    "mutation_score": "80"
+  },
+  "alert.rule-edit": {
+    "health": null,
+    "lifecycle_state": "active",
+    "verified_by_count": 2,
+    "coverage": null,
+    "mutation_score": null
+  },
+  "alert.flow": {
+    "health": null,
+    "lifecycle_state": "active",
+    "verified_by_count": 2,
+    "coverage": null,
+    "mutation_score": null
+  },
+  "alert.cap-fields": {
+    "health": null,
+    "lifecycle_state": "active",
+    "verified_by_count": 1,
+    "coverage": null,
+    "mutation_score": null
+  },
+  "docs.onboarding": {
+    "health": null,
+    "lifecycle_state": "draft",
+    "verified_by_count": 1,
+    "coverage": null,
+    "mutation_score": null
+  }
+}
