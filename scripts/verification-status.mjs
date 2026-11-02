@@ -118,6 +118,14 @@ function parseCapabilitiesYaml(text) {
         current._inVb = false;
       }
     }
+    
+    // Handle lanes array
+    const lanesMatch = trimmed.match(/^ {4}lanes:\s*\[(.+)\]$/);
+    if (lanesMatch) {
+      const lanesStr = lanesMatch[1];
+      current.lanes = lanesStr.split(',').map(l => l.trim().replace(/^['"]|['"]$/g, ''));
+      continue;
+    }
   }
 
   if (current && current.id) {

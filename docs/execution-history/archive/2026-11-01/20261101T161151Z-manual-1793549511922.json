@@ -1,0 +1,49 @@
+{
+  "executionId": "20261101T161151Z-manual-1793549511922",
+  "commitSha": "94fa2a293fe2dfb6d541439c86d2b4e57ba06269",
+  "branch": "main",
+  "buildId": "manual-1793549511922",
+  "timestamp": "2026-11-01T16:11:51.922Z",
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "linux",
+    "arch": "x64",
+    "ci": "false",
+    "githubActions": "false",
+    "cwd": "/workspaces/capability-testing"
+  },
+  "results": [
+    {
+      "name": "testOne",
+      "classname": "com.example.TestA",
+      "time": 0.1,
+      "failures": 0,
+      "status": "passed",
+      "capabilities": [
+        "alert.publish"
+      ],
+      "scenarioIds": []
+    },
+    {
+      "name": "testTwo",
+      "classname": "com.example.TestA",
+      "time": 0.2,
+      "failures": 1,
+      "status": "failed",
+      "capabilities": [
+        "alert.publish"
+      ],
+      "scenarioIds": []
+    }
+  ],
+  "source": "/workspaces/capability-testing/wip/test-fixtures/execution-history/sample.xml",
+  "capabilities": [
+    "alert.publish"
+  ],
+  "scenarioIds": [],
+  "summary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1
+  }
+}
