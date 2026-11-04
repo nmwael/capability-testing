@@ -1,0 +1,54 @@
+# Wave Tracking
+
+This template creates a tracking issue for a wave of related work items.
+
+## Usage
+
+Create one tracking issue per wave using this template. The tracking issue links to all child issues in the wave and shows completion status.
+
+---
+
+## Template Fields
+
+- **Wave Number**: 1, 2, or 3
+- **Wave Theme**: Data Integrity / Documentation Sync / Coverage Enhancements
+- **Child Issues**: List of issue numbers in this wave
+- **Target Milestone**: Wave completion target
+- **Acceptance Criteria**: All child issues have reviewer status "done"
+
+---
+
+## Example Body
+
+```markdown
+## Wave 1: Data Integrity Fixes
+
+**Theme**: Fix data consistency bugs in the tracker and scripts
+
+**Child Issues**:
+- #280 - Fix REQ-PUB-002 github_issue value (alert.rule-design)
+- #281 - Propagate reqIssueMap to all capability coverage pages (alert.publish)
+- #282 - Update gh-lib.test.mjs expectations (7 capabilities) (alert.publish)
+
+**Target Milestone**: Wave 1 Completion
+
+**Acceptance Criteria**:
+- [ ] All 3 child issues have reviewer status "done"
+- [ ] `node scripts/verify-traceability.mjs --check-github` passes
+- [ ] `node scripts/gh-lib.test.mjs` passes
+- [ ] No stale data in requirements.yml or capabilities.yml
+
+**Progress**:
+- [ ] #280 - Reviewer done
+- [ ] #281 - Reviewer done
+- [ ] #282 - Reviewer done
+```
+
+---
+
+## Automation
+
+The `.github/workflows/wave-plan.yml` workflow validates wave completion by checking:
+- All child issues in the wave have reviewer status "done"
+- All verification commands pass
+- No new blocking issues introduced

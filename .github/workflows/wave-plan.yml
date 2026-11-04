@@ -1,0 +1,171 @@
+name: Wave Plan Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  wave-validation:
+    name: Wave Plan Validation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify traceability (offline)
+        run: node scripts/verify-traceability.mjs
+
+      - name: Verify traceability (with GitHub)
+        if: github.event_name != 'pull_request'
+        run: node scripts/verify-traceability.mjs --check-github
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run gh-lib tests
+        run: node scripts/gh-lib.test.mjs
+
+      - name: Run capability verification
+        run: node scripts/verify-capabilities.js
+
+      - name: Check wave completion
+        if: github.event_name != 'pull_request'
+        run: |
+          node -e "
+            const { execSync } = require('child_process');
+            const waves = {
+              'Wave 1': ['280', '281', '282'],
+              'Wave 2': ['279', '283', '285'],
+              'Wave 3': ['284']
+            };
+            for (const [wave, issues] of Object.entries(waves)) {
+              const open = [];
+              for (const issue of issues) {
+                const out = require('child_process').execSync(
+                  \`gh issue view \${issue} --json state --jq '.state'\`,
+                  { encoding: 'utf-8' }
+                ).trim();
+                if (out !== 'CLOSED') open.push(issue);
+              }
+              if (open.length > 0) {
+                console.log(\`WAVE FAIL: \${wave} has open issues: \${open.join(', ')}\`);
+                process.exit(1);
+              }
+            }
+            console.log('All waves complete!');
+          "
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  wave-tracking:
+    name: Update Wave Tracking Issues
+    needs: wave-validation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Wave 1 Tracking
+        run: |
+          gh issue create --repo ${{ github.repository }} \
+            --title "Wave 1: Data Integrity Fixes - Tracking" \
+            --body-file - << 'EOF' || true
+          ## Wave 1: Data Integrity Fixes
+
+          **Theme**: Fix data consistency bugs in the tracker and scripts
+
+          **Child Issues**:
+          - #280 - Fix REQ-PUB-002 github_issue value (alert.rule-design)
+          - #281 - Propagate reqIssueMap to all capability coverage pages (alert.publish)
+          - #282 - Update gh-lib.test.mjs expectations (7 capabilities) (alert.publish)
+
+          **Target Milestone**: Wave 1 Completion
+
+          **Acceptance Criteria**:
+          - [ ] All 3 child issues have reviewer status "done"
+          - [ ] \`node scripts/verify-traceability.mjs --check-github\` passes
+          - [ ] \`node scripts/gh-lib.test.mjs\` passes
+          - [ ] No stale data in requirements.yml or capabilities.yml
+
+          **Progress**:
+          - [ ] #280 - Reviewer done
+          - [ ] #281 - Reviewer done
+          - [ ] #282 - Reviewer done
+          EOF
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update Wave 2 Tracking
+        run: |
+          gh issue create --repo ${{ github.repository }} \
+            --title "Wave 2: Documentation Sync - Tracking" \
+            --body-file - << 'EOF' || true
+          ## Wave 2: Documentation Sync
+
+          **Theme**: Align published documentation with the capability registry
+
+          **Child Issues**:
+          - #279 - Sync capabilities.md with capabilities.yml (generate from YAML) (docs.onboarding)
+          - #283 - Add capability→requirement links on capabilities page (docs.onboarding)
+          - #285 - Update "since" dates to actual creation dates (docs.onboarding)
+
+          **Target Milestone**: Wave 2 Completion
+
+          **Acceptance Criteria**:
+          - [ ] All 3 child issues have reviewer status "done"
+          - [ ] docs/capabilities.md generated from capabilities/capabilities.yml
+          - [ ] Capability page has capability→requirement links
+          - [ ] Since dates reflect actual creation dates
+
+          **Progress**:
+          - [ ] #279 - Reviewer done
+          - [ ] #283 - Reviewer done
+          - [ ] #285 - Reviewer done
+          EOF
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update Wave 3 Tracking
+        run: |
+          gh issue create --repo ${{ github.repository }} \
+            --title "Wave 3: Coverage Enhancements - Tracking" \
+            --body-file - << 'EOF' || true
+          ## Wave 3: Coverage Enhancements
+
+          **Theme**: Improve coverage report accessibility
+
+          **Child Issues**:
+          - #284 - Link frontend vitest HTML report from Pages (alert.frontend)
+
+          **Target Milestone**: Wave 3 Completion
+
+          **Acceptance Criteria**:
+          - [ ] Child issue has reviewer status "done"
+          - [ ] GitHub Pages links to frontend vitest HTML report
+          - [ ] CI publishes vitest report to gh-pages
+
+          **Progress**:
+          - [ ] #284 - Reviewer done
+          EOF
+        env:
+          GH_TOKEN: ${{ github.token }}

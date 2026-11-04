@@ -54,15 +54,31 @@ export function readCapabilities(text) {
 
     const idMatch = line.match(/^\s*-\s+id:\s*(.+)$/)
     if (idMatch) {
-      current = { id: unquote(idMatch[1]), intent: "", owner: "", status: "" }
+      current = { id: unquote(idMatch[1]), intent: "", owner: "", lifecycle_state: "", lifecycle_state_changed: "", since: "", verified_by: [] }
       caps.push(current)
       continue
     }
-    const kv = line.match(/^\s{2,}(intent|owner|lifecycle_state):\s*(.*)$/)
+    const kv = line.match(/^\s{2,}(intent|owner|lifecycle_state|lifecycle_state_changed|since):\s*(.*)$/)
     if (kv && current) {
       const value = unquote(kv[2])
       current[kv[1]] = value
       if (kv[1] === "lifecycle_state") current.status = value
+    }
+    const vbMatch = line.match(/^\s{2,}-\s+type:\s*(.+)$/)
+    if (vbMatch && current) {
+      current.verified_by.push({ type: unquote(vbMatch[1]), ref: "", scenarios: [], coverage: 0, mutation_score: 0, last_run: "" })
+    }
+    const vbKv = line.match(/^\s{4,}(ref|scenarios|coverage|mutation_score|last_run):\s*(.*)$/)
+    if (vbKv && current && current.verified_by.length > 0) {
+      const value = unquote(vbKv[2])
+      const last = current.verified_by[current.verified_by.length - 1]
+      if (vbKv[1] === "scenarios") {
+        last.scenarios = value.replace(/[\[\]"'\s]/g, "").split(",").filter(Boolean)
+      } else if (vbKv[1] === "coverage" || vbKv[1] === "mutation_score") {
+        last[vbKv[1]] = parseInt(value, 10)
+      } else {
+        last[vbKv[1]] = value
+      }
     }
   }
 

@@ -1,0 +1,94 @@
+name: Night Shift Automation
+
+on:
+  schedule:
+    # Runs at 22:00 UTC daily (start of Night Shift window)
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  milestones: write
+
+jobs:
+  night-shift-setup:
+    name: Night Shift Setup
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure capability milestones
+        run: node scripts/gh-ensure-milestones.mjs --update
+
+      - name: Seed requirement labels
+        run: node scripts/gh-seed-req-labels.mjs --update
+
+      - name: Link requirements to GitHub issues
+        run: node scripts/gh-link-requirements.mjs --update
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Post Night Shift start status
+        run: |
+          gh issue create --repo ${{ github.repository }} \
+            --title "Night Shift $(date +%Y-%m-%d) - Start" \
+            --body "Night Shift window started at 22:00 UTC. Automated sync tasks executed." \
+            --label "kind:tracking,role:pipeline" \
+            --milestone "Night Shift" || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  night-shift-reconcile:
+    name: Night Shift Reconciliation
+    runs-on: ubuntu-24.04
+    needs: night-shift-setup
+    if: github.event.schedule == '0 10 * * *' || github.event.workflow_dispatch
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconcile open issues vs git state
+        run: |
+          # This would run at 10:00 UTC (hard stop)
+          # Compare open issues with actual git state
+          # Comment status on partially-done issues
+          # Reopen/annotate any issue that no longer matches reality
+          echo "Night Shift reconciliation at 10:00 UTC - would run reconciliation logic here"
+
+  night-shift-verify:
+    name: Night Shift Verification
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify traceability (Night Shift mode)
+        run: node scripts/verify-traceability.mjs --check-github --night-shift
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run capability verification
+        run: node scripts/verify-capabilities.js
+
+      - name: Run gh-lib tests
+        run: node scripts/gh-lib.test.mjs
