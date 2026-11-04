@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>alert.rule-design — Capability test coverage</title>
+<style>
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;padding:0;color:#1b1f23;line-height:1.5}
+.topnav{position:sticky;top:0;z-index:100;background:#1b1f23;padding:.6rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem}
+.topnav a{color:#c9d1da;text-decoration:none;padding:.2rem .6rem;border-radius:4px;font-size:.88rem}
+.topnav a:hover,.topnav a:focus{background:#30363d;color:#fff}
+.topnav a.active{background:#238636;color:#fff}
+.topnav .cap-link{background:#23863d;color:#fff;padding:.15rem .5rem;border-radius:999px;font-size:.82rem}
+.topnav .cap-link:hover{background:#2ea043}
+main{max-width:72rem;padding:1.5rem}
+h1{margin:.5rem 0 .5rem 0}
+.meta{color:#57606a;font-size:.9rem;margin-top:0}
+.summary{display:flex;gap:1.5rem;margin:1rem 0;flex-wrap:wrap}
+.summary div{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:.75rem 1rem}
+.summary strong{display:block;font-size:1.4rem}
+table{width:100%;border-collapse:collapse;margin:.5rem 0 2rem}
+caption{text-align:left;font-weight:600;padding:.5rem 0;font-size:1.1rem}
+th,td{border:1px solid #d0d7de;padding:.4rem .6rem;text-align:left;vertical-align:top;font-size:.92rem}
+th{background:#f6f8fa}
+code{background:#f6f8fa;padding:.1rem .3rem;border-radius:3px;font-size:.88em}
+.pass{color:#116329;font-weight:600}
+.failure{color:#b42318;font-weight:600}
+.skipped{color:#9a6700;font-weight:600}
+.none{color:#b42318;font-weight:600;background:#ffeef0}
+.cap-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem}
+table.mutation td:nth-child(2){max-width:14rem}
+.card{border:1px solid #d0d7de;border-radius:6px;padding:1rem;margin:1rem 0;background:#fff}
+.card h2{margin-top:0}
+.card .meta{font-size:.85rem}
+</style>
+</head>
+<body>
+<nav class="topnav">
+<a href="../">Home</a>
+<a href="../capabilities">Capabilities</a>
+<a href="../reports">CI &amp; Reports</a>
+<a href="../governance">Governance</a>
+<span class="nav-spacer"></span>
+<a href="../index.html">Overview</a>
+</nav>
+<main>
+<h1><a href="cap-alert.rule-design.html">alert.rule-design</a> <a href="https://github.com/nmwael/capability-testing/blob/main/capabilities/capabilities.yml" class="meta" title="Source: capabilities/capabilities.yml">📄</a> — Draw routing rules as a React Flow graph; compile and execute them in Drools</h1>
+<p class="meta">Capability: <code>alert.rule-design</code> · Owner: publication · Status: active · Since: 1.0.0 · Requirements: <a href="https://github.com/nmwael/capability-testing/issues/268" target="_blank" rel="noopener"><code>REQ-PUB-002</code></a>, <a href="https://github.com/nmwael/capability-testing/issues/272" target="_blank" rel="noopener"><code>REQ-FRONT-001</code></a></p>
+<div class="summary">
+<div><strong>3</strong>verified_by</div>
+<div><strong>0</strong>no test</div>
+<div><strong>0</strong>failing</div>
+<div><strong>1</strong>tests</div>
+<div><strong>41/41</strong>scenarios</div>
+<div><strong>n/a%</strong>mutants killed</div>
+</div>
+<table class="drilldown-table">
+<thead><tr><th>Domain</th><th>Entry</th><th>Proof (test / scenario)</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td rowspan="1">Test class</td><td rowspan="1"><code>AlertRuleDesignIT</code></td><td>Test</td><td><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/surefire-reports/TEST-com.example.publication.AlertRuleDesignIT.xml"><code>ruleDesignEndpointIsDeclared</code></a><br><span class="meta">com.example.publication.AlertRuleDesignIT</span></td><td class="pass">pass</td></tr>
+<tr><td>Feature</td><td><code>features/publication/alert-rule-design.feature</code></td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L3">Design alert routing rules as a graph</a></em></td><td>—</td></tr>
+<tr><td rowspan="8">Feature</td><td rowspan="8"><code>features/publication/alert-rule-design.feature</code></td><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L14"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>A drawn graph compiles to a Drools ruleset</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L24"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>The compiled ruleset is real Drools</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L32"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>The condition nodes read the CAP info block</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L40"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>An alert outside the condition is not routed</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L48"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>An action node with no incoming condition is rejected</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L57"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>Two nodes cannot share an id</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L65"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>A cycle cannot be drawn</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/publication/alert-rule-design.feature#L73"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/backend/publication/target/cucumber-junit.xml"><code>Redrawing the graph replaces the rules that were there before</code></a> <span class="meta">Design alert routing rules as a graph</span></td><td class="pass">pass</td></tr>
+<tr><td>Feature</td><td><code>features/frontend/alert-rule-designer.feature</code></td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L10">Alert routing rule designer canvas</a></em></td><td>—</td></tr>
+<tr><td rowspan="33">Feature</td><td rowspan="33"><code>features/frontend/alert-rule-designer.feature</code></td><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L17"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L24"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L32"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L40"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L48"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L56"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L63"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L72"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L81"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L89"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L98"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L109"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L118"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L126"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L136"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L145"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L154"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L163"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L172"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L181"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L189"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L199"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L207"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L217"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L233"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L241"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L248"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L256"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/frontend/reports/junit.xml"><code>AlertRuleDesigner behaviour &gt; Backspace deletes the selected node exactly once</code></a> <span class="meta">src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L264"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L272"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/frontend/reports/junit.xml"><code>AlertRuleDesigner behaviour &gt; a disabled generate control says what is missing</code></a> <span class="meta">src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L280"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/frontend/reports/junit.xml"><code>AlertRuleDesigner behaviour &gt; the two node kinds are visually distinguishable</code></a> <span class="meta">src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L288"></a></em><br><a href="https://github.com/nmwael/capability-testing/blob/main/frontend/reports/junit.xml"><code>AlertRuleDesigner behaviour &gt; selecting a node is not an edit</code></a> <span class="meta">src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</span></td><td class="pass">pass</td></tr>
+<tr><td>Scenario</td><td><em><a href="https://github.com/nmwael/capability-testing/blob/main/features/frontend/alert-rule-designer.feature#L295"></a></em><br><span class="meta">covered by class</span> <code>src/features/alert-rule-designer/AlertRuleDesigner.test.tsx</code><span class="meta">(15 cases, runner emits no scenario name)</span></td><td class="pass">pass</td></tr>
+</tbody></table>
+</main>
+</body>
+</html>

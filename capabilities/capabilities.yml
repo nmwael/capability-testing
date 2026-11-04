@@ -5,7 +5,7 @@ capabilities:
     github_team: "@org/architects"
     lifecycle_state: active
     lifecycle_state_changed: "2026-01-15"
-    since: 1.0.0
+    since: 2026-01-15
     verified_by:
       - type: integration_test
         ref: "AlertPublishIT"
@@ -23,7 +23,7 @@ capabilities:
     github_team: "@org/architects"
     lifecycle_state: active
     lifecycle_state_changed: "2026-02-20"
-    since: 1.0.0
+    since: 2026-02-20
     verified_by:
       - type: integration_test
         ref: "AlertRouteIT"
@@ -43,7 +43,7 @@ capabilities:
     lifecycle_state: active
     lifecycle_state_changed: "2026-03-10"
     dependencies: [alert.publish]
-    since: 1.0.0
+    since: 2026-03-10
     verified_by:
       - type: integration_test
         ref: "AlertRuleDesignIT"
@@ -71,7 +71,7 @@ capabilities:
     lifecycle_state: active
     lifecycle_state_changed: "2026-04-05"
     dependencies: [alert.rule-design]
-    since: 1.0.0
+    since: 2026-04-05
     verified_by:
       - type: bdd_feature
         ref: "features/frontend/alert-rule-edit.feature"
@@ -90,7 +90,7 @@ capabilities:
     lifecycle_state: active
     lifecycle_state_changed: "2026-05-12"
     dependencies: [alert.publish]
-    since: 1.0.0
+    since: 2026-05-12
     verified_by:
       - type: bdd_feature
         ref: "features/publication/alert-flow.feature"
@@ -108,7 +108,7 @@ capabilities:
     lifecycle_state: active
     lifecycle_state_changed: "2026-06-20"
     dependencies: [alert.rule-design]
-    since: 1.0.0
+    since: 2026-06-20
     verified_by:
       - type: bdd_feature
         ref: "features/frontend/cap-field-catalogue.feature"
@@ -121,7 +121,7 @@ capabilities:
     github_team: "@org/product-owners"
     lifecycle_state: draft
     lifecycle_state_changed: "2026-09-01"
-    since: 1.1.0
+    since: 2026-09-01
     verified_by:
       - type: bdd_feature
         ref: "features/docs/onboarding.feature"
