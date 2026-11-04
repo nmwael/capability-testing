@@ -16,12 +16,12 @@ This page documents all capabilities governed by the Capability Contract. Each c
 
 | ID | Intent | Owner | Status | Since | Verified By |
 |----|--------|-------|--------|-------|-------------|
-| `@cap:backend` | Ensure backend stability | PO Architect | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
-| `@cap:frontend` | Ensure frontend stability | PO Architect | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
-| `@cap:e2e` | Ensure Playwright E2E tests | PO Architect | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
-| `@cap:trace` | Ensure traceability | PO Architect | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
-| `@cap:mentions` | Ensure no @-mentions in GitHub posts | PO Architect | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
-| `@cap:docs.onboarding` | Ensure docs.onboarding capability | PO Architect | Draft | TBD | TBD |
+| `@cap:backend` | Ensure backend stability | Product Owner | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
+| `@cap:frontend` | Ensure frontend stability | Product Owner | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
+| `@cap:e2e` | Ensure Playwright E2E tests | Product Owner | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
+| `@cap:trace` | Ensure traceability | Product Owner | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
+| `@cap:mentions` | Ensure no @-mentions in GitHub posts | Product Owner | Active | 2024-02-21 | [`ci.yml`](../ci.yml) |
+| `@cap:docs.onboarding` | Ensure docs.onboarding capability | Product Owner | Draft | TBD | TBD |
 
 ## Draft Capabilities
 
