@@ -40,7 +40,7 @@ jobs:
         run: >-
           mkdir -p reports && npm ci &&
           npm run test:unit -- --reporter=junit --outputFile=reports/junit.xml
-          --coverage --coverage.reporter=json-summary --coverage.reporter=text
+          --coverage --coverage.reporter=html --coverage.reporter=json-summary --coverage.reporter=text
       - name: Mutation testing
         working-directory: backend
         run: >-
@@ -57,6 +57,10 @@ jobs:
           --pit 'backend/*/target/pit-reports/mutations.xml'
           --features features
           --out docs/coverage
+      - name: Copy vitest HTML coverage report
+        run: |
+          mkdir -p docs/coverage/vitest
+          cp -r frontend/coverage/* docs/coverage/vitest/ 2>/dev/null || true
       - name: Upload capability report
         uses: actions/upload-artifact@v4
         with:
