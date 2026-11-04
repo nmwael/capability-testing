@@ -9,9 +9,14 @@
 // Usage:
 //   node scripts/verify-traceability.mjs
 //   node scripts/verify-traceability.mjs --requirements <path> --features <dir>
+//   node scripts/verify-traceability.mjs --check-github
 
 import fs from 'fs';
 import path from 'path';
+
+import { requireAuth, repoSlug, listMilestones, getIssue } from './gh-run.mjs';
+
+import { readRequirements, readCapabilities } from './gh-lib.mjs';
 
 const repoRoot = process.cwd();
 
@@ -30,46 +35,15 @@ const featuresDir = featuresArg ? path.resolve(repoRoot, featuresArg) : path.joi
 const capabilitiesPath = path.join(repoRoot, 'capabilities', 'capabilities.yml');
 const tombstonePath = path.join(repoRoot, 'features', '.retired-ids.yml');
 
+const checkGithub = process.argv.includes('--check-github');
+
 const errors = [];
-
-// ---- tiny YAML subset for requirements.yml (top-level `requirements:` list of maps) ----
-function parseRequirementsYaml(text) {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
-  const requirements = [];
-  let inList = false;
-  let current = null;
-
-  for (const raw of lines) {
-    const line = raw.replace(/#.*$/, '').trimEnd();
-    if (!line.trim()) continue;
-
-    if (line.match(/^requirements:/)) {
-      inList = true;
-      continue;
-    }
-    if (!inList) continue;
-
-    const item = line.match(/^ {2,}- (\w+):\s*(.*)$/);
-    if (item) {
-      if (current && current.id) requirements.push(current);
-      current = { [item[1]]: item[2].trim().replace(/^['"]|['"]$/g, '') };
-      continue;
-    }
-    const nested = line.match(/^ {4,}(\w+):\s*(.*)$/);
-    if (nested && current) {
-      current[nested[1]] = nested[2].trim().replace(/^['"]|['"]$/g, '');
-      continue;
-    }
-  }
-  if (current && current.id) requirements.push(current);
-  return requirements;
-}
 
 // ---- read requirements ----
 let requirements;
 try {
   const text = fs.readFileSync(requirementsPath, 'utf8');
-  requirements = parseRequirementsYaml(text);
+  requirements = readRequirements(text);
 } catch (e) {
   errors.push(`cannot read requirements file: ${path.relative(repoRoot, requirementsPath)}`);
   printAndExit();
@@ -91,8 +65,7 @@ if (dupReqIds.length) {
 let capabilities = [];
 try {
   const capsText = fs.readFileSync(capabilitiesPath, 'utf8');
-  const capMatches = capsText.match(/^ {2}- id:\s*(\S+)/gm);
-  capabilities = (capMatches || []).map(m => m.split('id:')[1].trim());
+  capabilities = readCapabilities(capsText).map(cap => cap.id);
 } catch (e) {
   errors.push(`cannot read capabilities file: capabilities/capabilities.yml`);
   printAndExit();
@@ -258,6 +231,64 @@ const scenarioReqIds = new Set(scenarios.map(s => s.reqId).filter(Boolean));
 for (const req of requirements) {
   if (!scenarioReqIds.has(req.id)) {
     errors.push(`Requirement '${req.id}' has no scenario`);
+  }
+}
+
+// ---- optional GitHub linkage validation (--check-github) ----
+if (checkGithub) {
+  requireAuth();
+  const slug = repoSlug();
+  const milestones = listMilestones(slug);
+  const milestoneTitles = new Set((milestones || []).map((m) => m.title));
+
+  for (const req of requirements) {
+    const issue = Number(req.github_issue);
+    if (!Number.isFinite(issue) || issue <= 0) {
+      errors.push(
+        `Requirement '${req.id}' has github_issue '${req.github_issue}' (must be > 0)`,
+      );
+      continue;
+    }
+
+    // Verify the issue actually exists on GitHub
+    let issueData;
+    try {
+      issueData = getIssue(slug, issue);
+    } catch {
+      errors.push(
+        `Requirement '${req.id}' GitHub issue #${issue} not found on GitHub`,
+      );
+      continue;
+    }
+
+    // Verify labels: kind:task, req:<id>, capability:<capability>
+    const labelNames = new Set((issueData.labels || []).map((l) => l.name));
+    for (const expected of [
+      'kind:task',
+      `req:${req.id}`,
+      `capability:${req.capability}`,
+    ]) {
+      if (!labelNames.has(expected)) {
+        errors.push(
+          `Requirement '${req.id}' GitHub issue #${issue} missing label '${expected}'`,
+        );
+      }
+    }
+
+    // Verify the issue is under the capability milestone
+    if (!issueData.milestone || issueData.milestone.title !== req.capability) {
+      errors.push(
+        `Requirement '${req.id}' GitHub issue #${issue} is not under milestone '${req.capability}'`,
+      );
+    }
+  }
+
+  for (const capId of capabilities) {
+    if (!milestoneTitles.has(capId)) {
+      errors.push(
+        `capability '${capId}' has no GitHub milestone titled '${capId}'`,
+      );
+    }
   }
 }
 

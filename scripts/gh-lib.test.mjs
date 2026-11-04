@@ -53,22 +53,22 @@ const JOURNAL = readFileSync(resolve(ROOT, "MODEL-JOURNAL.md"), "utf8")
 
 function checkCapabilities() {
   console.log("capabilities manifest -> milestones")
-  eq(CAPS.length, 5, "five capabilities are read from the manifest")
-  eq(CAPS.map((c) => c.id).join(","), "alert.publish,alert.route,alert.rule-design,alert.rule-edit,alert.flow",
-    "ids are read in manifest order")
+  const expectedIds = ["alert.publish", "alert.route", "alert.rule-design", "alert.rule-edit", "alert.flow", "alert.cap-fields", "docs.onboarding"]
+  eq(CAPS.length, expectedIds.length, `${expectedIds.length} capabilities are read from the manifest`)
+  eq(CAPS.map((c) => c.id).join(","), expectedIds.join(","), "ids are read in manifest order")
   eq(CAPS[0].owner, "publication", "owner is read")
   eq(CAPS[0].status, "active", "status is read")
   eq(CAPS.find((c) => c.id === "alert.route").owner, "alerting", "a later entry's owner is read too")
 
   const ms = milestonesFromCapabilities(CAPS)
-  eq(ms.length, 5, "one milestone per capability")
+  eq(ms.length, expectedIds.length, "one milestone per capability")
   eq(ms.map((m) => m.title).join(","), CAPS.map((c) => c.id).join(","),
     "milestone titles are exactly the capability ids (no drift from capability:* labels)")
   if (ms.every((m) => m.description.length > 20)) ok("each milestone carries a description")
   else fail("a milestone description is empty")
 
   const cl = capabilityLabels(CAPS)
-  eq(cl.length, 5, "one capability label per capability")
+  eq(cl.length, expectedIds.length, "one capability label per capability")
   eq(cl[0].name, "capability:alert.publish", "capability label naming")
   for (const l of allLabels(CAPS)) {
     if (!/^[0-9a-f]{6}$/.test(l.color)) fail(`label ${l.name} has a bad colour ${l.color}`)

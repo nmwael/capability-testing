@@ -1,0 +1,23 @@
+name: "Requirement"
+about: "Track a single requirement and its GitHub issue linkage"
+title: "[requirement] <REQ-<LANE>-<nnn>>"
+labels: ["kind:task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Requirement
+        **ID:** `<id>`
+        **Title:** <title>
+        **Capability:** <capability>
+        **Status:** <status>
+        **Since:** <since>
+
+        ### Traceability
+        - [ ] Linked to capability milestone
+        - [ ] At least one scenario (@req:<id> in feature file)
+        - [ ] GitHub issue number recorded in requirements.yml
+
+        ### Links
+        - Capability milestone: <capability>
+        - Scenarios: <scenario-ids>

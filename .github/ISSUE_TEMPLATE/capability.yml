@@ -1,0 +1,21 @@
+name: "Capability"
+about: "Track a capability milestone and its verification"
+title: "[capability] <id>"
+labels: ["kind:tracking"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Capability
+        **ID:** `<id>`
+        **Intent:** <intent>
+        **Owner:** <owner>
+        **Status:** <status>
+
+        ### Verification
+        - [ ] Integration test (``)
+        - [ ] BDD feature (``)
+
+        ### Links
+        - Milestone: `<id>`
+        - Requirements: <req-ids>

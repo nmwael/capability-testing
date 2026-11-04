@@ -45,7 +45,9 @@ export function readCapabilities(text) {
   let inList = false
   let current = null
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = stripComments(rawLine).trimEnd()
+    if (!line.trim()) continue
     if (/^capabilities:\s*$/.test(line)) { inList = true; continue }
     if (!inList) continue
     if (/^\S/.test(line)) break // a new top-level key ends the list
@@ -56,8 +58,12 @@ export function readCapabilities(text) {
       caps.push(current)
       continue
     }
-    const kv = line.match(/^\s{2,}(intent|owner|status):\s*(.*)$/)
-    if (kv && current) current[kv[1]] = unquote(kv[2])
+    const kv = line.match(/^\s{2,}(intent|owner|lifecycle_state):\s*(.*)$/)
+    if (kv && current) {
+      const value = unquote(kv[2])
+      current[kv[1]] = value
+      if (kv[1] === "lifecycle_state") current.status = value
+    }
   }
 
   if (!caps.length) throw new Error("readCapabilities: no capabilities found")
@@ -67,8 +73,9 @@ export function readCapabilities(text) {
   return caps
 }
 
+/** Pure quote-removal: strip surrounding quotes only. No comment stripping. */
 function unquote(raw) {
-  return raw.split("#")[0].trim().replace(/^['"]|['"]$/g, "")
+  return raw.trim().replace(/^['"]|['"]$/g, "")
 }
 
 /**
@@ -121,9 +128,104 @@ export function capabilityLabels(caps) {
   }))
 }
 
-/** The full label set: static vocabulary + one label per capability. */
-export function allLabels(caps) {
-  return [...LABELS, ...capabilityLabels(caps)]
+/** The full label set: static vocabulary + one label per capability plus one
+ * `req:*` label per requirement. */
+export function allLabels(caps, requirements = []) {
+  return [...LABELS, ...capabilityLabels(caps), ...requirementLabels(requirements)]
+}
+
+/** Required fields every parsed requirement must carry as non-empty strings. */
+const REQUIRED_FIELDS = ["id", "title", "capability", "status", "since"]
+
+/** Strip a trailing `# ...` comment, but only when `#` lies outside quotes. */
+function stripComments(raw) {
+  let out = ""
+  let inSingle = false
+  let inDouble = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (inSingle) {
+      out += ch
+      if (ch === "\\" && raw[i + 1] === "'") { out += raw[++i]; continue }
+      if (ch === "'") inSingle = false
+      continue
+    }
+    if (inDouble) {
+      out += ch
+      if (ch === "\\" && raw[i + 1] === '"') { out += raw[++i]; continue }
+      if (ch === '"') inDouble = false
+      continue
+    }
+    if (ch === "'") { inSingle = true; out += ch; continue }
+    if (ch === '"') { inDouble = true; out += ch; continue }
+    if (ch === "#") break
+    out += ch
+  }
+  return out
+}
+
+/** Throw when a parsed requirement lacks a required, non-empty field. */
+function validateRequirement(req, index) {
+  for (const field of REQUIRED_FIELDS) {
+    const value = req[field]
+    if (typeof value !== "string" || value.length === 0) {
+      throw new Error(
+        `readRequirements: requirement #${index} has missing or empty required field '${field}'`
+      )
+    }
+  }
+}
+
+/**
+ * Read `requirements/requirements.yml` with a line-oriented scan, mirroring
+ * scripts/verify-traceability.mjs's `parseRequirementsYaml`.
+ *
+ * A top-level `requirements:` list of `- id: <id>` entries whose `title`,
+ * `capability`, `status` and `since` are simple `key: value` lines. Comments
+ * are stripped and quoted scalars unquoted.
+ *
+ * @param {string} text raw file contents
+ * @returns {{id:string,title:string,capability:string,status:string,since:string,github_issue?:string,github_milestone?:string}[]}
+ */
+export function readRequirements(text) {
+  const lines = text.replace(/\r\n/g, "\n").split("\n")
+  const requirements = []
+  let inList = false
+  let current = null
+
+  for (const raw of lines) {
+    const line = stripComments(raw).trimEnd()
+    if (!line.trim()) continue
+    if (/^requirements:/.test(line)) { inList = true; continue }
+    if (!inList) continue
+
+    const item = line.match(/^ {2,}- (\w+):\s*(.*)$/)
+    if (item) {
+      if (current && current.id) requirements.push(current)
+      current = { [item[1]]: unquote(item[2]) }
+      continue
+    }
+    const nested = line.match(/^ {4,}(\w+):\s*(.*)$/)
+    if (nested && current) {
+      current[nested[1]] = unquote(nested[2])
+      continue
+    }
+  }
+  if (current && current.id) requirements.push(current)
+  if (!requirements.length) throw new Error("readRequirements: no requirements found")
+  for (let i = 0; i < requirements.length; i++) {
+    validateRequirement(requirements[i], i + 1)
+  }
+  return requirements
+}
+
+/** One `req:*` label per requirement. */
+export function requirementLabels(requirements) {
+  return requirements.map((req) => ({
+    name: `req:${req.id}`,
+    color: "fbca04",
+    description: `Requirement ${req.id}: ${req.title}`,
+  }))
 }
 
 // ---------------------------------------------------------------------------
