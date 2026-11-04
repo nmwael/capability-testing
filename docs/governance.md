@@ -9,14 +9,14 @@ This page documents governance roles, separation of duties, and approval policie
 
 <div class="card">
 <h2><a href="https://github.com/nmwael/capability-testing/blob/main/docs/governance.md" class="github-link" target="_blank" rel="noopener">📄</a> Source: docs/governance.md</h2>
-<p>Governance maintains independence by separating definition from verification. Changes must pass both the PO Architect and Test Manager gates before merging.</p>
+<p>Governance maintains independence by separating definition from verification. Changes must pass both the Product Owner and Test Manager gates before merging.</p>
 </div>
 
 ## Governance Roles
 
 | Role | Responsibilities | Gates |
 |------|------------------|-------|
-| **PO Architect** | Defines capabilities, ensures traceability, approves changes | Capabilities, CI, Traceability |
+| **Product Owner** | Defines capabilities, ensures traceability, approves changes | Capabilities, CI, Traceability |
 | **Test Manager** | Ensures test coverage, validates evidence, approves verification | Coverage, BDD, Verification |
 
 ## Separation of Duties
@@ -25,24 +25,24 @@ Governance maintains independence by separating definition from verification:
 
 | Area | Responsible | Verified By |
 |------|-------------|-------------|
-| Capability Definition | PO Architect | Test Manager |
-| Test Implementation | Test Manager | PO Architect |
-| Coverage Validation | Test Manager | PO Architect |
-| Change Approval | PO Architect + Test Manager | Both |
+| Capability Definition | Product Owner | Test Manager |
+| Test Implementation | Test Manager | Product Owner |
+| Coverage Validation | Test Manager | Product Owner |
+| Change Approval | Product Owner + Test Manager | Both |
 
 ## Change Approval Policy
 
 Changes to capabilities require dual approval:
 
-1. **Capability changes**: PO Architect defines, Test Manager verifies
-2. **CI job changes**: PO Architect proposes, Test Manager validates
-3. **Documentation changes**: Test Manager reviews, PO Architect approves
+1. **Capability changes**: Product Owner defines, Test Manager verifies
+2. **CI job changes**: Product Owner proposes, Test Manager validates
+3. **Documentation changes**: Test Manager reviews, Product Owner approves
 
 ## CODEOWNERS Enforcement Rules
 
 The `CODEOWNERS` file enforces:
 
-- **PO Architect**: Reviews all capability-related changes
+- **Product Owner**: Reviews all capability-related changes
 - **Test Manager**: Reviews all test and verification changes
 
 Changes must pass both gates before merging.

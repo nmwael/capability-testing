@@ -47,11 +47,11 @@ Five CI jobs ensure end-to-end protection of capabilities:
 
 | Job | Purpose | Owner |
 |-----|---------|-------|
-| `traceability` | Ensure traceability of claims to evidence | PO Architect |
-| `backend` | Ensure backend stability | PO Architect |
-| `frontend` | Ensure frontend stability | PO Architect |
-| `playwright-e2e` | Ensure Playwright E2E tests pass | PO Architect |
-| `mention-check` | Ensure no @-mentions in GitHub posts | PO Architect |
+| `traceability` | Ensure traceability of claims to evidence | Product Owner |
+| `backend` | Ensure backend stability | Product Owner |
+| `frontend` | Ensure frontend stability | Product Owner |
+| `playwright-e2e` | Ensure Playwright E2E tests pass | Product Owner |
+| `mention-check` | Ensure no @-mentions in GitHub posts | Product Owner |
 
 ## Capability Matrix
 
