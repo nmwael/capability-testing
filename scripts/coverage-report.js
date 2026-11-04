@@ -335,7 +335,7 @@ function matchTestsToScenarios(tests, scenarios) {
 
 
 // Generate HTML report
-function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatchedScenarios, summary, outDir) {
+function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatchedScenarios, summary, outDir, reqIssueMap = new Map()) {
   // Group scenarios by capability
   const capabilityMap = new Map();
   for (const [scenarioId, scenarioData] of scenarioTestsMap) {
@@ -405,14 +405,24 @@ function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatched
     let scenarioRows = scenarios.map(({ scenarioId, scenarioData }) => {
       const hasTests = scenarioData.tests.length > 0;
       const testCount = scenarioData.tests.length;
-      const reqIds = scenarioData.reqIds.length > 0 ? scenarioData.reqIds.join(', ') : 'None';
+      const reqIds = scenarioData.reqIds.length > 0 ? scenarioData.reqIds : [];
+      const reqHtml = reqIds.length > 0
+        ? reqIds.map(reqId => {
+            const cleanReqId = reqId.replace(/^@req:/, '');
+            const issueNum = reqIssueMap.get(cleanReqId);
+            if (issueNum) {
+              return `<a href="https://github.com/nmwael/capability-testing/issues/${issueNum}" target="_blank" rel="noopener">${escapeHtml(reqId)}</a>`;
+            }
+            return escapeHtml(reqId);
+          }).join(', ')
+        : 'None';
       const coverage = scenarioData.tests.find(t => t.coverage) ? scenarioData.tests.find(t => t.coverage).coverage : 'N/A';
       
       return `
         <div class="scenario-row ${scenarioData.tests.length === 0 ? 'uncovered' : ''}">
           <div class="scenario-id">${escapeHtml(scenarioId)}</div>
           <div class="scenario-name">${escapeHtml(scenarioData.name || '(unnamed)')}</div>
-          <div class="scenario-reqs">Req: ${escapeHtml(reqIds)}</div>
+          <div class="scenario-reqs">Req: ${reqHtml}</div>
           <div class="scenario-tests">${testCount} test(s)</div>
           <div class="scenario-coverage">Coverage: ${coverage}</div>
           <div class="scenario-status ${scenarioData.tests.length === 0 ? 'uncovered' : 'covered'}">
@@ -445,12 +455,25 @@ function generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatched
     <div class="section">
       <h2>Scenarios Without Test Coverage</h2>
       <div class="unmatched-list">
-        ${unmatchedScenarios.map(s => `
-          <div class="uncovered-item">
-            <h4>${escapeHtml(s.scenarioId)} - ${escapeHtml(s.name)}</h4>
-            <div class="reqs">Requirements: ${escapeHtml(s.reqIds.join(', ') || 'None')}</div>
-          </div>
-        `).join('')}
+        ${unmatchedScenarios.map(s => {
+          const reqIds = s.reqIds || [];
+          const reqHtml = reqIds.length > 0
+            ? reqIds.map(reqId => {
+                const cleanReqId = reqId.replace(/^@req:/, '');
+                const issueNum = reqIssueMap.get(cleanReqId);
+                if (issueNum) {
+                  return `<a href="https://github.com/nmwael/capability-testing/issues/${issueNum}" target="_blank" rel="noopener">${escapeHtml(reqId)}</a>`;
+                }
+                return escapeHtml(reqId);
+              }).join(', ')
+            : 'None';
+          return `
+            <div class="uncovered-item">
+              <h4>${escapeHtml(s.scenarioId)} - ${escapeHtml(s.name)}</h4>
+              <div class="reqs">Requirements: ${reqHtml}</div>
+            </div>
+          `;
+        }).join('')}
       </div>
     </div>
   ` : '';
@@ -779,6 +802,26 @@ function main() {
   const args = parseArgs();
   const entries = [];
   const repoRoot = process.cwd();
+
+  // Load requirements.yml for github_issue mapping
+  const requirementsPath = path.resolve(repoRoot, 'requirements/requirements.yml');
+  const reqIssueMap = new Map();
+  if (fs.existsSync(requirementsPath)) {
+    const reqContent = fs.readFileSync(requirementsPath, 'utf-8');
+    // Parse YAML-like structure: find all requirement entries
+    const idRegex = /id:\s*(REQ-[A-Z]+-\d+)/g;
+    const issueRegex = /github_issue:\s*(\d+)/g;
+    const lines = reqContent.split('\n');
+    let currentId = null;
+    for (const line of lines) {
+      const idMatch = line.match(/id:\s*(REQ-[A-Z]+-\d+)/);
+      if (idMatch) currentId = idMatch[1];
+      const issueMatch = line.match(/github_issue:\s*(\d+)/);
+      if (issueMatch && currentId) {
+        reqIssueMap.set(currentId, parseInt(issueMatch[1], 10));
+      }
+    }
+  }
   
   // Expand globs for all file path arguments
   const surefireFiles = args.surefire ? expandGlob(args.surefire) : [];
@@ -851,7 +894,7 @@ function main() {
   unmatchedTests = matchResult.unmatchedTests;
   unmatchedScenarios = matchResult.unmatchedScenarios;
 
-  generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatchedScenarios, args.summary, outDir);
+  generateHtmlReport(entries, scenarioTestsMap, unmatchedTests, unmatchedScenarios, args.summary, outDir, reqIssueMap);
 
   console.log(`Coverage report generated at ${outDir}/index.html`);
   console.log(`Total entries: ${entries.length}`);
